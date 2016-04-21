@@ -1,0 +1,19 @@
+{
+  "name": "syncrow",
+  "version": "0.0.1",
+  "description": "Easy directory synchronization over the network",
+  "main": "index.js",
+  "scripts": {
+    "test": "jasmine-node tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jan-osch/syncrow.git"
+  },
+  "author": "jan-osch",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jan-osch/syncrow/issues"
+  },
+  "homepage": "https://github.com/jan-osch/syncrow#readme"
+}
