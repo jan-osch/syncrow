@@ -1,4 +1,6 @@
 "use strict";
-const code = require('./server_client');
-
-new code.Server(__dirname + '/../testdir', 1234);
+var Server = require('./server');
+var DIRECTORY = __dirname + '/../testdir';
+console.log("server watching directory: " + DIRECTORY);
+var server = new Server(DIRECTORY, 1234);
+//# sourceMappingURL=test_server.js.map

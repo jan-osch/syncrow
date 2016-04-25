@@ -1,9 +1,7 @@
 "use strict";
-
-var code = require('./server_client');
-
-const DIRECTORY = process.argv[2];
-console.log(`client watching directory: ${DIRECTORY}`);
-let client = new code.Client(DIRECTORY);
-
+var Client = require('./client');
+var DIRECTORY = '/tmp/syncrow';
+console.log("client watching directory: " + DIRECTORY);
+var client = new Client(DIRECTORY);
 client.connect('', 1234);
+//# sourceMappingURL=test_client.js.map
