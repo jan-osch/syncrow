@@ -15,7 +15,7 @@ class SocketMessenger extends events.EventEmitter {
         this.resetBuffers();
         if (socket) {
             this.socket = socket;
-            this.socket.on('data', (data)=>this.parseData(data))
+            this.addListenersToSocket(this.socket)
         } else {
             this.socket = null;
             this.connect(host, port);
@@ -32,10 +32,17 @@ class SocketMessenger extends events.EventEmitter {
         this.expectedLength = null;
     }
 
+    private addListenersToSocket(socket:net.Socket) {
+        socket.on('data', (data)=>this.parseData(data));
+        socket.on('close', ()=> {
+            console.log('socket connection disconnected');
+        })
+    }
+
     private connect(host:string, port:number) {
         this.socket = net.connect(port, host, ()=> {
             console.log(`connected with ${host}:${port}`);
-            this.socket.on('data', (data)=>this.parseData(data))
+            this.addListenersToSocket(this.socket);
         })
     }
 

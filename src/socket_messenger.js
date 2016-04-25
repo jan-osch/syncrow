@@ -10,13 +10,12 @@ var events = require('events');
 var SocketMessenger = (function (_super) {
     __extends(SocketMessenger, _super);
     function SocketMessenger(host, port, socket) {
-        var _this = this;
         _super.call(this);
         this.separator = ':';
         this.resetBuffers();
         if (socket) {
             this.socket = socket;
-            this.socket.on('data', function (data) { return _this.parseData(data); });
+            this.addListenersToSocket(this.socket);
         }
         else {
             this.socket = null;
@@ -31,11 +30,18 @@ var SocketMessenger = (function (_super) {
         this.messageBuffer = '';
         this.expectedLength = null;
     };
+    SocketMessenger.prototype.addListenersToSocket = function (socket) {
+        var _this = this;
+        socket.on('data', function (data) { return _this.parseData(data); });
+        socket.on('close', function () {
+            console.log('socket connection disconnected');
+        });
+    };
     SocketMessenger.prototype.connect = function (host, port) {
         var _this = this;
         this.socket = net.connect(port, host, function () {
             console.log("connected with " + host + ":" + port);
-            _this.socket.on('data', function (data) { return _this.parseData(data); });
+            _this.addListenersToSocket(_this.socket);
         });
     };
     SocketMessenger.prototype.parseData = function (data) {

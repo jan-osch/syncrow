@@ -3,11 +3,12 @@
 import fs = require('fs');
 import net = require('net');
 import SocketMessenger= require('./socket_messenger');
+import FileContainer = require("./file_container");
 
 
 class Client {
     socketMessenger:SocketMessenger;
-    directoryToWatch:string;
+    fileContainer:FileContainer;
     eventActionMap:Object;
     static events = {
         error: 'error',
@@ -17,16 +18,14 @@ class Client {
     };
 
     constructor(directoryToWatch) {
-        this.directoryToWatch = directoryToWatch;
         this.socketMessenger = null;
         this.eventActionMap = {};
-        this.createDirectoryWatcher(directoryToWatch);
+        this.fileContainer = this.createDirectoryWatcher(directoryToWatch);
         this.createMapOfKnownEvents();
     }
 
     createDirectoryWatcher(directoryToWatch) {
-        return fs.watch(directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-            console.log(`file changed: ${fileName}`);
+        return new FileContainer(directoryToWatch).on('fileChanged', (fileName)=> {
             this.emitFileChanged(fileName);
         })
     }
@@ -74,7 +73,7 @@ class Client {
 
     sendFileToSocket(socket:SocketMessenger, file:string) {
         let fileTransferServer = net.createServer((fileTransferSocket)=> {
-            fs.createReadStream(this.createAbsolutePath(file)).pipe(fileTransferSocket);
+            this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(()=> {
             this.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
@@ -83,17 +82,14 @@ class Client {
         });
     }
 
-    createAbsolutePath(file):string {
-        return `${this.directoryToWatch}/${file}`;
-    }
 
-    consumeFileFromNewSocket(fileName, address) {
+    consumeFileFromNewSocket(fileName:string, address) {
         let fileTransferClient = net.connect(address, ()=> {
             console.log('created new transfer socket');
             fileTransferClient.on('end', ()=> {
                 console.log('finished file transfer');
             });
-            fileTransferClient.pipe(fs.createWriteStream(this.createAbsolutePath(fileName)));
+            fileTransferClient.pipe(this.fileContainer.getWriteStreamForFile(fileName));
         })
     }
 

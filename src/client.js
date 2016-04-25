@@ -1,20 +1,18 @@
 /// <reference path="../typescript-interfaces/node.d.ts" />
 "use strict";
-var fs = require('fs');
 var net = require('net');
 var SocketMessenger = require('./socket_messenger');
+var FileContainer = require("./file_container");
 var Client = (function () {
     function Client(directoryToWatch) {
-        this.directoryToWatch = directoryToWatch;
         this.socketMessenger = null;
         this.eventActionMap = {};
-        this.createDirectoryWatcher(directoryToWatch);
+        this.fileContainer = this.createDirectoryWatcher(directoryToWatch);
         this.createMapOfKnownEvents();
     }
     Client.prototype.createDirectoryWatcher = function (directoryToWatch) {
         var _this = this;
-        return fs.watch(directoryToWatch, { recursive: true }).on('change', function (event, fileName) {
-            console.log("file changed: " + fileName);
+        return new FileContainer(directoryToWatch).on('fileChanged', function (fileName) {
             _this.emitFileChanged(fileName);
         });
     };
@@ -56,16 +54,13 @@ var Client = (function () {
     Client.prototype.sendFileToSocket = function (socket, file) {
         var _this = this;
         var fileTransferServer = net.createServer(function (fileTransferSocket) {
-            fs.createReadStream(_this.createAbsolutePath(file)).pipe(fileTransferSocket);
+            _this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(function () {
             _this.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
                 address: fileTransferServer.address()
             });
         });
-    };
-    Client.prototype.createAbsolutePath = function (file) {
-        return this.directoryToWatch + "/" + file;
     };
     Client.prototype.consumeFileFromNewSocket = function (fileName, address) {
         var _this = this;
@@ -74,7 +69,7 @@ var Client = (function () {
             fileTransferClient.on('end', function () {
                 console.log('finished file transfer');
             });
-            fileTransferClient.pipe(fs.createWriteStream(_this.createAbsolutePath(fileName)));
+            fileTransferClient.pipe(_this.fileContainer.getWriteStreamForFile(fileName));
         });
     };
     Client.prototype.createMapOfKnownEvents = function () {

@@ -2070,7 +2070,7 @@ declare module "crypto" {
     export function createHmac(algorithm:string, key:string):Hmac;
     export function createHmac(algorithm:string, key:Buffer):Hmac;
 
-    export interface Hash {
+    export interface Hash extends  NodeJS.ReadWriteStream{
         update(data:any, input_encoding?:string):Hash;
         digest(encoding:'keysBuffer'):Buffer;
         digest(encoding:string):any;
