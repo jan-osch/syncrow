@@ -12,7 +12,9 @@ import ReadableStream = NodeJS.ReadableStream;
 class FileContainer extends events.EventEmitter {
     static events = {
         fileChanged: 'fileChanged',
-        fileHashComputed: 'fileHashComputed'
+        fileDeleted: 'fileDeleted',
+        fileCreated: 'fileCreated',
+        fileMetaComputed: 'fileMetaComputed'
     };
     private directoryToWatch:string;
     private watchedFiles:Object;
@@ -34,24 +36,45 @@ class FileContainer extends events.EventEmitter {
     public computeHashForFileTree() {
         this.getFileTree((err, fileTree)=> {
             if (err) throw err;
-            fileTree.forEach(this.computeHashForFile);
+            // fileTree.forEach(this.computeHashForFile);
         });
     }
 
-    private computeHashForFile(fileName:string) {
+    private computeFileMetaDataAndEmit(fileName:string) {
+        var that = this;
+        async.parallel([(parallelCallback)=> {
+            that.computeHashForFile(fileName, parallelCallback);
+        }, (parallelCallback)=> {
+            that.getModifiedDateForFile(fileName, parallelCallback);
+        }], (err:Error)=> {
+            if (err) return console.error(err);
+            that.emit(FileContainer.events.fileMetaComputed, that.getMetaDataForFile(fileName));
+        });
+    }
+
+    private computeHashForFile(fileName:string, callback:()=>void) {
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
         hash.on('end', ()=> {
-            this.saveAndEmitComputedHash(fileName, hash);
+            this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString());
+            callback();
         });
     }
 
-    private saveAndEmitComputedHash(fileName:string, hash:crypto.Hash) {
+    private getModifiedDateForFile(fileName:string, callback:(err?:Error)=>void) {
+        fs.stat(this.createAbsolutePath(fileName), (error:Error, stats:fs.Stats)=> {
+                if (error)return callback(error);
+                this.saveWatchedFileProperty(fileName, 'modifiedDate', stats.mtime);
+                callback();
+            }
+        )
+    }
+
+    private saveWatchedFileProperty(fileName:string, key:string, value:any) {
         if (!this.watchedFiles[fileName]) {
             this.watchedFiles[fileName] = {}
         }
-        this.watchedFiles[fileName].hashCode = hash.read().toString();
-        this.emit(FileContainer.events.fileHashComputed, fileName)
+        this.watchedFiles[fileName][key] = value;
     }
 
     private createAbsolutePath(file):string {
@@ -79,11 +102,25 @@ class FileContainer extends events.EventEmitter {
     private beginWatching() {
         var that = this;
         fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-            console.log(`file changed: ${fileName}`);
-            if (!that.writingFiles[fileName]) {
-                that.emit(FileContainer.events.fileChanged, fileName);
+            if (event === 'rename') {
+                return that.checkRenameEventMeaning(fileName);
             }
+            return that.emit(FileContainer.events.fileChanged, fileName);
         });
+    }
+
+    private checkRenameEventMeaning(fileName:string) {
+        var that = this;
+        if (!that.watchedFiles[fileName]) {
+            that.watchedFiles[fileName] = {};
+            return that.emit(FileContainer.events.fileCreated, fileName);
+        }
+        fs.stat(that.createAbsolutePath(fileName), (err)=> {
+            if (err) {
+                return that.emit(FileContainer.events.fileDeleted, fileName);
+            }
+            return that.emit(FileContainer.events.fileChanged, fileName);
+        })
     }
 }
 

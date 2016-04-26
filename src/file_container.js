@@ -8,6 +8,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var fs = require('fs');
 var events = require('events');
+var async = require('async');
 var crypto = require('crypto');
 var path = require('path');
 var FileContainer = (function (_super) {
@@ -23,27 +24,47 @@ var FileContainer = (function (_super) {
         callback(null, []);
     };
     FileContainer.prototype.computeHashForFileTree = function () {
-        var _this = this;
         this.getFileTree(function (err, fileTree) {
             if (err)
                 throw err;
-            fileTree.forEach(_this.computeHashForFile);
+            // fileTree.forEach(this.computeHashForFile);
         });
     };
-    FileContainer.prototype.computeHashForFile = function (fileName) {
+    FileContainer.prototype.computeFileMetaDataAndEmit = function (fileName) {
+        var that = this;
+        async.parallel([function (parallelCallback) {
+                that.computeHashForFile(fileName, parallelCallback);
+            }, function (parallelCallback) {
+                that.getModifiedDateForFile(fileName, parallelCallback);
+            }], function (err) {
+            if (err)
+                return console.error(err);
+            that.emit(FileContainer.events.fileMetaComputed, that.getMetaDataForFile(fileName));
+        });
+    };
+    FileContainer.prototype.computeHashForFile = function (fileName, callback) {
         var _this = this;
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
         hash.on('end', function () {
-            _this.saveAndEmitComputedHash(fileName, hash);
+            _this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString());
+            callback();
         });
     };
-    FileContainer.prototype.saveAndEmitComputedHash = function (fileName, hash) {
+    FileContainer.prototype.getModifiedDateForFile = function (fileName, callback) {
+        var _this = this;
+        fs.stat(this.createAbsolutePath(fileName), function (error, stats) {
+            if (error)
+                return callback(error);
+            _this.saveWatchedFileProperty(fileName, 'modifiedDate', stats.mtime);
+            callback();
+        });
+    };
+    FileContainer.prototype.saveWatchedFileProperty = function (fileName, key, value) {
         if (!this.watchedFiles[fileName]) {
             this.watchedFiles[fileName] = {};
         }
-        this.watchedFiles[fileName].hashCode = hash.read().toString();
-        this.emit(FileContainer.events.fileHashComputed, fileName);
+        this.watchedFiles[fileName][key] = value;
     };
     FileContainer.prototype.createAbsolutePath = function (file) {
         return path.join(this.directoryToWatch, file);
@@ -66,15 +87,30 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.beginWatching = function () {
         var that = this;
         fs.watch(this.directoryToWatch, { recursive: true }).on('change', function (event, fileName) {
-            console.log("file changed: " + fileName);
-            if (!that.writingFiles[fileName]) {
-                that.emit(FileContainer.events.fileChanged, fileName);
+            if (event === 'rename') {
+                return that.checkRenameEventMeaning(fileName);
             }
+            return that.emit(FileContainer.events.fileChanged, fileName);
+        });
+    };
+    FileContainer.prototype.checkRenameEventMeaning = function (fileName) {
+        var that = this;
+        if (!that.watchedFiles[fileName]) {
+            that.watchedFiles[fileName] = {};
+            return that.emit(FileContainer.events.fileCreated, fileName);
+        }
+        fs.stat(that.createAbsolutePath(fileName), function (err) {
+            if (err) {
+                return that.emit(FileContainer.events.fileDeleted, fileName);
+            }
+            return that.emit(FileContainer.events.fileChanged, fileName);
         });
     };
     FileContainer.events = {
         fileChanged: 'fileChanged',
-        fileHashComputed: 'fileHashComputed'
+        fileDeleted: 'fileDeleted',
+        fileCreated: 'fileCreated',
+        fileMetaComputed: 'fileMetaComputed'
     };
     FileContainer.watchTimeout = 10;
     return FileContainer;

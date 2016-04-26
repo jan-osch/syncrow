@@ -4,6 +4,11 @@ logs
 *.log
 npm-debug.log*
 
+src/**.js
+src/**.js.map
+
+testdir
+
 # Runtime data
 pids
 *.pid
@@ -35,3 +40,4 @@ jspm_packages
 .node_repl_history
 
 # Created by .ignore support plugin (hsz.mobi)
+
