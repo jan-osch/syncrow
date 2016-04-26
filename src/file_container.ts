@@ -6,6 +6,7 @@ import events = require('events');
 import async = require('async');
 import crypto = require('crypto');
 import path = require('path');
+import readTree = require('./read_tree');
 import {WriteStream} from "fs";
 import ReadableStream = NodeJS.ReadableStream;
 
@@ -26,18 +27,33 @@ class FileContainer extends events.EventEmitter {
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
         this.writingFiles = {};
-        this.beginWatching();
+        this.computeMetaAndBeginWatching();
+    }
+
+    public computeMetaAndBeginWatching() {
+        var that = this;
+        this.getFileTree((err, files)=> {
+            files.forEach((file)=> {
+                that.watchedFiles[file] = {};
+            });
+            that.computeMetaDataForFilesList(files);
+            that.beginWatching();
+        });
     }
 
     private getFileTree(callback:(err, files:Array<string>)=>void) {
-        callback(null, []);
+        readTree(this.directoryToWatch, {}, callback);
     }
 
-    public computeHashForFileTree() {
-        this.getFileTree((err, fileTree)=> {
-            if (err) throw err;
-            // fileTree.forEach(this.computeHashForFile);
-        });
+    public recomputeMetaDataForDirectory() {
+        var that = this;
+        this.getFileTree((err, files)=> {
+            that.computeMetaDataForFilesList(files);
+        })
+    }
+
+    private computeMetaDataForFilesList(files:Array<string>) {
+        files.forEach(this.computeFileMetaDataAndEmit, this);
     }
 
     private computeFileMetaDataAndEmit(fileName:string) {
@@ -64,6 +80,7 @@ class FileContainer extends events.EventEmitter {
     private getModifiedDateForFile(fileName:string, callback:(err?:Error)=>void) {
         fs.stat(this.createAbsolutePath(fileName), (error:Error, stats:fs.Stats)=> {
                 if (error)return callback(error);
+
                 this.saveWatchedFileProperty(fileName, 'modifiedDate', stats.mtime);
                 callback();
             }
@@ -102,9 +119,8 @@ class FileContainer extends events.EventEmitter {
     private beginWatching() {
         var that = this;
         fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-            if (event === 'rename') {
-                return that.checkRenameEventMeaning(fileName);
-            }
+            if (event === 'rename') return that.checkRenameEventMeaning(fileName);
+
             return that.emit(FileContainer.events.fileChanged, fileName);
         });
     }
@@ -115,10 +131,10 @@ class FileContainer extends events.EventEmitter {
             that.watchedFiles[fileName] = {};
             return that.emit(FileContainer.events.fileCreated, fileName);
         }
+
         fs.stat(that.createAbsolutePath(fileName), (err)=> {
-            if (err) {
-                return that.emit(FileContainer.events.fileDeleted, fileName);
-            }
+            if (err) return that.emit(FileContainer.events.fileDeleted, fileName);
+
             return that.emit(FileContainer.events.fileChanged, fileName);
         })
     }

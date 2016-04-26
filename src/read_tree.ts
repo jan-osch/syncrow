@@ -7,7 +7,9 @@ import path = require('path');
 import {Stats} from "fs";
 
 
-function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:boolean;}, callback:(err:Error, result:Array<string>)=>any) {
+function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:boolean;},
+                  callback:(err:Error, result:Array<string>)=>any) {
+    
     let results = [];
     let stack = [root];
 

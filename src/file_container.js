@@ -11,6 +11,7 @@ var events = require('events');
 var async = require('async');
 var crypto = require('crypto');
 var path = require('path');
+var readTree = require('./read_tree');
 var FileContainer = (function (_super) {
     __extends(FileContainer, _super);
     function FileContainer(directoryToWatch) {
@@ -18,17 +19,29 @@ var FileContainer = (function (_super) {
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
         this.writingFiles = {};
-        this.beginWatching();
+        this.computeMetaAndBeginWatching();
     }
-    FileContainer.prototype.getFileTree = function (callback) {
-        callback(null, []);
-    };
-    FileContainer.prototype.computeHashForFileTree = function () {
-        this.getFileTree(function (err, fileTree) {
-            if (err)
-                throw err;
-            // fileTree.forEach(this.computeHashForFile);
+    FileContainer.prototype.computeMetaAndBeginWatching = function () {
+        var that = this;
+        this.getFileTree(function (err, files) {
+            files.forEach(function (file) {
+                that.watchedFiles[file] = {};
+            });
+            that.computeMetaDataForFilesList(files);
+            that.beginWatching();
         });
+    };
+    FileContainer.prototype.getFileTree = function (callback) {
+        readTree(this.directoryToWatch, {}, callback);
+    };
+    FileContainer.prototype.recomputeMetaDataForDirectory = function () {
+        var that = this;
+        this.getFileTree(function (err, files) {
+            that.computeMetaDataForFilesList(files);
+        });
+    };
+    FileContainer.prototype.computeMetaDataForFilesList = function (files) {
+        files.forEach(this.computeFileMetaDataAndEmit, this);
     };
     FileContainer.prototype.computeFileMetaDataAndEmit = function (fileName) {
         var that = this;
@@ -87,9 +100,8 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.beginWatching = function () {
         var that = this;
         fs.watch(this.directoryToWatch, { recursive: true }).on('change', function (event, fileName) {
-            if (event === 'rename') {
+            if (event === 'rename')
                 return that.checkRenameEventMeaning(fileName);
-            }
             return that.emit(FileContainer.events.fileChanged, fileName);
         });
     };
@@ -100,9 +112,8 @@ var FileContainer = (function (_super) {
             return that.emit(FileContainer.events.fileCreated, fileName);
         }
         fs.stat(that.createAbsolutePath(fileName), function (err) {
-            if (err) {
+            if (err)
                 return that.emit(FileContainer.events.fileDeleted, fileName);
-            }
             return that.emit(FileContainer.events.fileChanged, fileName);
         });
     };
