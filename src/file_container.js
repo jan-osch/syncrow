@@ -1,5 +1,6 @@
 /// <reference path="../typescript-interfaces/node.d.ts" />
 /// <reference path="../typescript-interfaces/async.d.ts" />
+/// <reference path="../typescript-interfaces/rimraf.d.ts" />
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -12,13 +13,15 @@ var async = require('async');
 var crypto = require('crypto');
 var path = require('path');
 var readTree = require('./read_tree');
+var rimraf = require('rimraf');
+//TODO add support for different parent directory names
 var FileContainer = (function (_super) {
     __extends(FileContainer, _super);
     function FileContainer(directoryToWatch) {
         _super.call(this);
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
-        this.writingFiles = {};
+        this.blockedFiles = {};
         this.computeMetaAndBeginWatching();
     }
     FileContainer.prototype.computeMetaAndBeginWatching = function () {
@@ -27,9 +30,11 @@ var FileContainer = (function (_super) {
             files.forEach(function (file) {
                 that.watchedFiles[file] = {};
             });
-            that.computeMetaDataForFilesList(files);
             that.beginWatching();
         });
+    };
+    FileContainer.prototype.getListOfWatchedFiles = function () {
+        return Object.keys(this.watchedFiles);
     };
     FileContainer.prototype.getFileTree = function (callback) {
         readTree(this.directoryToWatch, {}, callback);
@@ -37,11 +42,8 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.recomputeMetaDataForDirectory = function () {
         var that = this;
         this.getFileTree(function (err, files) {
-            that.computeMetaDataForFilesList(files);
+            files.forEach(that.computeFileMetaDataAndEmit, that);
         });
-    };
-    FileContainer.prototype.computeMetaDataForFilesList = function (files) {
-        files.forEach(this.computeFileMetaDataAndEmit, this);
     };
     FileContainer.prototype.computeFileMetaDataAndEmit = function (fileName) {
         var that = this;
@@ -52,7 +54,7 @@ var FileContainer = (function (_super) {
             }], function (err) {
             if (err)
                 return console.error(err);
-            that.emit(FileContainer.events.fileMetaComputed, that.getMetaDataForFile(fileName));
+            that.emit(FileContainer.events.metaComputed, that.getMetaDataForFile(fileName));
         });
     };
     FileContainer.prototype.computeHashForFile = function (fileName, callback) {
@@ -83,16 +85,32 @@ var FileContainer = (function (_super) {
         return path.join(this.directoryToWatch, file);
     };
     FileContainer.prototype.getMetaDataForFile = function (fileName) {
-        return this.watchedFiles[fileName];
+        return {
+            modified: this.watchedFiles[fileName].modifiedDate,
+            hashCode: this.watchedFiles[fileName].hashCode,
+            name: fileName
+        };
     };
-    FileContainer.prototype.getWriteStreamForFile = function (fileName) {
-        var that = this;
-        that.writingFiles[fileName] = true;
-        return fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', function () {
+    FileContainer.prototype.deleteFile = function (fileName) {
+        var _this = this;
+        this.blockedFiles[fileName] = true;
+        rimraf(fileName, function (error) {
+            if (error)
+                return console.error(error);
             setTimeout(function () {
-                that.writingFiles[fileName] = false;
+                delete _this.blockedFiles[fileName];
             }, FileContainer.watchTimeout);
         });
+    };
+    FileContainer.prototype.consumeFileStream = function (fileName, readStream) {
+        var that = this;
+        that.blockedFiles[fileName] = true;
+        var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', function () {
+            setTimeout(function () {
+                delete that.blockedFiles[fileName];
+            }, FileContainer.watchTimeout);
+        });
+        readStream.pipe(writeStream);
     };
     FileContainer.prototype.getReadStreamForFile = function (fileName) {
         return fs.createReadStream(this.createAbsolutePath(fileName));
@@ -100,28 +118,36 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.beginWatching = function () {
         var that = this;
         fs.watch(this.directoryToWatch, { recursive: true }).on('change', function (event, fileName) {
+            var fullFileName = that.createAbsolutePath(fileName);
             if (event === 'rename')
-                return that.checkRenameEventMeaning(fileName);
-            return that.emit(FileContainer.events.fileChanged, fileName);
+                return that.checkRenameEventMeaning(fullFileName);
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fullFileName);
         });
     };
-    FileContainer.prototype.checkRenameEventMeaning = function (fileName) {
+    FileContainer.prototype.checkRenameEventMeaning = function (fullFileName) {
         var that = this;
-        if (!that.watchedFiles[fileName]) {
-            that.watchedFiles[fileName] = {};
-            return that.emit(FileContainer.events.fileCreated, fileName);
+        if (!that.watchedFiles[fullFileName]) {
+            that.watchedFiles[fullFileName] = {};
+            return that.emitEventIfFileNotBlocked(FileContainer.events.created, fullFileName);
         }
-        fs.stat(that.createAbsolutePath(fileName), function (err) {
-            if (err)
-                return that.emit(FileContainer.events.fileDeleted, fileName);
-            return that.emit(FileContainer.events.fileChanged, fileName);
+        fs.stat(that.createAbsolutePath(fullFileName), function (err) {
+            if (err) {
+                delete that.watchedFiles[fullFileName];
+                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fullFileName);
+            }
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fullFileName);
         });
+    };
+    FileContainer.prototype.emitEventIfFileNotBlocked = function (event, fullFileName) {
+        if (!this.blockedFiles[fullFileName]) {
+            this.emit(event, fullFileName);
+        }
     };
     FileContainer.events = {
-        fileChanged: 'fileChanged',
-        fileDeleted: 'fileDeleted',
-        fileCreated: 'fileCreated',
-        fileMetaComputed: 'fileMetaComputed'
+        changed: 'changed',
+        deleted: 'deleted',
+        created: 'created',
+        metaComputed: 'metaComputed'
     };
     FileContainer.watchTimeout = 10;
     return FileContainer;
