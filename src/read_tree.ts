@@ -9,15 +9,15 @@ import {Stats} from "fs";
 
 function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:boolean;},
                   callback:(err:Error, result:Array<string>)=>any) {
-    
+
     let results = [];
     let stack = [root];
 
     async.whilst(shouldFinish, (whilstCallback)=> {
         let currentDir = stack.pop();
 
-        if (!options.onlyFiles) {
-            results.push(currentDir);
+        if (!options.onlyFiles && currentDir != root) {
+            addToResults(currentDir);
         }
 
         fs.readdir(currentDir, (err, files)=> {
@@ -33,6 +33,11 @@ function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:bool
         return stack.length !== 0;
     }
 
+    function addToResults(pathToAdd:string){
+        results.push(path.relative(root,pathToAdd));
+    }
+
+
     function processListOfFiles(currentDir:string, fileList:Array<string>, callback) {
         async.mapSeries(fileList, (file, seriesCallback:(err?)=>any)=> {
             let suspectFile = connectPaths(currentDir, file);
@@ -42,8 +47,8 @@ function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:bool
 
                 if (stat.isDirectory()) {
                     stack.push(suspectFile);
-                } else {
-                    results.push(suspectFile);
+                } else if (suspectFile != root) {
+                    addToResults(suspectFile)
                 }
 
                 seriesCallback();

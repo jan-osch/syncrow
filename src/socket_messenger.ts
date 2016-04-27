@@ -2,12 +2,17 @@
 import net = require('net');
 import events = require('events');
 
-
+//TODO add support for disconnection
 class SocketMessenger extends events.EventEmitter {
     socket:net.Socket;
     messageBuffer:string;
     expectedLength:number;
     separator = ':';
+    static events = {
+        message: 'message',
+        connected: 'connected',
+        disconnected: 'disconnected'
+    };
     static messageEvent = 'message';
 
     constructor(host:string, port:number, socket?:net.Socket) {
@@ -36,7 +41,9 @@ class SocketMessenger extends events.EventEmitter {
         socket.on('data', (data)=>this.parseData(data));
         socket.on('close', ()=> {
             console.log('socket connection disconnected');
-        })
+            this.emit(SocketMessenger.events.disconnected);
+        });
+        this.emit(SocketMessenger.events.connected);
     }
 
     private connect(host:string, port:number) {

@@ -19,7 +19,7 @@ class Server extends Client {
 
     emitFileChanged(fileName:string) {
         this.clients.forEach((socket:SocketMessenger)=> {
-            this.writeEventToSocketMessenger(socket, Client.events.changed, fileName);
+            Client.writeEventToSocketMessenger(socket, Client.events.changed, fileName);
         });
     }
 

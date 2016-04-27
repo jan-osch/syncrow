@@ -16,9 +16,8 @@ var Server = (function (_super) {
         this.socketServer = this.createSocketServer(mainPort);
     }
     Server.prototype.emitFileChanged = function (fileName) {
-        var _this = this;
         this.clients.forEach(function (socket) {
-            _this.writeEventToSocketMessenger(socket, Client.events.changed, fileName);
+            Client.writeEventToSocketMessenger(socket, Client.events.changed, fileName);
         });
     };
     Server.prototype.addNewClient = function (socket) {

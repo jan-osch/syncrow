@@ -9,8 +9,8 @@ function readTree(root, options, callback) {
     var stack = [root];
     async.whilst(shouldFinish, function (whilstCallback) {
         var currentDir = stack.pop();
-        if (!options.onlyFiles) {
-            results.push(currentDir);
+        if (!options.onlyFiles && currentDir != root) {
+            addToResults(currentDir);
         }
         fs.readdir(currentDir, function (err, files) {
             if (err)
@@ -23,6 +23,9 @@ function readTree(root, options, callback) {
     function shouldFinish() {
         return stack.length !== 0;
     }
+    function addToResults(pathToAdd) {
+        results.push(path.relative(root, pathToAdd));
+    }
     function processListOfFiles(currentDir, fileList, callback) {
         async.mapSeries(fileList, function (file, seriesCallback) {
             var suspectFile = connectPaths(currentDir, file);
@@ -32,8 +35,8 @@ function readTree(root, options, callback) {
                 if (stat.isDirectory()) {
                     stack.push(suspectFile);
                 }
-                else {
-                    results.push(suspectFile);
+                else if (suspectFile != root) {
+                    addToResults(suspectFile);
                 }
                 seriesCallback();
             });

@@ -9,7 +9,9 @@ import crypto = require('crypto');
 import path = require('path');
 import readTree = require('./read_tree');
 import rimraf = require('rimraf');
+import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
+import {Stats} from "fs";
 
 
 //TODO add support for different parent directory names
@@ -18,6 +20,7 @@ class FileContainer extends events.EventEmitter {
         changed: 'changed',
         deleted: 'deleted',
         created: 'created',
+        createdDirectory: 'createdDirectory',
         metaComputed: 'metaComputed'
     };
     private directoryToWatch:string;
@@ -25,15 +28,16 @@ class FileContainer extends events.EventEmitter {
     private blockedFiles:Object;
     static watchTimeout = 10;
 
+    static directoryHashConstant = 'directory';
+
     constructor(directoryToWatch:string) {
         super();
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
         this.blockedFiles = {};
-        this.computeMetaAndBeginWatching();
     }
 
-    public computeMetaAndBeginWatching() {
+    public getListOfTrackedFilesAndBeginWatching() {
         var that = this;
         this.getFileTree((err, files)=> {
             files.forEach((file)=> {
@@ -58,24 +62,42 @@ class FileContainer extends events.EventEmitter {
         })
     }
 
+    public isFileInContainer(file:string):boolean {
+        return this.watchedFiles[file] !== undefined;
+    }
+
     private computeFileMetaDataAndEmit(fileName:string) {
         var that = this;
         async.parallel([(parallelCallback)=> {
-            that.computeHashForFile(fileName, parallelCallback);
+            that.computeHashForFileOrReturnConstantValueForDirectory(fileName, parallelCallback);
         }, (parallelCallback)=> {
             that.getModifiedDateForFile(fileName, parallelCallback);
         }], (err:Error)=> {
             if (err) return console.error(err);
-            that.emit(FileContainer.events.metaComputed, that.getMetaDataForFile(fileName));
+            that.emit(FileContainer.events.metaComputed, this.getMetaDataForFile(fileName));
         });
     }
 
-    private computeHashForFile(fileName:string, callback:()=>void) {
+    private computeHashForFile(fileName:string, callback:(err?)=>void) {
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
-        hash.on('end', ()=> {
-            this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString());
+        hash.on('finish', ()=> {
+            this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString('hex'));
             callback();
+        });
+    }
+
+    private computeHashForFileOrReturnConstantValueForDirectory(fileName:string, callback:(err?)=>any) {
+        var that = this;
+        fs.stat(this.createAbsolutePath(fileName), (err, stats:Stats)=> {
+            if (err)return callback(err);
+
+            if (stats.isDirectory()) {
+                that.saveWatchedFileProperty(fileName, 'hashCode', FileContainer.directoryHashConstant);
+                return callback();
+            }
+
+            that.computeHashForFile(fileName, callback);
         });
     }
 
@@ -100,7 +122,7 @@ class FileContainer extends events.EventEmitter {
         return path.join(this.directoryToWatch, file);
     }
 
-    public getMetaDataForFile(fileName:string):{hashCode:string, modified:Date, name:string} {
+    private getMetaDataForFile(fileName:string):{hashCode:string, modified:Date, name:string} {
         return {
             modified: this.watchedFiles[fileName].modifiedDate,
             hashCode: this.watchedFiles[fileName].hashCode,
@@ -110,7 +132,7 @@ class FileContainer extends events.EventEmitter {
 
     public deleteFile(fileName:string) {
         this.blockedFiles[fileName] = true;
-        rimraf(fileName, (error)=> {
+        rimraf(this.createAbsolutePath(fileName), (error)=> {
             if (error) return console.error(error);
             setTimeout(()=> {
                 delete this.blockedFiles[fileName];
@@ -135,34 +157,43 @@ class FileContainer extends events.EventEmitter {
         return fs.createReadStream(this.createAbsolutePath(fileName));
     }
 
-    private beginWatching() {
-        var that = this;
-        fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-            var fullFileName = that.createAbsolutePath(fileName);
-            if (event === 'rename') return that.checkRenameEventMeaning(fullFileName);
-
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fullFileName);
-        });
-    }
-
-    private checkRenameEventMeaning(fullFileName:string) {
-        var that = this;
-        if (!that.watchedFiles[fullFileName]) {
-            that.watchedFiles[fullFileName] = {};
-            return that.emitEventIfFileNotBlocked(FileContainer.events.created, fullFileName);
-        }
-
-        fs.stat(that.createAbsolutePath(fullFileName), (err)=> {
-            if (err) {
-                delete that.watchedFiles[fullFileName];
-                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fullFileName);
-            }
-
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fullFileName);
+    public createDirectory(fileName:string) {
+        return mkdirp(this.createAbsolutePath(fileName), (err)=> {
+            if (err) return console.error(err);
         })
     }
 
-    emitEventIfFileNotBlocked(event:string, fullFileName:string) {
+    private beginWatching() {
+        var that = this;
+        fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
+            if (event === 'rename') return that.checkRenameEventMeaning(fileName);
+
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
+        });
+    }
+
+    private checkRenameEventMeaning(fileName:string) {
+        var that = this;
+
+        fs.stat(that.createAbsolutePath(fileName), (err, stats:Stats)=> {
+            if (err && that.watchedFiles[fileName]) {
+                delete that.watchedFiles[fileName];
+                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
+
+            } else if (!that.watchedFiles[fileName] && stats.isDirectory()) {
+                that.watchedFiles[fileName] = {};
+                return that.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, fileName);
+
+            } else if (!that.watchedFiles[fileName]) {
+                that.watchedFiles[fileName] = {};
+                return that.emitEventIfFileNotBlocked(FileContainer.events.created, fileName);
+            }
+
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
+        })
+    }
+
+    private emitEventIfFileNotBlocked(event:string, fullFileName:string) {
         if (!this.blockedFiles[fullFileName]) {
             this.emit(event, fullFileName);
         }

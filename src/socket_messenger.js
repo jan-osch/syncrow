@@ -7,6 +7,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 /// <reference path="../typescript-interfaces/node.d.ts" />
 var net = require('net');
 var events = require('events');
+//TODO add support for disconnection
 var SocketMessenger = (function (_super) {
     __extends(SocketMessenger, _super);
     function SocketMessenger(host, port, socket) {
@@ -35,7 +36,9 @@ var SocketMessenger = (function (_super) {
         socket.on('data', function (data) { return _this.parseData(data); });
         socket.on('close', function () {
             console.log('socket connection disconnected');
+            _this.emit(SocketMessenger.events.disconnected);
         });
+        this.emit(SocketMessenger.events.connected);
     };
     SocketMessenger.prototype.connect = function (host, port) {
         var _this = this;
@@ -69,6 +72,11 @@ var SocketMessenger = (function (_super) {
         this.messageBuffer = remainder;
         this.checkIfExpectedLengthArrived();
         this.checkIfMessageIsComplete();
+    };
+    SocketMessenger.events = {
+        message: 'message',
+        connected: 'connected',
+        disconnected: 'disconnected'
     };
     SocketMessenger.messageEvent = 'message';
     return SocketMessenger;

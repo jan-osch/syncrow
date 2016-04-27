@@ -14,6 +14,7 @@ var crypto = require('crypto');
 var path = require('path');
 var readTree = require('./read_tree');
 var rimraf = require('rimraf');
+var mkdirp = require('mkdirp');
 //TODO add support for different parent directory names
 var FileContainer = (function (_super) {
     __extends(FileContainer, _super);
@@ -22,9 +23,8 @@ var FileContainer = (function (_super) {
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
         this.blockedFiles = {};
-        this.computeMetaAndBeginWatching();
     }
-    FileContainer.prototype.computeMetaAndBeginWatching = function () {
+    FileContainer.prototype.getListOfTrackedFilesAndBeginWatching = function () {
         var that = this;
         this.getFileTree(function (err, files) {
             files.forEach(function (file) {
@@ -45,25 +45,41 @@ var FileContainer = (function (_super) {
             files.forEach(that.computeFileMetaDataAndEmit, that);
         });
     };
+    FileContainer.prototype.isFileInContainer = function (file) {
+        return this.watchedFiles[file] !== undefined;
+    };
     FileContainer.prototype.computeFileMetaDataAndEmit = function (fileName) {
+        var _this = this;
         var that = this;
         async.parallel([function (parallelCallback) {
-                that.computeHashForFile(fileName, parallelCallback);
+                that.computeHashForFileOrReturnConstantValueForDirectory(fileName, parallelCallback);
             }, function (parallelCallback) {
                 that.getModifiedDateForFile(fileName, parallelCallback);
             }], function (err) {
             if (err)
                 return console.error(err);
-            that.emit(FileContainer.events.metaComputed, that.getMetaDataForFile(fileName));
+            that.emit(FileContainer.events.metaComputed, _this.getMetaDataForFile(fileName));
         });
     };
     FileContainer.prototype.computeHashForFile = function (fileName, callback) {
         var _this = this;
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
-        hash.on('end', function () {
-            _this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString());
+        hash.on('finish', function () {
+            _this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString('hex'));
             callback();
+        });
+    };
+    FileContainer.prototype.computeHashForFileOrReturnConstantValueForDirectory = function (fileName, callback) {
+        var that = this;
+        fs.stat(this.createAbsolutePath(fileName), function (err, stats) {
+            if (err)
+                return callback(err);
+            if (stats.isDirectory()) {
+                that.saveWatchedFileProperty(fileName, 'hashCode', FileContainer.directoryHashConstant);
+                return callback();
+            }
+            that.computeHashForFile(fileName, callback);
         });
     };
     FileContainer.prototype.getModifiedDateForFile = function (fileName, callback) {
@@ -94,7 +110,7 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.deleteFile = function (fileName) {
         var _this = this;
         this.blockedFiles[fileName] = true;
-        rimraf(fileName, function (error) {
+        rimraf(this.createAbsolutePath(fileName), function (error) {
             if (error)
                 return console.error(error);
             setTimeout(function () {
@@ -115,27 +131,36 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.getReadStreamForFile = function (fileName) {
         return fs.createReadStream(this.createAbsolutePath(fileName));
     };
+    FileContainer.prototype.createDirectory = function (fileName) {
+        return mkdirp(this.createAbsolutePath(fileName), function (err) {
+            if (err)
+                return console.error(err);
+        });
+    };
     FileContainer.prototype.beginWatching = function () {
         var that = this;
         fs.watch(this.directoryToWatch, { recursive: true }).on('change', function (event, fileName) {
-            var fullFileName = that.createAbsolutePath(fileName);
             if (event === 'rename')
-                return that.checkRenameEventMeaning(fullFileName);
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fullFileName);
+                return that.checkRenameEventMeaning(fileName);
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
         });
     };
-    FileContainer.prototype.checkRenameEventMeaning = function (fullFileName) {
+    FileContainer.prototype.checkRenameEventMeaning = function (fileName) {
         var that = this;
-        if (!that.watchedFiles[fullFileName]) {
-            that.watchedFiles[fullFileName] = {};
-            return that.emitEventIfFileNotBlocked(FileContainer.events.created, fullFileName);
-        }
-        fs.stat(that.createAbsolutePath(fullFileName), function (err) {
-            if (err) {
-                delete that.watchedFiles[fullFileName];
-                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fullFileName);
+        fs.stat(that.createAbsolutePath(fileName), function (err, stats) {
+            if (err && that.watchedFiles[fileName]) {
+                delete that.watchedFiles[fileName];
+                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
             }
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fullFileName);
+            else if (!that.watchedFiles[fileName] && stats.isDirectory()) {
+                that.watchedFiles[fileName] = {};
+                return that.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, fileName);
+            }
+            else if (!that.watchedFiles[fileName]) {
+                that.watchedFiles[fileName] = {};
+                return that.emitEventIfFileNotBlocked(FileContainer.events.created, fileName);
+            }
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
         });
     };
     FileContainer.prototype.emitEventIfFileNotBlocked = function (event, fullFileName) {
@@ -147,9 +172,11 @@ var FileContainer = (function (_super) {
         changed: 'changed',
         deleted: 'deleted',
         created: 'created',
+        createdDirectory: 'createdDirectory',
         metaComputed: 'metaComputed'
     };
     FileContainer.watchTimeout = 10;
+    FileContainer.directoryHashConstant = 'directory';
     return FileContainer;
 }(events.EventEmitter));
 module.exports = FileContainer;
