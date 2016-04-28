@@ -140,7 +140,7 @@ class Client {
             this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(()=> {
             let address =fileTransferServer.address();
-            address.address = this.socketMessenger.getOwnHost();
+            address.host = this.socketMessenger.getOwnHost();
             Client.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
                 address: address

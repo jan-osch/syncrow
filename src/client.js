@@ -111,7 +111,7 @@ var Client = (function () {
             _this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(function () {
             var address = fileTransferServer.address();
-            address.address = _this.socketMessenger.getOwnHost();
+            address.host = _this.socketMessenger.getOwnHost();
             Client.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
                 address: address
