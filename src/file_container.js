@@ -154,6 +154,9 @@ var FileContainer = (function (_super) {
                 delete that.watchedFiles[fileName];
                 return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
             }
+            else if (err) {
+                return console.error('removed unwatched file');
+            }
             else if (!that.watchedFiles[fileName] && stats.isDirectory()) {
                 that.watchedFiles[fileName] = {};
                 return that.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, fileName);

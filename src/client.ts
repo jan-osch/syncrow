@@ -7,6 +7,10 @@ import FileContainer = require("./file_container");
 import logger = require('./logger');
 
 //TODO add support syncing after reestablishing connection
+//TODO add support for deleting offline
+//TODO Strategies for offline loading
+//TODO add support for cross platform directories
+
 class Client {
     socketMessenger:SocketMessenger;
     fileContainer:FileContainer;

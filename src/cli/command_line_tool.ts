@@ -38,3 +38,4 @@ if (program.server) {
 }
 
 
+//TODO add verbose support

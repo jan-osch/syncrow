@@ -28,4 +28,5 @@ else {
     var socketMessenger = new SocketMessenger(program.host, program.port);
     new Client(program.directory, socketMessenger);
 }
+//TODO add verbose support
 //# sourceMappingURL=command_line_tool.js.map

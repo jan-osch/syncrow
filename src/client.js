@@ -5,6 +5,9 @@ var SocketMessenger = require('./socket_messenger');
 var FileContainer = require("./file_container");
 var logger = require('./logger');
 //TODO add support syncing after reestablishing connection
+//TODO add support for deleting offline
+//TODO Strategies for offline loading
+//TODO add support for cross platform directories
 var Client = (function () {
     function Client(directoryToWatch, socketMessenger) {
         this.filesToSync = {};
