@@ -74,7 +74,7 @@ var SocketMessenger = (function (_super) {
         this.checkIfExpectedLengthArrived();
         this.checkIfMessageIsComplete();
     };
-    SocketMessenger.prototype.getOtherPartyHost = function () {
+    SocketMessenger.prototype.getOwnHost = function () {
         return this.socket.address().address;
     };
     SocketMessenger.events = {

@@ -139,9 +139,11 @@ class Client {
         let fileTransferServer = net.createServer((fileTransferSocket)=> {
             this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(()=> {
+            let address =fileTransferServer.address();
+            address.address = this.socketMessenger.getOwnHost();
             Client.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
-                address: fileTransferServer.address()
+                address: address
             });
         });
     }
@@ -194,7 +196,6 @@ class Client {
     }
 
     consumeFileFromNewSocket(fileName:string, address) {
-        address.host = this.socketMessenger.getOtherPartyHost();
         let fileTransferClient = net.connect(address, ()=> {
             logger.info(`created new transfer socket, file: ${fileName}`);
             console.time(fileName+ ' transfer');

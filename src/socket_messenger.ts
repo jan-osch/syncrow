@@ -85,7 +85,7 @@ class SocketMessenger extends events.EventEmitter {
         this.checkIfMessageIsComplete();
     }
     
-    public getOtherPartyHost():string{
+    public getOwnHost():string{
         return this.socket.address().address;
     }
 }

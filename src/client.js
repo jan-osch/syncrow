@@ -110,9 +110,11 @@ var Client = (function () {
         var fileTransferServer = net.createServer(function (fileTransferSocket) {
             _this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(function () {
+            var address = fileTransferServer.address();
+            address.address = _this.socketMessenger.getOwnHost();
             Client.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
-                address: fileTransferServer.address()
+                address: address
             });
         });
     };
@@ -163,7 +165,6 @@ var Client = (function () {
     };
     Client.prototype.consumeFileFromNewSocket = function (fileName, address) {
         var _this = this;
-        address.host = this.socketMessenger.getOtherPartyHost();
         var fileTransferClient = net.connect(address, function () {
             logger.info("created new transfer socket, file: " + fileName);
             console.time(fileName + ' transfer');
