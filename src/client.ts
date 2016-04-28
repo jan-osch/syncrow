@@ -194,6 +194,7 @@ class Client {
     }
 
     consumeFileFromNewSocket(fileName:string, address) {
+        address.host = this.socketMessenger.getOtherPartyHost();
         let fileTransferClient = net.connect(address, ()=> {
             logger.info(`created new transfer socket, file: ${fileName}`);
             console.time(fileName+ ' transfer');

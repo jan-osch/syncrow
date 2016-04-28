@@ -163,6 +163,7 @@ var Client = (function () {
     };
     Client.prototype.consumeFileFromNewSocket = function (fileName, address) {
         var _this = this;
+        address.host = this.socketMessenger.getOtherPartyHost();
         var fileTransferClient = net.connect(address, function () {
             logger.info("created new transfer socket, file: " + fileName);
             console.time(fileName + ' transfer');

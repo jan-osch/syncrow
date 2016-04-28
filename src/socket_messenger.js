@@ -74,6 +74,9 @@ var SocketMessenger = (function (_super) {
         this.checkIfExpectedLengthArrived();
         this.checkIfMessageIsComplete();
     };
+    SocketMessenger.prototype.getOtherPartyHost = function () {
+        return this.socket.address().address;
+    };
     SocketMessenger.events = {
         message: 'message',
         connected: 'connected',
