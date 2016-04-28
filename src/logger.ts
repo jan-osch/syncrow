@@ -1,6 +1,10 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 
 import chalk = require('chalk');
+
+class Logger{
+    static number = 0;
+}
 
 function debug(content:string) {
     console.log(chalk.grey(content));

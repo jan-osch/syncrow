@@ -1,6 +1,8 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
+/// <reference path="../typings/main.d.ts" />
+
 import net = require('net');
 import events = require('events');
+import logger = require('./logger');
 
 //TODO add support for disconnection
 class SocketMessenger extends events.EventEmitter {
@@ -40,7 +42,7 @@ class SocketMessenger extends events.EventEmitter {
     private addListenersToSocket(socket:net.Socket) {
         socket.on('data', (data)=>this.parseData(data));
         socket.on('close', ()=> {
-            console.log('socket connection disconnected');
+            logger.info('socket connection disconnected');
             this.emit(SocketMessenger.events.disconnected);
         });
         this.emit(SocketMessenger.events.connected);
@@ -48,7 +50,7 @@ class SocketMessenger extends events.EventEmitter {
 
     private connect(host:string, port:number) {
         this.socket = net.connect(port, host, ()=> {
-            console.log(`connected with ${host}:${port}`);
+            logger.info(`connected with ${host}:${port}`);
             this.addListenersToSocket(this.socket);
         })
     }

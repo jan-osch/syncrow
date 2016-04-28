@@ -1,4 +1,4 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 
 import fs = require('fs');
 import net = require('net');

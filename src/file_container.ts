@@ -1,6 +1,4 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
-/// <reference path="../typescript-interfaces/async.d.ts" />
-/// <reference path="../typescript-interfaces/rimraf.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 
 import fs = require('fs');
 import events = require('events');
@@ -12,8 +10,10 @@ import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
+import logger =require('./logger');
 
-
+// TODO add conflict resolving
+// TOTO add reconnection manager
 //TODO add support for different parent directory names
 class FileContainer extends events.EventEmitter {
     static events = {
@@ -26,7 +26,7 @@ class FileContainer extends events.EventEmitter {
     private directoryToWatch:string;
     private watchedFiles:Object;
     private blockedFiles:Object;
-    static watchTimeout = 10;
+    static watchTimeout = 50;
 
     static directoryHashConstant = 'directory';
 
@@ -132,6 +132,7 @@ class FileContainer extends events.EventEmitter {
 
     public deleteFile(fileName:string) {
         this.blockedFiles[fileName] = true;
+        logger.info(`deleting: ${fileName}`);
         rimraf(this.createAbsolutePath(fileName), (error)=> {
             if (error) return console.error(error);
             setTimeout(()=> {

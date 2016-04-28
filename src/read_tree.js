@@ -1,5 +1,4 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
-/// <reference path="../typescript-interfaces/async.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 "use strict";
 var async = require('async');
 var fs = require('fs');

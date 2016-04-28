@@ -1,12 +1,13 @@
+/// <reference path="../typings/main.d.ts" />
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-/// <reference path="../typescript-interfaces/node.d.ts" />
 var net = require('net');
 var events = require('events');
+var logger = require('./logger');
 //TODO add support for disconnection
 var SocketMessenger = (function (_super) {
     __extends(SocketMessenger, _super);
@@ -35,7 +36,7 @@ var SocketMessenger = (function (_super) {
         var _this = this;
         socket.on('data', function (data) { return _this.parseData(data); });
         socket.on('close', function () {
-            console.log('socket connection disconnected');
+            logger.info('socket connection disconnected');
             _this.emit(SocketMessenger.events.disconnected);
         });
         this.emit(SocketMessenger.events.connected);
@@ -43,7 +44,7 @@ var SocketMessenger = (function (_super) {
     SocketMessenger.prototype.connect = function (host, port) {
         var _this = this;
         this.socket = net.connect(port, host, function () {
-            console.log("connected with " + host + ":" + port);
+            logger.info("connected with " + host + ":" + port);
             _this.addListenersToSocket(_this.socket);
         });
     };

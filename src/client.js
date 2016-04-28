@@ -1,9 +1,9 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 "use strict";
 var net = require('net');
 var SocketMessenger = require('./socket_messenger');
 var FileContainer = require("./file_container");
-var utils = require('./utils');
+var logger = require('./logger');
 //TODO add support syncing after reestablishing connection
 var Client = (function () {
     function Client(directoryToWatch, socketMessenger) {
@@ -19,7 +19,7 @@ var Client = (function () {
         [FileContainer.events.changed, FileContainer.events.deleted, FileContainer.events.created, FileContainer.events.createdDirectory]
             .forEach(function (eventName) {
             fileContainer.on(eventName, function (eventContent) {
-                utils.debug("got event: " + eventName); //debug
+                logger.debug("got event: " + eventName); //debug
                 Client.writeEventToSocketMessenger(that.socketMessenger, eventName, eventContent);
             });
         });
@@ -34,7 +34,7 @@ var Client = (function () {
         var _this = this;
         socketMessenger.on(SocketMessenger.events.message, function (message) { return _this.routeEvent(_this.socketMessenger, message); });
         socketMessenger.on(SocketMessenger.events.connected, function () {
-            utils.info('connected with other party beginning to sync');
+            logger.info('connected with other party beginning to sync');
             _this.syncAfterConnectionReestablished();
         });
         return socketMessenger;
@@ -52,7 +52,7 @@ var Client = (function () {
             return this.fileContainer.createDirectory(syncData.name);
         }
         else if (!this.fileContainer.isFileInContainer(syncData.name)) {
-            this.sendGetFileEvent(syncData.name);
+            return this.sendGetFileEvent(syncData.name);
         }
     };
     Client.prototype.sendGetFileEvent = function (fileName) {
@@ -102,7 +102,7 @@ var Client = (function () {
         });
     };
     Client.writeEventToSocketMessenger = function (socket, type, message) {
-        utils.info("writing to socket event: " + type + " with body: " + JSON.stringify(message));
+        logger.debug("writing to socket event: " + type + " with body: " + JSON.stringify(message));
         socket.writeData(Client.createEvent(type, message));
     };
     Client.prototype.sendFileToSocket = function (socket, file) {
@@ -123,50 +123,52 @@ var Client = (function () {
     Client.prototype.addClientEvents = function () {
         var _this = this;
         this.addEventToKnownMap(Client.events.getFile, function (socket, event) {
-            utils.debug("received a getFile: " + JSON.stringify(event.body));
+            logger.debug("received a getFile: " + JSON.stringify(event.body));
             _this.sendFileToSocket(socket, event.body);
         });
         this.addEventToKnownMap(Client.events.metaData, function (socket, event) {
-            utils.debug("received metaData: " + JSON.stringify(event.body));
+            logger.debug("received metaData: " + JSON.stringify(event.body));
             _this.addSyncMetaDataFromOtherParty(event.body);
         });
         this.addEventToKnownMap(Client.events.getMeta, function (socket, event) {
-            utils.debug("received getMeta: " + JSON.stringify(event.body));
+            logger.debug("received getMeta: " + JSON.stringify(event.body));
             _this.fileContainer.recomputeMetaDataForDirectory();
         });
         this.addEventToKnownMap(Client.events.fileSocket, function (socket, event) {
-            utils.debug("received fileSocket: " + JSON.stringify(event.body));
+            logger.debug("received fileSocket: " + JSON.stringify(event.body));
             _this.consumeFileFromNewSocket(event.body.file, event.body.address);
         });
         this.addEventToKnownMap(Client.events.error, function (socket, event) {
-            utils.debug("received error message " + JSON.stringify(event.body));
+            logger.debug("received error message " + JSON.stringify(event.body));
         });
     };
     Client.prototype.addFileContainerEvents = function () {
         var _this = this;
         this.addEventToKnownMap(FileContainer.events.created, function (socket, event) {
-            utils.debug("received create event: " + JSON.stringify(event.body));
+            logger.debug("received create event: " + JSON.stringify(event.body));
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.createdDirectory, function (socket, event) {
-            utils.debug("received create event: " + JSON.stringify(event.body));
+            logger.debug("received create event: " + JSON.stringify(event.body));
             _this.fileContainer.createDirectory(event.body);
         });
         this.addEventToKnownMap(FileContainer.events.changed, function (socket, event) {
-            utils.debug("received changed event: " + JSON.stringify(event.body));
+            logger.debug("received changed event: " + JSON.stringify(event.body));
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.deleted, function (socket, event) {
-            utils.debug("received a delete event: " + JSON.stringify(event.body));
+            logger.debug("received a delete event: " + JSON.stringify(event.body));
             _this.fileContainer.deleteFile(event.body);
         });
     };
     Client.prototype.consumeFileFromNewSocket = function (fileName, address) {
         var _this = this;
         var fileTransferClient = net.connect(address, function () {
-            utils.info('created new transfer socket');
+            logger.info("created new transfer socket, file: " + fileName);
+            console.time(fileName + ' transfer');
             fileTransferClient.on('end', function () {
-                utils.info('finished file transfer');
+                logger.info("finished file transfer, file: " + fileName);
+                console.timeEnd(fileName + ' transfer');
             });
             _this.fileContainer.consumeFileStream(fileName, fileTransferClient);
         });

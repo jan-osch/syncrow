@@ -1,6 +1,4 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
-/// <reference path="../typescript-interfaces/async.d.ts" />
-/// <reference path="../typescript-interfaces/rimraf.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -15,6 +13,9 @@ var path = require('path');
 var readTree = require('./read_tree');
 var rimraf = require('rimraf');
 var mkdirp = require('mkdirp');
+var logger = require('./logger');
+// TODO add conflict resolving
+// TOTO add reconnection manager
 //TODO add support for different parent directory names
 var FileContainer = (function (_super) {
     __extends(FileContainer, _super);
@@ -110,6 +111,7 @@ var FileContainer = (function (_super) {
     FileContainer.prototype.deleteFile = function (fileName) {
         var _this = this;
         this.blockedFiles[fileName] = true;
+        logger.info("deleting: " + fileName);
         rimraf(this.createAbsolutePath(fileName), function (error) {
             if (error)
                 return console.error(error);
@@ -175,7 +177,7 @@ var FileContainer = (function (_super) {
         createdDirectory: 'createdDirectory',
         metaComputed: 'metaComputed'
     };
-    FileContainer.watchTimeout = 10;
+    FileContainer.watchTimeout = 50;
     FileContainer.directoryHashConstant = 'directory';
     return FileContainer;
 }(events.EventEmitter));

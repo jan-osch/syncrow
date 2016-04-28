@@ -1,6 +1,12 @@
-/// <reference path="../typescript-interfaces/node.d.ts" />
+/// <reference path="../typings/main.d.ts" />
 "use strict";
 var chalk = require('chalk');
+var Logger = (function () {
+    function Logger() {
+    }
+    Logger.number = 0;
+    return Logger;
+}());
 function debug(content) {
     console.log(chalk.grey(content));
 }
@@ -11,4 +17,4 @@ module.exports = {
     debug: debug,
     info: info
 };
-//# sourceMappingURL=utils.js.map
+//# sourceMappingURL=logger.js.map
