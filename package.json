@@ -24,6 +24,7 @@
     "rimraf": "^2.5.2",
     "socket.io": "^1.4.5",
     "socket.io-client": "latest",
-    "socket.io-stream": "^0.9.0"
+    "socket.io-stream": "^0.9.0",
+    "upath": "^0.1.7"
   }
 }

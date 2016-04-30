@@ -14,6 +14,7 @@ var readTree = require('./read_tree');
 var rimraf = require('rimraf');
 var mkdirp = require('mkdirp');
 var logger = require('./logger');
+var PathHelper = require('./helpers/path_helper');
 // TODO add conflict resolving
 // TOTO add reconnection manager
 //TODO add support for different parent directory names
@@ -38,7 +39,11 @@ var FileContainer = (function (_super) {
         return Object.keys(this.watchedFiles);
     };
     FileContainer.prototype.getFileTree = function (callback) {
-        readTree(this.directoryToWatch, {}, callback);
+        readTree(this.directoryToWatch, {}, function (err, results) {
+            if (err)
+                return callback(err);
+            callback(null, results.map(PathHelper.normalizePath));
+        });
     };
     FileContainer.prototype.recomputeMetaDataForDirectory = function () {
         var that = this;

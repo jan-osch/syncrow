@@ -11,6 +11,7 @@ import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
 import logger =require('./logger');
+import PathHelper = require('./helpers/path_helper');
 
 // TODO add conflict resolving
 // TOTO add reconnection manager
@@ -51,8 +52,12 @@ class FileContainer extends events.EventEmitter {
         return Object.keys(this.watchedFiles);
     }
 
-    private getFileTree(callback:(err, files:Array<string>)=>void) {
-        readTree(this.directoryToWatch, {}, callback);
+    private getFileTree(callback:(err, files?:Array<string>)=>void) {
+        readTree(this.directoryToWatch, {}, (err, results:Array<string>)=> {
+            if (err) return callback(err);
+
+            callback(null, results.map(PathHelper.normalizePath))
+        });
     }
 
     public recomputeMetaDataForDirectory() {
@@ -70,10 +75,13 @@ class FileContainer extends events.EventEmitter {
         var that = this;
         async.parallel([(parallelCallback)=> {
             that.computeHashForFileOrReturnConstantValueForDirectory(fileName, parallelCallback);
+
         }, (parallelCallback)=> {
             that.getModifiedDateForFile(fileName, parallelCallback);
+
         }], (err:Error)=> {
             if (err) return console.error(err);
+
             that.emit(FileContainer.events.metaComputed, this.getMetaDataForFile(fileName));
         });
     }
@@ -81,6 +89,7 @@ class FileContainer extends events.EventEmitter {
     private computeHashForFile(fileName:string, callback:(err?)=>void) {
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
+
         hash.on('finish', ()=> {
             this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString('hex'));
             callback();
