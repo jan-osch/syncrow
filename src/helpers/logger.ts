@@ -2,6 +2,9 @@
 
 import chalk = require('chalk');
 
+//TODO add support for local verbose level
+//TODO add support for global verbose level
+
 class Logger {
     static level = 0;
     private context:string;
