@@ -1,13 +1,14 @@
-
 /// <reference path="../../typings/main.d.ts" />
-
 
 import program = require('commander');
 import net = require('net');
 import fs = require('fs');
 import SocketMessenger = require("../socket_messenger");
 import Client = require("../client");
-import logger = require('../logger');
+import Logger = require('../helpers/logger');
+import ConnectionHelper = require("../helpers/connection_helper");
+
+let logger = Logger.getNewLogger('CLI');
 
 program.version('0.0.1')
     .option('-h, --host <host>', 'host for connection', '0.0.0.0')
@@ -22,20 +23,9 @@ logger.debug(`port: ${program.port}`);
 logger.debug(`server: ${program.server}`);
 logger.debug(`directory: ${program.directory}`);
 
-if (program.server) {
-    net.createServer((socket)=> {
-        logger.info('connected');
-        let socketMessenger = new SocketMessenger(null, null, socket);
-        new Client(program.directory, socketMessenger);
-
-    }).listen({port: program.port}, ()=> {
-        logger.info(`server listening on port: ${program.port}`)
-    });
-
-} else {
-    let socketMessenger = new SocketMessenger(program.host, program.port);
-    new Client(program.directory, socketMessenger);
-}
-
-
 //TODO add verbose support
+
+let connectionHelper = new ConnectionHelper(program.port, program.host, program.server);
+let socketMessenger = new SocketMessenger(connectionHelper);
+new Client(program.directory, socketMessenger);
+

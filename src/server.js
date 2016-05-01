@@ -36,4 +36,4 @@ var Server = (function (_super) {
     return Server;
 }(Client));
 module.exports = Server;
-//# sourceMappingURL=server.js.map
+//# sourceMappingURL=isServer.js.map

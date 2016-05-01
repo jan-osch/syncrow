@@ -10,12 +10,11 @@ import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
-import logger =require('./logger');
+import logger =require('./helpers/logger');
 import PathHelper = require('./helpers/path_helper');
 
 // TODO add conflict resolving
 // TOTO add reconnection manager
-//TODO add support for different parent directory names
 class FileContainer extends events.EventEmitter {
     static events = {
         changed: 'changed',
@@ -128,7 +127,7 @@ class FileContainer extends events.EventEmitter {
     }
 
     private createAbsolutePath(file):string {
-        return path.join(this.directoryToWatch, file);
+        return PathHelper.normalizePath(path.join(this.directoryToWatch, file));
     }
 
     private getMetaDataForFile(fileName:string):{hashCode:string, modified:Date, name:string} {
@@ -176,9 +175,9 @@ class FileContainer extends events.EventEmitter {
     private beginWatching() {
         var that = this;
         fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-            if (event === 'rename') return that.checkRenameEventMeaning(fileName);
+            if (event === 'rename') return that.checkRenameEventMeaning(PathHelper.normalizePath(fileName));
 
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, PathHelper.normalizePath(fileName));
         });
     }
 

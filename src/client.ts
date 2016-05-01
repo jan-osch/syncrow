@@ -4,12 +4,13 @@ import fs = require('fs');
 import net = require('net');
 import SocketMessenger= require('./socket_messenger');
 import FileContainer = require("./file_container");
-import logger = require('./logger');
+import Logger = require('./helpers/logger');
+
+let logger = Logger.getNewLogger('Client');
 
 //TODO add support syncing after reestablishing connection
 //TODO add support for deleting offline
 //TODO Strategies for offline loading
-//TODO add support for cross platform directories
 
 class Client {
     socketMessenger:SocketMessenger;
@@ -41,7 +42,7 @@ class Client {
         [FileContainer.events.changed, FileContainer.events.deleted, FileContainer.events.created, FileContainer.events.createdDirectory]
             .forEach((eventName)=> {
                 fileContainer.on(eventName, (eventContent:any)=> {
-                    logger.debug(`got event: ${eventName}`); //debug
+                    //logger.debug(`got event: ${eventName}`); //debug
                     Client.writeEventToSocketMessenger(that.socketMessenger, eventName, eventContent);
                 });
             });
@@ -62,6 +63,7 @@ class Client {
             logger.info('connected with other party beginning to sync');
             this.syncAfterConnectionReestablished();
         });
+        socketMessenger.on(SocketMessenger.events.disconnected, ()=>logger.info('disconnected, waiting for reconnection'));
         return socketMessenger;
     }
 
@@ -70,12 +72,15 @@ class Client {
         Client.writeEventToSocketMessenger(this.socketMessenger, Client.events.getMeta);
     }
 
-    private addSyncMetaDataFromOtherParty(syncData:{hashCode:string, modified:Date, name:string}) {
+    private addSyncMetaDataFromOtherParty(syncData:{hashCode:string, modified:Date, name:string}):void {
         if (this.filesToSync[syncData.name]) {
             this.compareSyncMetaData(this.filesToSync[syncData.name], syncData);
-            return delete this.filesToSync[syncData.name];
+            delete this.filesToSync[syncData.name];
+            return;
+
         } else if (syncData.hashCode === FileContainer.directoryHashConstant && !this.fileContainer.isFileInContainer(syncData.name)) {
             return this.fileContainer.createDirectory(syncData.name);
+
         } else if (!this.fileContainer.isFileInContainer(syncData.name)) {
             return this.sendGetFileEvent(syncData.name);
         }
@@ -108,7 +113,7 @@ class Client {
     }
 
     routeEvent(socket:SocketMessenger, message:string) {
-        let event = this.parseEvent(socket, message);
+        let event = Client.parseEvent(socket, message);
         if (!event) return;
 
         if (this.eventActionMap[event['type']]) {
@@ -118,7 +123,7 @@ class Client {
         Client.writeEventToSocketMessenger(socket, Client.events.error, `unknown event type: ${event.type}`);
     }
 
-    parseEvent(socket:SocketMessenger, message:string):{type:string, body?:any} {
+    static parseEvent(socket:SocketMessenger, message:string):{type:string, body?:any} {
         try {
             return JSON.parse(message.toString());
         } catch (e) {
@@ -135,7 +140,7 @@ class Client {
     }
 
     static writeEventToSocketMessenger(socket:SocketMessenger, type:string, message?:any) {
-        logger.debug(`writing to socket event: ${type} with body: ${JSON.stringify(message)}`);
+        //logger.debug(`writing to socket event: ${type} with body: ${JSON.stringify(message)}`);
         socket.writeData(Client.createEvent(type, message));
     }
 
@@ -143,8 +148,11 @@ class Client {
         let fileTransferServer = net.createServer((fileTransferSocket)=> {
             this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(()=> {
-            let address =fileTransferServer.address();
-            address.host = this.socketMessenger.getOwnHost();
+            let address = {
+                port: fileTransferServer.address().port,
+                host: this.socketMessenger.getOwnHost()
+            };
+
             Client.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
                 file: file,
                 address: address
@@ -160,41 +168,41 @@ class Client {
 
     private addClientEvents() {
         this.addEventToKnownMap(Client.events.getFile, (socket, event)=> {
-            logger.debug(`received a getFile: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received a getFile: ${JSON.stringify(event.body)}`);
             this.sendFileToSocket(socket, event.body)
         });
         this.addEventToKnownMap(Client.events.metaData, (socket, event)=> {
-            logger.debug(`received metaData: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received metaData: ${JSON.stringify(event.body)}`);
             this.addSyncMetaDataFromOtherParty(event.body);
         });
         this.addEventToKnownMap(Client.events.getMeta, (socket, event)=> {
-            logger.debug(`received getMeta: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received getMeta: ${JSON.stringify(event.body)}`);
             this.fileContainer.recomputeMetaDataForDirectory();
         });
         this.addEventToKnownMap(Client.events.fileSocket, (socket, event)=> {
-            logger.debug(`received fileSocket: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received fileSocket: ${JSON.stringify(event.body)}`);
             this.consumeFileFromNewSocket(event.body.file, event.body.address);
         });
         this.addEventToKnownMap(Client.events.error, (socket, event)=> {
-            logger.debug(`received error message ${JSON.stringify(event.body)}`)
+            //logger.debug(`received error message ${JSON.stringify(event.body)}`)
         });
     }
 
     private addFileContainerEvents() {
         this.addEventToKnownMap(FileContainer.events.created, (socket, event)=> {
-            logger.debug(`received create event: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received create event: ${JSON.stringify(event.body)}`);
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.createdDirectory, (socket, event)=> {
-            logger.debug(`received create event: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received create event: ${JSON.stringify(event.body)}`);
             this.fileContainer.createDirectory(event.body);
         });
         this.addEventToKnownMap(FileContainer.events.changed, (socket, event)=> {
-            logger.debug(`received changed event: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received changed event: ${JSON.stringify(event.body)}`);
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.deleted, (socket, event)=> {
-            logger.debug(`received a delete event: ${JSON.stringify(event.body)}`);
+            //logger.debug(`received a delete event: ${JSON.stringify(event.body)}`);
             this.fileContainer.deleteFile(event.body);
         });
     }
@@ -202,11 +210,13 @@ class Client {
     consumeFileFromNewSocket(fileName:string, address) {
         let fileTransferClient = net.connect(address, ()=> {
             logger.info(`created new transfer socket, file: ${fileName}`);
-            console.time(fileName+ ' transfer');
+            console.time(fileName + ' transfer');
+
             fileTransferClient.on('end', ()=> {
                 logger.info(`finished file transfer, file: ${fileName}`);
-                console.timeEnd(fileName+ ' transfer');
+                console.timeEnd(fileName + ' transfer');
             });
+
             this.fileContainer.consumeFileStream(fileName, fileTransferClient);
         })
     }

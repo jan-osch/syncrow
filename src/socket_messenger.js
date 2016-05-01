@@ -5,26 +5,36 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var net = require('net');
 var events = require('events');
-var logger = require('./logger');
-//TODO add support for disconnection
+var Logger = require('./helpers/logger');
+var ConnectionHelper = require("./helpers/connection_helper");
+var logger = Logger.getNewLogger('SocketMessenger');
 var SocketMessenger = (function (_super) {
     __extends(SocketMessenger, _super);
-    function SocketMessenger(host, port, socket) {
+    function SocketMessenger(connectionHelper) {
         _super.call(this);
         this.separator = ':';
         this.resetBuffers();
-        if (socket) {
-            this.socket = socket;
-            this.addListenersToSocket(this.socket);
-        }
-        else {
-            this.socket = null;
-            this.connect(host, port);
-        }
+        this.connected = false;
+        this.socket = null;
+        this.connectionHelper = connectionHelper;
+        this.obtainNewSocket();
     }
+    SocketMessenger.prototype.obtainNewSocket = function () {
+        var _this = this;
+        this.connectionHelper.once(ConnectionHelper.events.socket, function (socket) {
+            logger.debug('/obtainNewSocket- adding new socket');
+            _this.socket = socket;
+            _this.connected = true;
+            _this.addListenersToSocket(_this.socket);
+        });
+        logger.debug('/obtainNewSocket- requesting new socket');
+        this.connectionHelper.getSocket();
+    };
     SocketMessenger.prototype.writeData = function (data) {
+        if (!this.connected) {
+            return logger.warn('/writeData - socket connection is closed will not write data');
+        }
         var message = "" + data.length + this.separator + data;
         this.socket.write(message);
     };
@@ -34,19 +44,16 @@ var SocketMessenger = (function (_super) {
     };
     SocketMessenger.prototype.addListenersToSocket = function (socket) {
         var _this = this;
+        logger.debug('/addListenersToSocket - adding listeners to new socket');
         socket.on('data', function (data) { return _this.parseData(data); });
-        socket.on('close', function () {
-            logger.info('socket connection disconnected');
-            _this.emit(SocketMessenger.events.disconnected);
-        });
+        socket.on('close', function () { return _this.handleSocketDisconnected(); });
         this.emit(SocketMessenger.events.connected);
     };
-    SocketMessenger.prototype.connect = function (host, port) {
-        var _this = this;
-        this.socket = net.connect(port, host, function () {
-            logger.info("connected with " + host + ":" + port);
-            _this.addListenersToSocket(_this.socket);
-        });
+    SocketMessenger.prototype.handleSocketDisconnected = function () {
+        logger.debug('socket connection closed');
+        this.connected = false;
+        this.obtainNewSocket();
+        this.emit(SocketMessenger.events.disconnected);
     };
     SocketMessenger.prototype.parseData = function (data) {
         this.messageBuffer += data.toString();
@@ -64,7 +71,7 @@ var SocketMessenger = (function (_super) {
     };
     SocketMessenger.prototype.checkIfMessageIsComplete = function () {
         if (this.expectedLength && this.messageBuffer.length >= this.expectedLength) {
-            this.emit(SocketMessenger.messageEvent, this.messageBuffer.slice(0, this.expectedLength));
+            this.emit(SocketMessenger.events.message, this.messageBuffer.slice(0, this.expectedLength));
             this.restartParsingMessage(this.messageBuffer.slice(this.expectedLength));
         }
     };
@@ -82,7 +89,6 @@ var SocketMessenger = (function (_super) {
         connected: 'connected',
         disconnected: 'disconnected'
     };
-    SocketMessenger.messageEvent = 'message';
     return SocketMessenger;
 }(events.EventEmitter));
 module.exports = SocketMessenger;

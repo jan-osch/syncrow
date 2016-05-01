@@ -13,11 +13,10 @@ var path = require('path');
 var readTree = require('./read_tree');
 var rimraf = require('rimraf');
 var mkdirp = require('mkdirp');
-var logger = require('./logger');
+var logger = require('./helpers/logger');
 var PathHelper = require('./helpers/path_helper');
 // TODO add conflict resolving
 // TOTO add reconnection manager
-//TODO add support for different parent directory names
 var FileContainer = (function (_super) {
     __extends(FileContainer, _super);
     function FileContainer(directoryToWatch) {
@@ -104,7 +103,7 @@ var FileContainer = (function (_super) {
         this.watchedFiles[fileName][key] = value;
     };
     FileContainer.prototype.createAbsolutePath = function (file) {
-        return path.join(this.directoryToWatch, file);
+        return PathHelper.normalizePath(path.join(this.directoryToWatch, file));
     };
     FileContainer.prototype.getMetaDataForFile = function (fileName) {
         return {
@@ -148,8 +147,8 @@ var FileContainer = (function (_super) {
         var that = this;
         fs.watch(this.directoryToWatch, { recursive: true }).on('change', function (event, fileName) {
             if (event === 'rename')
-                return that.checkRenameEventMeaning(fileName);
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
+                return that.checkRenameEventMeaning(PathHelper.normalizePath(fileName));
+            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, PathHelper.normalizePath(fileName));
         });
     };
     FileContainer.prototype.checkRenameEventMeaning = function (fileName) {

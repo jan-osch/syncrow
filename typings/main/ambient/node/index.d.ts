@@ -660,7 +660,7 @@ declare module "http" {
          * Destroy any sockets that are currently in use by the agent.
          * It is usually not necessary to do this. However, if you are using an agent with KeepAlive enabled,
          * then it is best to explicitly shut down the agent when you know that it will no longer be used. Otherwise,
-         * sockets may hang open for quite a long time before the server terminates them.
+         * sockets may hang open for quite a long time before the isServer terminates them.
          */
         destroy():void;
     }
@@ -740,7 +740,7 @@ declare module "cluster" {
     export function on(event:"fork", listener:(worker:Worker) => void):void;
     export function on(event:"listening", listener:(worker:Worker, address:any) => void):void;
     export function on(event:"message", listener:(worker:Worker, message:any) => void):void;
-    export function on(event:"online", listener:(worker:Worker) => void):void;
+    export function on(event:"connected", listener:(worker:Worker) => void):void;
     export function on(event:"setup", listener:(settings:any) => void):void;
     export function on(event:string, listener:Function):any;
 
@@ -1736,7 +1736,7 @@ declare module "fs" {
     export function unwatchFile(filename:string, listener?:(curr:Stats, prev:Stats) => void):void;
 
     export function watch(filename:string, listener?:(event:string, filename:string) => any):FSWatcher;
-    export function watch(filename:string, options:{ persistent?:boolean; }, listener?:(event:string, filename:string) => any):FSWatcher;
+    export function watch(filename:string, options:{ persistent?:boolean; recursive?:boolean;}, listener?:(event:string, filename:string) => any):FSWatcher;
 
     export function exists(path:string, callback?:(exists:boolean) => void):void;
 

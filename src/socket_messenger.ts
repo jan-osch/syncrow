@@ -2,36 +2,56 @@
 
 import net = require('net');
 import events = require('events');
-import logger = require('./logger');
+import Logger = require('./helpers/logger');
+import ConnectionHelper = require("./helpers/connection_helper");
+import {Socket} from "net";
 
-//TODO add support for disconnection
+let logger = Logger.getNewLogger('SocketMessenger');
+
+
 class SocketMessenger extends events.EventEmitter {
     socket:net.Socket;
+    connectionHelper:ConnectionHelper;
     messageBuffer:string;
     expectedLength:number;
     separator = ':';
+    connected:boolean;
+
     static events = {
         message: 'message',
         connected: 'connected',
         disconnected: 'disconnected'
     };
-    static messageEvent = 'message';
 
-    constructor(host:string, port:number, socket?:net.Socket) {
+    constructor(connectionHelper:ConnectionHelper) {
         super();
         this.resetBuffers();
-        if (socket) {
+        this.connected = false;
+        this.socket = null;
+        this.connectionHelper = connectionHelper;
+
+        this.obtainNewSocket();
+    }
+
+    obtainNewSocket() {
+        this.connectionHelper.once(ConnectionHelper.events.socket, (socket)=> {
+            logger.debug('/obtainNewSocket- adding new socket');
             this.socket = socket;
-            this.addListenersToSocket(this.socket)
-        } else {
-            this.socket = null;
-            this.connect(host, port);
-        }
+            this.connected = true;
+            this.addListenersToSocket(this.socket);
+        });
+
+        logger.debug('/obtainNewSocket- requesting new socket');
+        this.connectionHelper.getSocket();
     }
 
     public writeData(data:string) {
+        if (!this.connected) {
+            return logger.warn('/writeData - socket connection is closed will not write data')
+        }
         var message = `${data.length}${this.separator}${data}`;
         this.socket.write(message);
+
     }
 
     private resetBuffers() {
@@ -39,20 +59,19 @@ class SocketMessenger extends events.EventEmitter {
         this.expectedLength = null;
     }
 
-    private addListenersToSocket(socket:net.Socket) {
+    private addListenersToSocket(socket:Socket) {
+        logger.debug('/addListenersToSocket - adding listeners to new socket');
         socket.on('data', (data)=>this.parseData(data));
-        socket.on('close', ()=> {
-            logger.info('socket connection disconnected');
-            this.emit(SocketMessenger.events.disconnected);
-        });
+        socket.on('close', ()=> this.handleSocketDisconnected());
+
         this.emit(SocketMessenger.events.connected);
     }
 
-    private connect(host:string, port:number) {
-        this.socket = net.connect(port, host, ()=> {
-            logger.info(`connected with ${host}:${port}`);
-            this.addListenersToSocket(this.socket);
-        })
+    handleSocketDisconnected() {
+        logger.debug('socket connection closed');
+        this.connected = false;
+        this.obtainNewSocket();
+        this.emit(SocketMessenger.events.disconnected);
     }
 
     private parseData(data:Buffer) {
@@ -73,7 +92,7 @@ class SocketMessenger extends events.EventEmitter {
 
     private checkIfMessageIsComplete() {
         if (this.expectedLength && this.messageBuffer.length >= this.expectedLength) {
-            this.emit(SocketMessenger.messageEvent, this.messageBuffer.slice(0, this.expectedLength));
+            this.emit(SocketMessenger.events.message, this.messageBuffer.slice(0, this.expectedLength));
             this.restartParsingMessage(this.messageBuffer.slice(this.expectedLength));
         }
     }
@@ -84,8 +103,8 @@ class SocketMessenger extends events.EventEmitter {
         this.checkIfExpectedLengthArrived();
         this.checkIfMessageIsComplete();
     }
-    
-    public getOwnHost():string{
+
+    public getOwnHost():string {
         return this.socket.address().address;
     }
 }
