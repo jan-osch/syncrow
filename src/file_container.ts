@@ -10,8 +10,10 @@ import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
-import logger =require('./helpers/logger');
+import Logger  = require('./helpers/logger');
 import PathHelper = require('./helpers/path_helper');
+
+let logger = new Logger('FileContainer');
 
 // TODO add conflict resolving
 // TOTO add reconnection manager
@@ -111,7 +113,7 @@ class FileContainer extends events.EventEmitter {
 
     private getModifiedDateForFile(fileName:string, callback:(err?:Error)=>void) {
         fs.stat(this.createAbsolutePath(fileName), (error:Error, stats:fs.Stats)=> {
-                if (error)return callback(error);
+                if (error) return callback(error);
 
                 this.saveWatchedFileProperty(fileName, 'modifiedDate', stats.mtime);
                 callback();
@@ -140,7 +142,8 @@ class FileContainer extends events.EventEmitter {
 
     public deleteFile(fileName:string) {
         this.blockedFiles[fileName] = true;
-        logger.info(`deleting: ${fileName}`);
+        logger.info(`/deleteFile - deleting: ${fileName}`);
+
         rimraf(this.createAbsolutePath(fileName), (error)=> {
             if (error) return console.error(error);
             setTimeout(()=> {
@@ -150,25 +153,34 @@ class FileContainer extends events.EventEmitter {
     }
 
     public consumeFileStream(fileName:string, readStream:ReadableStream) {
-        var that = this;
-        that.blockedFiles[fileName] = true;
+        try {
+            var that = this;
+            that.blockedFiles[fileName] = true;
 
-        var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', ()=> {
-            setTimeout(()=> {
-                delete that.blockedFiles[fileName];
-            }, FileContainer.watchTimeout);
-        });
+            var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', ()=> {
+                setTimeout(()=> {
+                    delete that.blockedFiles[fileName];
+                }, FileContainer.watchTimeout);
+            });
 
-        readStream.pipe(writeStream);
+            readStream.pipe(writeStream);
+
+        } catch (error) {
+            logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
+        }
     }
 
     public getReadStreamForFile(fileName:string):ReadableStream {
-        return fs.createReadStream(this.createAbsolutePath(fileName));
+        try {
+            return fs.createReadStream(this.createAbsolutePath(fileName));
+        } catch (error) {
+            logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+        }
     }
 
     public createDirectory(fileName:string) {
-        return mkdirp(this.createAbsolutePath(fileName), (err)=> {
-            if (err) return console.error(err);
+        return mkdirp(this.createAbsolutePath(fileName), (error)=> {
+            if (error) return logger.warn(`/createDirectory - could not create directory, reason: ${error}`);
         })
     }
 
@@ -184,13 +196,13 @@ class FileContainer extends events.EventEmitter {
     private checkRenameEventMeaning(fileName:string) {
         var that = this;
 
-        fs.stat(that.createAbsolutePath(fileName), (err, stats:Stats)=> {
-            if (err && that.watchedFiles[fileName]) {
+        fs.stat(that.createAbsolutePath(fileName), (error, stats:Stats)=> {
+            if (error && that.watchedFiles[fileName]) {
                 delete that.watchedFiles[fileName];
                 return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
 
-            } else if (err) {
-                return console.error('removed unwatched file');
+            } else if (error) {
+                return logger.warn(`/checkRenameEventMeaning - deleted a non-tracked file, filename: ${fileName} reason: ${error}`);
 
             } else if (!that.watchedFiles[fileName] && stats.isDirectory()) {
                 that.watchedFiles[fileName] = {};
