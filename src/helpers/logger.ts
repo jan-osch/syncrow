@@ -25,8 +25,28 @@ class Logger {
         this.logInColor(message, 'yellow');
     }
 
+    timeDebug(message:string) {
+        console.time(this.getFormattedMessageInColor('blue', message));
+    }
+
+    timeEndDebug(message:string) {
+        console.timeEnd(this.getFormattedMessageInColor('blue', message));
+    }
+    
+    time(message:string) {
+        console.time(this.getFormattedMessageInColor('blue', message));
+    }
+
+    timeEnd(message:string) {
+        console.timeEnd(this.getFormattedMessageInColor('blue', message));
+    }
+
     private logInColor(message:string, color:string) {
-        console.log(chalk[color](this.formatMessage(message)));
+        console.log(this.getFormattedMessageInColor(color, message));
+    }
+
+    private getFormattedMessageInColor(color:string, message:string) {
+        return chalk[color](this.formatMessage(message));
     }
 
     private formatMessage(message:string) {
