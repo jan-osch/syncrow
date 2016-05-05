@@ -131,8 +131,7 @@ class Client {
         }
     }
 
-    static createEvent(type:string, body?:any):string {
-        body = body || {};
+    static createEvent(type:string, body = {}):string {
         return JSON.stringify({
             type: type,
             body: body

@@ -52,9 +52,9 @@ class ConnectionHelper extends EventEmitter {
         let socket = net.connect(this.port, this.host, ()=> {
             logger.info(`/getNewSocketAsClient - connected with ${this.host}:${this.port}`);
             this.emit(ConnectionHelper.events.socket, socket);
-        }).on(ConnectionHelper.events.error, (error)=> {
+        }).once(ConnectionHelper.events.error, (error)=> {
             logger.debug(`/getNewSocketAsClient - not connected, reason: ${error}`);
-            logger.info(`/getNewSocketAsClient - could not connect - next connection attempt in ${ConnectionHelper.reconnectionInterval} miliseconds`);
+            logger.info(`/getNewSocketAsClient - could not connect - next connection attempt in ${ConnectionHelper.reconnectionInterval} milliseconds`);
             setTimeout(()=>this.getNewSocketAsClient(), ConnectionHelper.reconnectionInterval);
         })
     }
