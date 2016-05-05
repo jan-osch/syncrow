@@ -5,7 +5,7 @@ import events = require('events');
 import async = require('async');
 import crypto = require('crypto');
 import path = require('path');
-import readTree = require('./read_tree');
+import readTree = require('./helpers/read_tree');
 import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
@@ -13,7 +13,7 @@ import {Stats} from "fs";
 import Logger  = require('./helpers/logger');
 import PathHelper = require('./helpers/path_helper');
 
-let logger = new Logger('FileContainer');
+let logger = Logger.getNewLogger('FileContainer');
 
 // TODO add conflict resolving
 // TOTO add reconnection manager
@@ -31,6 +31,7 @@ class FileContainer extends events.EventEmitter {
     static watchTimeout = 50;
 
     static directoryHashConstant = 'directory';
+    processedFilesLimit = 50;
 
     constructor(directoryToWatch:string) {
         super();
@@ -64,7 +65,7 @@ class FileContainer extends events.EventEmitter {
     public recomputeMetaDataForDirectory() {
         var that = this;
         this.getFileTree((err, files)=> {
-            files.forEach(that.computeFileMetaDataAndEmit, that);
+            async.eachLimit(files, that.processedFilesLimit, (file:string, callback)=>that.computeFileMetaDataAndEmit(file, callback))
         })
     }
 
@@ -72,7 +73,7 @@ class FileContainer extends events.EventEmitter {
         return this.watchedFiles[file] !== undefined;
     }
 
-    private computeFileMetaDataAndEmit(fileName:string) {
+    private computeFileMetaDataAndEmit(fileName:string, callback:(err?)=>void) {
         var that = this;
         async.parallel([(parallelCallback)=> {
             that.computeHashForFileOrReturnConstantValueForDirectory(fileName, parallelCallback);
@@ -81,17 +82,20 @@ class FileContainer extends events.EventEmitter {
             that.getModifiedDateForFile(fileName, parallelCallback);
 
         }], (err:Error)=> {
-            if (err) return console.error(err);
+            if (err) return logger.warn(`computeFileMetaDataAndEmit - got error: ${err}`);
 
             that.emit(FileContainer.events.metaComputed, this.getMetaDataForFile(fileName));
+            callback();
         });
     }
 
     private computeHashForFile(fileName:string, callback:(err?)=>void) {
+        logger.timeDebug(`computing hash for file ${fileName}`);
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
 
         hash.on('finish', ()=> {
+            logger.timeEndDebug(`computing hash for file ${fileName}`);
             this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString('hex'));
             callback();
         });

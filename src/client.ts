@@ -5,6 +5,7 @@ import net = require('net');
 import SocketMessenger= require('./socket_messenger');
 import FileContainer = require("./file_container");
 import Logger = require('./helpers/logger');
+import {LimitedAsyncQueue} from "./helpers/limited_async_queue";
 
 let logger = Logger.getNewLogger('Client');
 
@@ -17,6 +18,7 @@ class Client {
     fileContainer:FileContainer;
     eventActionMap:Object;
     filesToSync:Object;
+    socketsQueue:LimitedAsyncQueue;
 
     static events = {
         error: 'error',
@@ -27,9 +29,10 @@ class Client {
         createDirectory: 'createDirectory'
     };
 
-    constructor(directoryToWatch:string, socketMessenger:SocketMessenger) {
+    constructor(directoryToWatch:string, socketMessenger:SocketMessenger, socketsLimit = 30) {
         this.filesToSync = {};
         this.eventActionMap = {};
+        this.socketsQueue = new LimitedAsyncQueue(socketsLimit);
         this.fileContainer = this.createDirectoryWatcher(directoryToWatch);
         this.createMapOfKnownEvents();
         this.socketMessenger = this.addSocketMessenger(socketMessenger);
@@ -42,7 +45,7 @@ class Client {
         [FileContainer.events.changed, FileContainer.events.deleted, FileContainer.events.created, FileContainer.events.createdDirectory]
             .forEach((eventName)=> {
                 fileContainer.on(eventName, (eventContent:any)=> {
-                    //logger.debug(`got event: ${eventName}`); //debug
+                    logger.debug(`got event: ${eventName}`);
                     Client.writeEventToSocketMessenger(that.socketMessenger, eventName, eventContent);
                 });
             });
@@ -143,8 +146,13 @@ class Client {
         socket.writeData(Client.createEvent(type, message));
     }
 
-    sendFileToSocket(socket:SocketMessenger, file:string) {
+    sendFileWhenSocketIsAvailable(socket:SocketMessenger, file:string) {
+        this.socketsQueue.add((callback)=>this.sendFileToSocket(socket, file, callback))
+    }
+
+    sendFileToSocket(socket:SocketMessenger, file:string, callback) {
         let fileTransferServer = net.createServer((fileTransferSocket)=> {
+            fileTransferSocket.on('end', ()=>callback());
             this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
         }).listen(()=> {
             let address = {
@@ -167,52 +175,52 @@ class Client {
 
     private addClientEvents() {
         this.addEventToKnownMap(Client.events.getFile, (socket, event)=> {
-            //logger.debug(`received a getFile: ${JSON.stringify(event.body)}`);
-            this.sendFileToSocket(socket, event.body)
+            logger.debug(`received a getFile: ${JSON.stringify(event.body)}`);
+            this.sendFileWhenSocketIsAvailable(socket, event.body);
         });
         this.addEventToKnownMap(Client.events.metaData, (socket, event)=> {
-            //logger.debug(`received metaData: ${JSON.stringify(event.body)}`);
+            logger.debug(`received metaData: ${JSON.stringify(event.body)}`);
             this.addSyncMetaDataFromOtherParty(event.body);
         });
         this.addEventToKnownMap(Client.events.getMeta, (socket, event)=> {
-            //logger.debug(`received getMeta: ${JSON.stringify(event.body)}`);
+            logger.debug(`received getMeta: ${JSON.stringify(event.body)}`);
             this.fileContainer.recomputeMetaDataForDirectory();
         });
         this.addEventToKnownMap(Client.events.fileSocket, (socket, event)=> {
-            //logger.debug(`received fileSocket: ${JSON.stringify(event.body)}`);
+            logger.debug(`received fileSocket: ${JSON.stringify(event.body)}`);
             this.consumeFileFromNewSocket(event.body.file, event.body.address);
         });
         this.addEventToKnownMap(Client.events.error, (socket, event)=> {
-            //logger.debug(`received error message ${JSON.stringify(event.body)}`)
+            logger.debug(`received error message ${JSON.stringify(event.body)}`)
         });
     }
 
     private addFileContainerEvents() {
         this.addEventToKnownMap(FileContainer.events.created, (socket, event)=> {
-            //logger.debug(`received create event: ${JSON.stringify(event.body)}`);
+            logger.debug(`received create event: ${JSON.stringify(event.body)}`);
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.createdDirectory, (socket, event)=> {
-            //logger.debug(`received create event: ${JSON.stringify(event.body)}`);
+            logger.debug(`received create event: ${JSON.stringify(event.body)}`);
             this.fileContainer.createDirectory(event.body);
         });
         this.addEventToKnownMap(FileContainer.events.changed, (socket, event)=> {
-            //logger.debug(`received changed event: ${JSON.stringify(event.body)}`);
+            logger.debug(`received changed event: ${JSON.stringify(event.body)}`);
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.deleted, (socket, event)=> {
-            //logger.debug(`received a delete event: ${JSON.stringify(event.body)}`);
+            logger.debug(`received a delete event: ${JSON.stringify(event.body)}`);
             this.fileContainer.deleteFile(event.body);
         });
     }
 
     consumeFileFromNewSocket(fileName:string, address) {
         let fileTransferClient = net.connect(address, ()=> {
-            logger.info(`created new transfer socket, file: ${fileName}`);
+            logger.info(`/consumeFileFromNewSocket - connected with a new transfer socket, file: ${fileName}`);
             console.time(fileName + ' transfer');
 
             fileTransferClient.on('end', ()=> {
-                logger.info(`finished file transfer, file: ${fileName}`);
+                logger.info(`consumeFileFromNewSocket - finished file transfer, file: ${fileName}`);
                 console.timeEnd(fileName + ' transfer');
             });
 
@@ -223,6 +231,7 @@ class Client {
     private addEventToKnownMap(key:string, listener:Function) {
         this.eventActionMap[key] = listener;
     }
+
 }
 
 export  = Client;
