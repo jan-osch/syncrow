@@ -12,11 +12,12 @@ import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
 import Logger  = require('./helpers/logger');
 import PathHelper = require('./helpers/path_helper');
+import Configuration = require('../config/configuration');
 
-let logger = Logger.getNewLogger('FileContainer');
+
+let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel);
 
 // TODO add conflict resolving
-// TOTO add reconnection manager
 class FileContainer extends events.EventEmitter {
     static events = {
         changed: 'changed',
@@ -27,17 +28,17 @@ class FileContainer extends events.EventEmitter {
     };
     private directoryToWatch:string;
     private watchedFiles:Object;
-    private blockedFiles:Object;
-    static watchTimeout = 50;
+    private blockedFiles:Set<string>;
 
-    static directoryHashConstant = 'directory';
-    processedFilesLimit = 50;
+    static watchTimeout = Configuration.fileContainer.watchTimeout;
+    static processedFilesLimit = Configuration.fileContainer.processedFilesLimit;
+    static directoryHashConstant = Configuration.fileContainer.directoryHashConstant;
 
     constructor(directoryToWatch:string) {
         super();
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
-        this.blockedFiles = {};
+        this.blockedFiles = new Set();
     }
 
     public getListOfTrackedFilesAndBeginWatching() {
@@ -65,7 +66,7 @@ class FileContainer extends events.EventEmitter {
     public recomputeMetaDataForDirectory() {
         var that = this;
         this.getFileTree((err, files)=> {
-            async.eachLimit(files, that.processedFilesLimit, (file:string, callback)=>that.computeFileMetaDataAndEmit(file, callback))
+            async.eachLimit(files, FileContainer.processedFilesLimit, (file:string, callback)=>that.computeFileMetaDataAndEmit(file, callback))
         })
     }
 
@@ -145,13 +146,13 @@ class FileContainer extends events.EventEmitter {
     }
 
     public deleteFile(fileName:string) {
-        this.blockedFiles[fileName] = true;
+        this.blockedFiles.add(fileName);
         logger.info(`/deleteFile - deleting: ${fileName}`);
 
         rimraf(this.createAbsolutePath(fileName), (error)=> {
             if (error) return console.error(error);
             setTimeout(()=> {
-                delete this.blockedFiles[fileName];
+                this.blockedFiles.delete(fileName);
             }, FileContainer.watchTimeout);
         });
     }
@@ -159,11 +160,11 @@ class FileContainer extends events.EventEmitter {
     public consumeFileStream(fileName:string, readStream:ReadableStream) {
         try {
             var that = this;
-            that.blockedFiles[fileName] = true;
+            that.blockedFiles.add(fileName);
 
             var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', ()=> {
                 setTimeout(()=> {
-                    delete that.blockedFiles[fileName];
+                    that.blockedFiles.delete(fileName);
                 }, FileContainer.watchTimeout);
             });
 
@@ -222,7 +223,7 @@ class FileContainer extends events.EventEmitter {
     }
 
     private emitEventIfFileNotBlocked(event:string, fullFileName:string) {
-        if (!this.blockedFiles[fullFileName]) {
+        if (!this.blockedFiles.has(fullFileName)) {
             this.emit(event, fullFileName);
         }
     }

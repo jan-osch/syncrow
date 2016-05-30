@@ -1,6 +1,5 @@
 /// <reference path="../../typings/main.d.ts" />
 
-
 export class LimitedAsyncQueue {
     private limit:number;
     private current:number;

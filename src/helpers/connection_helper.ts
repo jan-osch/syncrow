@@ -4,15 +4,16 @@ import Logger = require('./logger');
 import net = require('net');
 import {EventEmitter} from "events";
 import {Server, Socket} from "net";
+import Configuration = require('../../config/configuration');
 
-let logger = Logger.getNewLogger('ConnectionHelper');
+let logger = Logger.getNewLogger('ConnectionHelper', Configuration.connectionHelper.logLevel);
 
 class ConnectionHelper extends EventEmitter {
     port:number;
     host:string;
     isServer:boolean;
     server:Server;
-    static reconnectionInterval = 5000;
+    static reconnectionInterval = Configuration.connectionHelper.reconnectionInterval;
 
     static events = {
         socket: 'socket',

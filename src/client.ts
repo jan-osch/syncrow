@@ -6,8 +6,9 @@ import SocketMessenger= require('./socket_messenger');
 import FileContainer = require("./file_container");
 import Logger = require('./helpers/logger');
 import {LimitedAsyncQueue} from "./helpers/limited_async_queue";
+import Configuration = require('../config/configuration');
 
-let logger = Logger.getNewLogger('Client');
+let logger = Logger.getNewLogger('Client', Configuration.client.logLevel);
 
 //TODO add support syncing after reestablishing connection
 //TODO add support for deleting offline
@@ -29,7 +30,7 @@ class Client {
         createDirectory: 'createDirectory'
     };
 
-    constructor(directoryToWatch:string, socketMessenger:SocketMessenger, socketsLimit = 30) {
+    constructor(directoryToWatch:string, socketMessenger:SocketMessenger, socketsLimit = Configuration.client.socketsLimit) {
         this.filesToSync = {};
         this.eventActionMap = {};
         this.socketsQueue = new LimitedAsyncQueue(socketsLimit);
@@ -64,15 +65,10 @@ class Client {
         socketMessenger.on(SocketMessenger.events.message, (message:string)=>this.routeEvent(this.socketMessenger, message));
         socketMessenger.on(SocketMessenger.events.connected, ()=> {
             logger.info('connected with other party beginning to sync');
-            this.syncAfterConnectionReestablished();
+            this.fileContainer.recomputeMetaDataForDirectory();
         });
         socketMessenger.on(SocketMessenger.events.disconnected, ()=>logger.info('disconnected, waiting for reconnection'));
         return socketMessenger;
-    }
-
-    private syncAfterConnectionReestablished() {
-        this.fileContainer.recomputeMetaDataForDirectory();
-        Client.writeEventToSocketMessenger(this.socketMessenger, Client.events.getMeta);
     }
 
     private addSyncMetaDataFromOtherParty(syncData:{hashCode:string, modified:Date, name:string}):void {
@@ -142,18 +138,21 @@ class Client {
     }
 
     static writeEventToSocketMessenger(socket:SocketMessenger, type:string, message?:any) {
-        //logger.debug(`writing to socket event: ${type} with body: ${JSON.stringify(message)}`);
         socket.writeData(Client.createEvent(type, message));
     }
 
     sendFileWhenSocketIsAvailable(socket:SocketMessenger, file:string) {
+        logger.debug(`/sendFileWhenSocketIsAvailable - file should be send: ${file}`);
         this.socketsQueue.add((callback)=>this.sendFileToSocket(socket, file, callback))
     }
 
     sendFileToSocket(socket:SocketMessenger, file:string, callback) {
         let fileTransferServer = net.createServer((fileTransferSocket)=> {
-            fileTransferSocket.on('end', ()=>callback());
+            logger.timeDebug(`transferring file ${file}`);
+            fileTransferSocket.on('end', ()=> Client.handleFileTransferFinished(file, callback));
+
             this.fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
+
         }).listen(()=> {
             let address = {
                 port: fileTransferServer.address().port,
@@ -167,6 +166,11 @@ class Client {
         });
     }
 
+    private static handleFileTransferFinished(file:string, callback) {
+        logger.timeEndDebug(`transferring file ${file}`);
+        callback();
+    }
+
 
     createMapOfKnownEvents() {
         this.addClientEvents();
@@ -175,41 +179,41 @@ class Client {
 
     private addClientEvents() {
         this.addEventToKnownMap(Client.events.getFile, (socket, event)=> {
-            logger.debug(`received a getFile: ${JSON.stringify(event.body)}`);
+            logger.debug(`/otherClientEvents - received a getFile: ${JSON.stringify(event.body)}`);
             this.sendFileWhenSocketIsAvailable(socket, event.body);
         });
         this.addEventToKnownMap(Client.events.metaData, (socket, event)=> {
-            logger.debug(`received metaData: ${JSON.stringify(event.body)}`);
+            logger.debug(`/otherClientEvents - received metaData for file:${event.body.name}`);
             this.addSyncMetaDataFromOtherParty(event.body);
         });
         this.addEventToKnownMap(Client.events.getMeta, (socket, event)=> {
-            logger.debug(`received getMeta: ${JSON.stringify(event.body)}`);
+            logger.debug(`/otherClientEvents - received getMeta: ${JSON.stringify(event.body)}`);
             this.fileContainer.recomputeMetaDataForDirectory();
         });
         this.addEventToKnownMap(Client.events.fileSocket, (socket, event)=> {
-            logger.debug(`received fileSocket: ${JSON.stringify(event.body)}`);
+            logger.debug(`/otherClientEvents - received fileSocket: ${JSON.stringify(event.body)}`);
             this.consumeFileFromNewSocket(event.body.file, event.body.address);
         });
         this.addEventToKnownMap(Client.events.error, (socket, event)=> {
-            logger.debug(`received error message ${JSON.stringify(event.body)}`)
+            logger.debug(`/otherClientEvents - received error message ${JSON.stringify(event.body)}`)
         });
     }
 
     private addFileContainerEvents() {
         this.addEventToKnownMap(FileContainer.events.created, (socket, event)=> {
-            logger.debug(`received create event: ${JSON.stringify(event.body)}`);
+            logger.debug(`/fileContainerEvents -received create event: ${JSON.stringify(event.body)}`);
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.createdDirectory, (socket, event)=> {
-            logger.debug(`received create event: ${JSON.stringify(event.body)}`);
+            logger.debug(`/fileContainerEvents -received create event: ${JSON.stringify(event.body)}`);
             this.fileContainer.createDirectory(event.body);
         });
         this.addEventToKnownMap(FileContainer.events.changed, (socket, event)=> {
-            logger.debug(`received changed event: ${JSON.stringify(event.body)}`);
+            logger.debug(`/fileContainerEvents - received changed event: ${JSON.stringify(event.body)}`);
             Client.writeEventToSocketMessenger(socket, Client.events.getFile, event.body);
         });
         this.addEventToKnownMap(FileContainer.events.deleted, (socket, event)=> {
-            logger.debug(`received a delete event: ${JSON.stringify(event.body)}`);
+            logger.debug(`/fileContainerEvents - received a delete event: ${JSON.stringify(event.body)}`);
             this.fileContainer.deleteFile(event.body);
         });
     }

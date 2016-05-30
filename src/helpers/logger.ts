@@ -1,44 +1,50 @@
 /// <reference path="../../typings/main.d.ts" />
 
 import chalk = require('chalk');
-
-//TODO add support for local verbose level
-//TODO add support for global verbose level
+import Configuration = require('../../config/configuration');
 
 class Logger {
-    static level = 0;
+    private localLevel:number;
     private context:string;
 
-    constructor(context:string) {
+    constructor(context:string, localLevel = 10) {
         this.context = context;
+        this.localLevel = localLevel;
     }
 
     debug(message:string) {
-        this.logInColor(message, 'grey')
+        if (this.levelHigherThan(3))
+            this.logInColor(message, 'grey')
     }
 
     info(message:string) {
-        this.logInColor(message, 'green');
+        if (this.levelHigherThan(0))
+            this.logInColor(message, 'green');
     }
 
     warn(message:string) {
-        this.logInColor(message, 'yellow');
+        if (this.levelHigherThan(0))
+            this.logInColor(message, 'yellow');
     }
 
     timeDebug(message:string) {
-        console.time(this.getFormattedMessageInColor('blue', message));
+        if (this.levelHigherThan(2))
+            console.time(this.getFormattedMessageInColor('blue', message));
     }
 
     timeEndDebug(message:string) {
-        console.timeEnd(this.getFormattedMessageInColor('blue', message));
+        if (this.levelHigherThan(2))
+            console.timeEnd(this.getFormattedMessageInColor('blue', message));
     }
-    
+
     time(message:string) {
-        console.time(this.getFormattedMessageInColor('blue', message));
+        if (this.levelHigherThan(1))
+            console.time(this.getFormattedMessageInColor('blue', message));
     }
 
     timeEnd(message:string) {
-        console.timeEnd(this.getFormattedMessageInColor('blue', message));
+        if (this.levelHigherThan(1))
+            console.timeEnd(this.getFormattedMessageInColor('blue', message));
     }
 
     private logInColor(message:string, color:string) {
@@ -50,11 +56,15 @@ class Logger {
     }
 
     private formatMessage(message:string) {
-        return `${this.context} ${message}`;
+        return `[${new Date()}] ${this.context} ${message}`;
     }
 
-    public static getNewLogger(context:string):Logger {
-        return new Logger(context);
+    public static getNewLogger(context:string, level?:number):Logger {
+        return new Logger(context, level);
+    }
+
+    private levelHigherThan(level:number) {
+        return this.localLevel >= level;
     }
 }
 
