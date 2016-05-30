@@ -4,7 +4,8 @@
   "description": "Easy directory synchronization over the network",
   "main": "index.js",
   "scripts": {
-    "test": "jasmine-node tests"
+    "test": "gulp run test",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -22,9 +23,13 @@
     "commander": "^2.9.0",
     "mkdirp": "^0.5.1",
     "rimraf": "^2.5.2",
-    "socket.io": "^1.4.5",
-    "socket.io-client": "latest",
-    "socket.io-stream": "^0.9.0",
+    "tsc": "^1.20150623.0",
     "upath": "^0.1.7"
+  },
+  "devDependencies": {
+    "gulp": "latest",
+    "gulp-shell": "^0.5.2",
+    "gulp-watch": "^4.3.6",
+    "run-sequence": "^1.2.1"
   }
 }
