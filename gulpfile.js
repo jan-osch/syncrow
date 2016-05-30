@@ -7,7 +7,8 @@ const watch = require("gulp-watch");
 const paths = {
     js: ['./src/**/*.js'],
     test: './test',
-    destination: './build'
+    destination: './build',
+    watch: ['./src/**/*.ts', './test/**/*.js']
 };
 
 gulp.task('default', callback => {
@@ -31,11 +32,11 @@ gulp.task('watch', shell.task([
 ], {ignoreErrors: true, quiet:true}));
 
 gulp.task('watch-test', () => {
-    return watch(paths.js, () => {
-        run('build', 'run-test');
+    return watch(paths.watch, () => {
+        run('build', 'test');
     });
 });
 
-gulp.task('run-test', shell.task([
-    `mocha ${paths.test}`
+gulp.task('test', shell.task([
+    `mocha --recursive ${paths.test}`
 ]));

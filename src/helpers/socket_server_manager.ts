@@ -18,7 +18,7 @@ class SocketServerManager {
         net.createServer((socket:Socket)=> {
             socket.once('close', callback());
             callerCallback(socket);
-        });
+        }).listen();
     };
 
     public requestNewSocket(callback:(socket:Socket)=>any) {

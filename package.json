@@ -4,7 +4,7 @@
   "description": "Easy directory synchronization over the network",
   "main": "index.js",
   "scripts": {
-    "test": "gulp run test",
+    "test": "mocha --recursive test",
     "build": "tsc"
   },
   "repository": {
@@ -27,9 +27,12 @@
     "upath": "^0.1.7"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
     "gulp": "latest",
     "gulp-shell": "^0.5.2",
     "gulp-watch": "^4.3.6",
-    "run-sequence": "^1.2.1"
+    "rewire": "^2.5.1",
+    "run-sequence": "^1.2.1",
+    "sinon": "^1.17.4"
   }
 }
