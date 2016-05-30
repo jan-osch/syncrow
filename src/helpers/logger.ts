@@ -1,7 +1,7 @@
 /// <reference path="../../typings/main.d.ts" />
 
 import chalk = require('chalk');
-import Configuration = require('../../config/configuration');
+import Configuration = require('../configuration');
 
 class Logger {
     private localLevel:number;

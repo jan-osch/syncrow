@@ -4,7 +4,7 @@ import Logger = require('./logger');
 import net = require('net');
 import {EventEmitter} from "events";
 import {Server, Socket} from "net";
-import Configuration = require('../../config/configuration');
+import Configuration = require('../configuration');
 
 let logger = Logger.getNewLogger('ConnectionHelper', Configuration.connectionHelper.logLevel);
 

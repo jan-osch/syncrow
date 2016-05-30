@@ -1,8 +1,8 @@
-import gulp from "gulp";
-import shell from "gulp-shell";
-import rimraf from "rimraf";
-import run from "run-sequence";
-import watch from "gulp-watch";
+const gulp = require("gulp");
+const shell = require("gulp-shell");
+const rimraf = require("rimraf");
+const run = require("run-sequence");
+const watch = require("gulp-watch");
 
 const paths = {
     js: ['./src/**/*.js'],
@@ -24,13 +24,11 @@ gulp.task('clean', callback => {
 
 gulp.task('compile', shell.task([
     'tsc'
-]));
+], {ignoreErrors: true, quiet:true}));
 
-gulp.task('watch', () => {
-    return watch(paths.js, () => {
-        run('build');
-    });
-});
+gulp.task('watch', shell.task([
+    'tsc --watch'
+], {ignoreErrors: true, quiet:true}));
 
 gulp.task('watch-test', () => {
     return watch(paths.js, () => {

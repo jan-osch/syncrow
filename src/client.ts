@@ -6,7 +6,7 @@ import SocketMessenger= require('./socket_messenger');
 import FileContainer = require("./file_container");
 import Logger = require('./helpers/logger');
 import {LimitedAsyncQueue} from "./helpers/limited_async_queue";
-import Configuration = require('../config/configuration');
+import Configuration = require('./configuration');
 
 let logger = Logger.getNewLogger('Client', Configuration.client.logLevel);
 
@@ -235,7 +235,6 @@ class Client {
     private addEventToKnownMap(key:string, listener:Function) {
         this.eventActionMap[key] = listener;
     }
-
 }
 
 export  = Client;

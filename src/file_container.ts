@@ -12,7 +12,7 @@ import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
 import Logger  = require('./helpers/logger');
 import PathHelper = require('./helpers/path_helper');
-import Configuration = require('../config/configuration');
+import Configuration = require('./configuration');
 
 
 let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel);
