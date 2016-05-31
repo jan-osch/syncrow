@@ -9,10 +9,13 @@ import {LimitedAsyncQueue} from "./helpers/limited_async_queue";
 import Configuration = require('./configuration');
 
 let logger = Logger.getNewLogger('Client', Configuration.client.logLevel);
+const debug = require('debug')('client');
 
 //TODO add support syncing after reestablishing connection
 //TODO add support for deleting offline
 //TODO Strategies for offline loading
+//TODO extract the common parts of client and server
+
 
 class Client {
     socketMessenger:SocketMessenger;
@@ -25,6 +28,7 @@ class Client {
         error: 'error',
         fileSocket: 'fileSocket',
         getFile: 'getFile',
+        pullFile: 'pullFile',
         getMeta: 'getMeta',
         metaData: 'metaData',
         createDirectory: 'createDirectory'
@@ -171,6 +175,16 @@ class Client {
         callback();
     }
 
+    pushFileToNewSocket(address:Object, file:string, fileContainer:FileContainer, callback) {
+        let fileTransferSocket = net.createConnection(address, ()=> {
+
+            debug(`Other party connected, beginning to push the file: ${file} to socket`);
+
+            fileTransferSocket.on('end', callback);
+
+            fileContainer.getReadStreamForFile(file).pipe(fileTransferSocket);
+        });
+    }
 
     createMapOfKnownEvents() {
         this.addClientEvents();
@@ -181,6 +195,11 @@ class Client {
         this.addEventToKnownMap(Client.events.getFile, (socket, event)=> {
             logger.debug(`/otherClientEvents - received a getFile: ${JSON.stringify(event.body)}`);
             this.sendFileWhenSocketIsAvailable(socket, event.body);
+        });
+
+        this.addEventToKnownMap(Client.events.pullFile, (socket, event)=> {
+            this.pushFileToNewSocket(event.body.address, event.body.name, this.fileContainer, ()=> {
+            }); //TODO proper callback
         });
         this.addEventToKnownMap(Client.events.metaData, (socket, event)=> {
             logger.debug(`/otherClientEvents - received metaData for file:${event.body.name}`);

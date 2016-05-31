@@ -23,14 +23,22 @@ class SocketMessenger extends events.EventEmitter {
         disconnected: 'disconnected'
     };
 
-    constructor(connectionHelper:ConnectionHelper) {
+    constructor(connectionHelper:ConnectionHelper, socket:Socket) {
         super();
         this.resetBuffers();
-        this.connected = false;
-        this.socket = null;
-        this.connectionHelper = connectionHelper;
 
-        this.obtainNewSocket();
+        if (socket) {
+            this.socket = socket;
+            this.connected = true;
+            this.addListenersToSocketAndEmitConnected(socket);
+
+        } else {
+            this.connected = false;
+            this.socket = null;
+            this.connectionHelper = connectionHelper;
+            this.obtainNewSocket();
+        }
+
     }
 
     obtainNewSocket() {
@@ -38,7 +46,7 @@ class SocketMessenger extends events.EventEmitter {
             logger.debug('/obtainNewSocket- adding new socket');
             this.socket = socket;
             this.connected = true;
-            this.addListenersToSocket(this.socket);
+            this.addListenersToSocketAndEmitConnected(this.socket);
         });
 
         logger.debug('/obtainNewSocket- requesting new socket');
@@ -59,8 +67,8 @@ class SocketMessenger extends events.EventEmitter {
         this.expectedLength = null;
     }
 
-    private addListenersToSocket(socket:Socket) {
-        logger.debug('/addListenersToSocket - adding listeners to new socket');
+    private addListenersToSocketAndEmitConnected(socket:Socket) {
+        logger.debug('/addListenersToSocketAndEmitConnected - adding listeners to new socket');
         socket.on('data', (data)=>this.parseData(data));
         socket.on('close', ()=> this.handleSocketDisconnected());
 
