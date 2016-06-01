@@ -18,6 +18,8 @@ import Configuration = require('./configuration');
 let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel);
 
 // TODO add conflict resolving
+// TODO refactor to remove metaComputed event - change to callback
+
 class FileContainer extends events.EventEmitter {
     static events = {
         changed: 'changed',

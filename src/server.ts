@@ -19,7 +19,7 @@
 //
 //     emitFileChanged(fileName:string) {
 //         this.clients.forEach((socket:Messenger)=> {
-//             Client.writeEventToSocketMessenger(socket, Client.events.changed, fileName);
+//             Client.writeEventToOtherParty(socket, Client.events.changed, fileName);
 //         });
 //     }
 //

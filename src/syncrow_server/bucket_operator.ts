@@ -11,13 +11,14 @@ import net  = require('net');
 
 import UserService = require('./user_service');
 
-import async = require('async');
+import async from "async";
 import _= require('lodash');
 import Messenger = require("../messenger");
 import Client = require("../client");
 
 import errorPrinter = require('../utils/error_printer');
 import TransferActions = require("./transfer_actions");
+import EventsHelper from "../helpers/events_helper";
 const debug = require('debug')('bucketoperator');
 
 
@@ -27,14 +28,16 @@ class BucketOperator {
     private otherParties:Array<Messenger>;
     private container:FileContainer;
     private otherPartiesMessageListeners:Array<Function>;
+    private transferJobsQueue:async.AsyncQueue;
 
-
-    constructor(host:string, path:string) {
+    //TODO add configuration support
+    constructor(host:string, path:string, transferConcurrency=10) {
         this.path = path;
         this.host = host;
         this.container = new FileContainer(path);
         this.otherParties = [];
         this.otherPartiesMessageListeners = [];
+        this.transferJobsQueue = async.queue((job, callback)=>job(callback), )
     }
 
     /**
@@ -65,7 +68,7 @@ class BucketOperator {
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
-        const event = Client.parseEvent(otherParty, message);
+        const event = EventsHelper.parseEvent(otherParty, message);
 
         if (event.type === FileContainer.events.created || event.type === FileContainer.events.changed) {
             const pullStamp = `pulling file: ${event.body}`;

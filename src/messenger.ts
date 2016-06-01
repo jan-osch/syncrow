@@ -10,12 +10,13 @@ let logger = Logger.getNewLogger('Messenger');
 
 
 class Messenger extends events.EventEmitter {
-    socket:net.Socket;
-    connectionHelper:ConnectionHelper;
-    messageBuffer:string;
-    expectedLength:number;
-    separator = ':';
-    connected:boolean;
+
+    private socket:net.Socket;
+    private connectionHelper:ConnectionHelper;
+    private messageBuffer:string;
+    private expectedLength:number;
+    private static separator = ':';
+    private connected:boolean;
 
     static events = {
         message: 'message',
@@ -23,7 +24,7 @@ class Messenger extends events.EventEmitter {
         disconnected: 'disconnected'
     };
 
-    constructor(connectionHelper:ConnectionHelper, socket:Socket) {
+    constructor(connectionHelper?:ConnectionHelper, socket?:Socket) {
         super();
         this.resetBuffers();
 
@@ -32,7 +33,7 @@ class Messenger extends events.EventEmitter {
             this.connected = true;
             this.addListenersToSocketAndEmitConnected(socket);
 
-        } else {
+        } else if (connectionHelper) {
             this.connected = false;
             this.socket = null;
             this.connectionHelper = connectionHelper;
@@ -41,7 +42,28 @@ class Messenger extends events.EventEmitter {
 
     }
 
-    obtainNewSocket() {
+    /**
+     *
+     * @param data
+     * @returns {undefined}
+     */
+    public writeMessage(data:string) {
+        if (!this.connected) {
+            return logger.warn('/writeMessage - socket connection is closed will not write data')
+        }
+        var message = `${data.length}${Messenger.separator}${data}`;
+        this.socket.write(message);
+
+    }
+
+    /**
+     * @returns {string}
+     */
+    public getOwnHost():string {
+        return this.socket.address().address;
+    }
+
+    private obtainNewSocket() {
         this.connectionHelper.once(ConnectionHelper.events.socket, (socket)=> {
             logger.debug('/obtainNewSocket- adding new socket');
             this.socket = socket;
@@ -51,15 +73,6 @@ class Messenger extends events.EventEmitter {
 
         logger.debug('/obtainNewSocket- requesting new socket');
         this.connectionHelper.getSocket();
-    }
-
-    public writeMessage(data:string) {
-        if (!this.connected) {
-            return logger.warn('/writeMessage - socket connection is closed will not write data')
-        }
-        var message = `${data.length}${this.separator}${data}`;
-        this.socket.write(message);
-
     }
 
     private resetBuffers() {
@@ -75,7 +88,7 @@ class Messenger extends events.EventEmitter {
         this.emit(Messenger.events.connected);
     }
 
-    handleSocketDisconnected() {
+    private handleSocketDisconnected() {
         logger.debug('socket connection closed');
         this.connected = false;
         this.obtainNewSocket();
@@ -110,10 +123,6 @@ class Messenger extends events.EventEmitter {
         this.messageBuffer = remainder;
         this.checkIfExpectedLengthArrived();
         this.checkIfMessageIsComplete();
-    }
-
-    public getOwnHost():string {
-        return this.socket.address().address;
     }
 }
 

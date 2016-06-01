@@ -149,7 +149,7 @@ class BucketWrapper {
             (socket)=> BucketWrapper.consumeFileFromSocket(socket, fileName, destinationContainer, callback)
         ).listen(()=> {
 
-            Client.writeEventToSocketMessenger(otherParty, Client.events.pullFile, {
+            Client.writeEventToOtherParty(otherParty, Client.events.pullFile, {
                 file: fileName,
                 address: this.getOwnSocketServerAddress(filePullingServer)
             });
@@ -183,7 +183,7 @@ class BucketWrapper {
                 host: this.host
             };
 
-            Client.writeEventToSocketMessenger(otherParty, Client.events.fileSocket, {
+            Client.writeEventToOtherParty(otherParty, Client.events.fileSocket, {
                 file: file,
                 address: address
             });

@@ -4,8 +4,8 @@
 import FileContainer = require("../file_container");
 import net  = require('net');
 import {Socket} from "net";
+import EventsHelper from "../helpers/events_helper";
 import Messenger = require("../messenger");
-import Client = require("../client");
 
 const debug = require('debug')('bucketoperator');
 
@@ -35,7 +35,7 @@ class TransferActions {
                 host: host
             };
 
-            Client.writeEventToSocketMessenger(pushingParty, Client.events.pullFile, {
+            EventsHelper.writeEventToOtherParty(pushingParty, EventsHelper.events.pullFile, {
                 file: fileName,
                 address: address
             });
