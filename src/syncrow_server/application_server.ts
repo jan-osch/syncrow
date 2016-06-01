@@ -6,7 +6,7 @@ import FileContainer = require("../file_container");
 import net  = require('net');
 
 import UserService = require('./user_service');
-import {Socket} from "net";
+import {Socket, Server} from "net";
 
 import async = require('async');
 import _= require('lodash');
@@ -123,28 +123,51 @@ class ApplicationServer {
             this.sendFileToSocket(socket, bucketName, event.body, _.noop);
         }
         if (event.type === FileContainer.events.created) {
-            Client.writeEventToSocketMessenger(socket, Client.events.pullFile, event.body); //TODO implement creation of free socket for the transfer
+            this.pullFileFromParty(socket, event.body, this.containers[bucketName], _.noop);
         }
         if (event.type === FileContainer.events.createdDirectory) {
             this.containers[bucketName].createDirectory(event.body);
         }
         if (event.type === FileContainer.events.changed) {
-            Client.writeEventToSocketMessenger(socket, Client.events.pullFile, event.body); //TODO same here
+            this.pullFileFromParty(socket, event.body, this.containers[bucketName], _.noop);
         }
         if (event.type === FileContainer.events.deleted) {
             this.containers[bucketName].deleteFile(event.body);
         }
         if (event.type === Client.events.fileSocket) {
-            this.consumeFileFromNewSocket(this.containers[bucketName], event.body.file, event.body.address, ()=>{
+            this.consumeFileFromNewSocket(this.containers[bucketName], event.body.file, event.body.address, ()=> {
 
             });
         }
-
     }
 
-    private
+    private pullFileFromParty(otherParty:SocketMessenger, fileName:string, destinationContainer:FileContainer, callback:Function) {
+        const filePullingServer = net.createServer(
+            (socket)=> ApplicationServer.consumeFileFromSocket(socket, fileName, destinationContainer, callback)
+        ).listen(()=> {
 
-    public sendFileToSocket(socket:SocketMessenger, bucketName:string, file:string, callback) {
+            Client.writeEventToSocketMessenger(otherParty, Client.events.pullFile, {
+                file: fileName,
+                address: this.getOwnSocketServerAddress(filePullingServer)
+            });
+
+        })
+    }
+
+    private static consumeFileFromSocket(fileTransferSocket:Socket, fileName:string, destinationContainer:FileContainer, callback:Function) {
+        fileTransferSocket.on('end', callback);
+
+        destinationContainer.consumeFileStream(fileName, fileTransferSocket);
+    }
+
+    private getOwnSocketServerAddress(socketServer:Server):{port:number, host:string} {
+        return {
+            port: socketServer.address().port,
+            host: this.host
+        };
+    }
+
+    public sendFileToSocket(otherParty:SocketMessenger, bucketName:string, file:string, callback) {
         let fileTransferServer = net.createServer((fileTransferSocket)=> {
 
             fileTransferSocket.on('end', callback);
@@ -157,12 +180,13 @@ class ApplicationServer {
                 host: this.host
             };
 
-            Client.writeEventToSocketMessenger(socket, Client.events.fileSocket, {
+            Client.writeEventToSocketMessenger(otherParty, Client.events.fileSocket, {
                 file: file,
                 address: address
             });
         });
     }
+
 
     consumeFileFromNewSocket(container:FileContainer, fileName:string, address:Object, callback:Function) {
         let fileTransferClient = net.connect(address, ()=> {
