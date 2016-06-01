@@ -6,10 +6,10 @@ import Logger = require('./helpers/logger');
 import ConnectionHelper = require("./helpers/connection_helper");
 import {Socket} from "net";
 
-let logger = Logger.getNewLogger('SocketMessenger');
+let logger = Logger.getNewLogger('Messenger');
 
 
-class SocketMessenger extends events.EventEmitter {
+class Messenger extends events.EventEmitter {
     socket:net.Socket;
     connectionHelper:ConnectionHelper;
     messageBuffer:string;
@@ -53,9 +53,9 @@ class SocketMessenger extends events.EventEmitter {
         this.connectionHelper.getSocket();
     }
 
-    public writeData(data:string) {
+    public writeMessage(data:string) {
         if (!this.connected) {
-            return logger.warn('/writeData - socket connection is closed will not write data')
+            return logger.warn('/writeMessage - socket connection is closed will not write data')
         }
         var message = `${data.length}${this.separator}${data}`;
         this.socket.write(message);
@@ -72,14 +72,14 @@ class SocketMessenger extends events.EventEmitter {
         socket.on('data', (data)=>this.parseData(data));
         socket.on('close', ()=> this.handleSocketDisconnected());
 
-        this.emit(SocketMessenger.events.connected);
+        this.emit(Messenger.events.connected);
     }
 
     handleSocketDisconnected() {
         logger.debug('socket connection closed');
         this.connected = false;
         this.obtainNewSocket();
-        this.emit(SocketMessenger.events.disconnected);
+        this.emit(Messenger.events.disconnected);
     }
 
     private parseData(data:Buffer) {
@@ -100,7 +100,7 @@ class SocketMessenger extends events.EventEmitter {
 
     private checkIfMessageIsComplete() {
         if (this.expectedLength && this.messageBuffer.length >= this.expectedLength) {
-            this.emit(SocketMessenger.events.message, this.messageBuffer.slice(0, this.expectedLength));
+            this.emit(Messenger.events.message, this.messageBuffer.slice(0, this.expectedLength));
             this.restartParsingMessage(this.messageBuffer.slice(this.expectedLength));
         }
     }
@@ -117,4 +117,4 @@ class SocketMessenger extends events.EventEmitter {
     }
 }
 
-export = SocketMessenger;
+export = Messenger;

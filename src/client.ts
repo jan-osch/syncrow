@@ -2,7 +2,7 @@
 
 import fs = require('fs');
 import net = require('net');
-import SocketMessenger= require('./socket_messenger');
+import SocketMessenger= require('./messenger');
 import FileContainer = require("./file_container");
 import Logger = require('./helpers/logger');
 import {LimitedAsyncQueue} from "./helpers/limited_async_queue";
@@ -142,7 +142,7 @@ class Client {
     }
 
     static writeEventToSocketMessenger(socket:SocketMessenger, type:string, message?:any) {
-        socket.writeData(Client.createEvent(type, message));
+        socket.writeMessage(Client.createEvent(type, message));
     }
 
     sendFileWhenSocketIsAvailable(socket:SocketMessenger, file:string) {

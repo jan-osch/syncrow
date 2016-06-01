@@ -3,12 +3,12 @@
 // import fs = require('fs');
 // import net = require('net');
 //
-// import SocketMessenger = require('./socket_messenger');
+// import Messenger = require('./socket_messenger');
 // import Client = require('./client');
 //
 // class Server extends Client {
 //
-//     clients:Array<SocketMessenger>;
+//     clients:Array<Messenger>;
 //     socketServer:net.Server;
 //
 //     constructor(directoryToWatch, mainPort) {
@@ -18,16 +18,16 @@
 //     }
 //
 //     emitFileChanged(fileName:string) {
-//         this.clients.forEach((socket:SocketMessenger)=> {
+//         this.clients.forEach((socket:Messenger)=> {
 //             Client.writeEventToSocketMessenger(socket, Client.events.changed, fileName);
 //         });
 //     }
 //
 //     addNewClient(socket) {
 //         console.info('new client connected');
-//         var clientSocketMessenger = new SocketMessenger(null, null, socket);
+//         var clientSocketMessenger = new Messenger(null, null, socket);
 //         this.clients.push(clientSocketMessenger);
-//         clientSocketMessenger.on(SocketMessenger.messageEvent, (data) =>this.routeEvent(clientSocketMessenger, data))
+//         clientSocketMessenger.on(Messenger.messageEvent, (data) =>this.routeEvent(clientSocketMessenger, data))
 //     }
 //
 //     createSocketServer(mainPort) {

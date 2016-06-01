@@ -10,17 +10,17 @@ import {Socket, Server} from "net";
 
 import async = require('async');
 import _= require('lodash');
-import SocketMessenger = require("../socket_messenger");
+import SocketMessenger = require("../messenger");
 import Client = require("../client");
 
 const debug = require('debug')('server:server');
 
-class ApplicationServer {
+class BucketWrapper {
     private port:number;
     private bucketsList:Array<string>;
     private containers:Object;
     private bucketSockets:Object;
-    private bucketServers:Object;
+    private bucketServers:Object; //TODO change to map string:Server
     private bucketServerPorts:Object;
     private host:string;
 
@@ -29,7 +29,10 @@ class ApplicationServer {
         this.host = host;
         this.bucketsList = this.loadBuckets(path);
         this.containers = this.initializeBuckets(path, this.bucketsList);
-        this.bucketSockets = this.createBucketSocketMap(this.bucketsList)
+        this.bucketSockets = this.createBucketSocketMap(this.bucketsList);
+
+
+        //TODO add call to initialize sever buckets - > and async other operations
     }
 
     private loadBuckets(path):Array<string> {
@@ -143,7 +146,7 @@ class ApplicationServer {
 
     private pullFileFromParty(otherParty:SocketMessenger, fileName:string, destinationContainer:FileContainer, callback:Function) {
         const filePullingServer = net.createServer(
-            (socket)=> ApplicationServer.consumeFileFromSocket(socket, fileName, destinationContainer, callback)
+            (socket)=> BucketWrapper.consumeFileFromSocket(socket, fileName, destinationContainer, callback)
         ).listen(()=> {
 
             Client.writeEventToSocketMessenger(otherParty, Client.events.pullFile, {
@@ -202,9 +205,9 @@ class ApplicationServer {
     }
 }
 
-const k = new ApplicationServer(90, '.');
+const k = new BucketWrapper(90, '.');
 
 k.requestSocketForBucket('', '', ()=> {
 });
 
-export = ApplicationServer;
+export = BucketWrapper;
