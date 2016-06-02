@@ -11,9 +11,9 @@ import BucketOperator from "./bucket_operator";
 
 import async = require('async');
 import _= require('lodash');
-import SocketMessenger = require("../helpers/messenger");
+import SocketMessenger = require("../transport/messenger");
 import Client = require("../client/client");
-import Messenger = require("../helpers/messenger");
+import Messenger = require("../transport/messenger");
 
 const debug = require('debug')('syncrow:bucket_service');
 

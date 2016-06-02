@@ -15,14 +15,14 @@ import PathHelper = require('./path_helper');
 import Configuration = require('../configuration');
 
 
-let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel); //TODO change to debug
+let logger = Logger.loggerFor('FileContainer', Configuration.fileContainer.logLevel); //TODO change to debug
 
 const debug = require('debug')('syncrow:file_container');
 
 // TODO add conflict resolving
 // TODO refactor to remove metaComputed event - change to callback
 
-class FileContainer extends events.EventEmitter {
+export class FileContainer extends events.EventEmitter {
     static events = {
         changed: 'changed',
         deleted: 'fileDeleted',
@@ -275,5 +275,3 @@ class FileContainer extends events.EventEmitter {
         }
     }
 }
-
-export = FileContainer;

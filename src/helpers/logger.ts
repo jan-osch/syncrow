@@ -1,51 +1,53 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import chalk = require('chalk');
-import Configuration = require('../configuration');
+import * as chalk from "chalk";
+import * as moment from "moment";
 
-//TODO refactor
-class Logger {
-    private localLevel:number;
+export class Logger {
     private context:string;
 
-    constructor(context:string, localLevel = 10) {
+    constructor(context:string) {
         this.context = context;
-        this.localLevel = localLevel;
     }
 
-    debug(message:string) {
-        if (this.levelHigherThan(3))
-            this.logInColor(message, 'grey')
+    /**
+     * For important messages
+     * @param message
+     */
+    public info(message?:string) {
+        this.logInColor(message, 'green');
     }
 
-    info(message:string) {
-        if (this.levelHigherThan(0))
-            this.logInColor(message, 'green');
+    /**
+     * When state is invalid, but program no error
+     * @param message
+     */
+    public warn(message?:string) {
+        this.logInColor(message, 'yellow');
     }
 
-    warn(message:string) {
-        if (this.levelHigherThan(0))
-            this.logInColor(message, 'yellow');
+    /**
+     * Prints errors if present
+     * @param err
+     */
+    public error(err?:any) {
+        if (err)console.error(err);
     }
 
-    timeDebug(message:string) {
-        if (this.levelHigherThan(2))
-            console.time(this.getFormattedMessageInColor('blue', message));
+    /**
+     * Measure time of important operations
+     * @param key
+     */
+    public time(key:string) {
+        console.time(this.getFormattedMessageInColor('blue', key));
     }
 
-    timeEndDebug(message:string) {
-        if (this.levelHigherThan(2))
-            console.timeEnd(this.getFormattedMessageInColor('blue', message));
-    }
-
-    time(message:string) {
-        if (this.levelHigherThan(1))
-            console.time(this.getFormattedMessageInColor('blue', message));
-    }
-
-    timeEnd(message:string) {
-        if (this.levelHigherThan(1))
-            console.timeEnd(this.getFormattedMessageInColor('blue', message));
+    /**
+     * Finish measuring time for important operations
+     * @param key
+     */
+    public timeEnd(key:string) {
+        console.timeEnd(this.getFormattedMessageInColor('blue', key));
     }
 
     private logInColor(message:string, color:string) {
@@ -57,17 +59,15 @@ class Logger {
     }
 
     private formatMessage(message:string) {
-        return `[${new Date()}] ${this.context} ${message}`;
-    }
-
-    public static getNewLogger(context:string, level?:number):Logger {
-        return new Logger(context, level);
-    }
-
-    private levelHigherThan(level:number) {
-        return this.localLevel >= level;
+        return `[${moment().format('H:m:s')}] ${this.context} ${message}`;
     }
 }
 
-
-export = Logger;
+/**
+ * Convenience function
+ * @param context
+ * @returns {Logger}
+ */
+export function loggerFor(context:string):Logger {
+    return new Logger(context);
+}

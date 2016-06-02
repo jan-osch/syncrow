@@ -3,13 +3,13 @@
 import program = require('commander');
 import net = require('net');
 import fs = require('fs');
-import SocketMessenger = require("../helpers/messenger");
+import SocketMessenger = require("../transport/messenger");
 import Client = require("../client/client");
 import Logger = require('../helpers/logger');
-import ConnectionHelper = require("../helpers/connection");
+import ConnectionHelper = require("../transport/connection");
 import request = require("request");
 
-let logger = Logger.getNewLogger('CLI');
+let logger = Logger.loggerFor('CLI');
 
 const debug = require("debug")("syncrow:cli");
 //TODO add support for direct connection

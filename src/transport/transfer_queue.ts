@@ -1,14 +1,16 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import Messenger= require('../helpers/messenger');
-import FileContainer = require("../helpers/file_container");
-import TransferActions = require("../helpers/transfer_actions");
-import async = require("async");
+import {Messenger} from './messenger';
+import {FileContainer, default as FileContainer} from "../helpers/file_container";
+import {TransferActions} from "./transfer_actions";
+import * as async from "async";
 
-const debug = require('debug')('transfer:queue');
 
-import errorPrinter = require('../utils/error_printer');
+import * as debugFor from "debug";
+import {loggerFor} from "../helpers/logger";
 
+const debug = debugFor("syncrow:trasfer_queue");
+const logger = loggerFor('TransferQueue');
 
 export default class TransferQueue {
 
@@ -33,7 +35,7 @@ export default class TransferQueue {
             if (timingMessage) console.time(timingMessage);
 
             TransferActions.connectAndUploadFile(fileName, address, sourceContainer, (err)=> {
-                errorPrinter(err);
+                logger.error(err);
                 if (timingMessage) console.timeEnd(timingMessage);
 
                 uploadingDoneCallback()

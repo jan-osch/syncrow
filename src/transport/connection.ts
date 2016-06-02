@@ -1,23 +1,22 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import Logger = require('./logger');
-import net = require('net');
 import {EventEmitter} from "events";
-import {Socket} from "net";
-import Configuration = require('../configuration');
-import errorPrinter = require('../utils/error_printer');
+import {Socket, connect} from "net";
+import * as Configuration from "../configuration";
 
-const debug = require("debug")("syncrow:connection");
+import * as debugFor from "debug";
+import {loggerFor} from "../helpers/logger";
 
-let logger = Logger.getNewLogger('Connection', Configuration.connectionHelper.logLevel);
+const debug = debugFor("syncrow:connection");
+const logger = loggerFor('Connection');
 
-enum ConnectionStrategy{
+export enum ConnectionStrategy{
     onProblemAbort,
     onProblemReconnectToRemote,
     onProblemListenForConnection
 }
 
-class Connection extends EventEmitter {
+export class Connection extends EventEmitter {
 
     public static events = {
         data: 'data',
@@ -34,6 +33,13 @@ class Connection extends EventEmitter {
     private socket:Socket;
     private connected:boolean;
 
+    /**
+     * Used to mantain 
+     * @param socket
+     * @param strategy
+     * @param remotePort
+     * @param remoteHost
+     */
     constructor(socket:Socket, strategy = ConnectionStrategy.onProblemAbort, remotePort?:number, remoteHost?:string) {
         super();
         this.remoteHost = remoteHost;
@@ -69,6 +75,13 @@ class Connection extends EventEmitter {
         return this.socket.localAddress;
     }
 
+    /**
+     * @param data
+     */
+    public write(data:string){
+        this.socket.write(data);
+    }
+
     private validateStrategy() {
         if (this.strategy == ConnectionStrategy.onProblemReconnectToRemote) {
             if (!this.remoteHost || !this.remotePort) {
@@ -78,7 +91,7 @@ class Connection extends EventEmitter {
     }
 
     private handleSocketProblem(error?:Error) {
-        errorPrinter(error);
+        logger.error(error);
 
         if (this.strategy === ConnectionStrategy.onProblemAbort) {
             this.destroySocket();
@@ -91,7 +104,7 @@ class Connection extends EventEmitter {
             this.getNewSocketAsClient((err, socket)=> {
 
                 if (err) {
-                    errorPrinter(err);
+                    logger.error(err);
                     return this.emit(Connection.events.disconnected);
                 }
 
@@ -121,7 +134,7 @@ class Connection extends EventEmitter {
         async.whilst(()=>hasToRetry,
 
             (callback)=> {
-                socket = net.connect(this.remotePort, this.remoteHost, ()=> {
+                socket = connect(this.remotePort, this.remoteHost, ()=> {
 
                     logger.info(`/getNewSocketAsClient - connected with ${this.remoteHost}:${this.remotePort}`);
                     hasToRetry = false;
@@ -139,6 +152,4 @@ class Connection extends EventEmitter {
         );
     }
 }
-
-export  = Connection;
 

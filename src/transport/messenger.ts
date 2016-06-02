@@ -1,14 +1,14 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import net = require('net');
-import events = require('events');
-import Logger = require('./logger');
-import Connection = require("./connection");
+import {EventEmitter} from "events";
+import {Connection} from "./connection";
+import * as debugFor from "debug";
+import {loggerFor} from "../helpers/logger";
 
-let logger = Logger.getNewLogger('Messenger');
-const debug = require('debug')('syncrow:messenger');
+const debug = debugFor("syncrow:messenger");
+const logger = loggerFor('Messenger');
 
-class Messenger extends events.EventEmitter {
+export class Messenger extends EventEmitter {
 
     private connection:Connection;
 
@@ -25,6 +25,10 @@ class Messenger extends events.EventEmitter {
         recovering: 'reconnecting'
     };
 
+    /**
+     * Enables sending string messages between parties
+     * @param connection
+     */
     constructor(connection:Connection) {
         super();
         this.resetBuffers();
@@ -96,7 +100,7 @@ class Messenger extends events.EventEmitter {
     }
 
     private checkIfExpectedLengthArrived() {
-        var indexOfContentLengthHeaderSeparator = this.messageBuffer.indexOf(this.separator);
+        var indexOfContentLengthHeaderSeparator = this.messageBuffer.indexOf(Messenger.separator);
         if (indexOfContentLengthHeaderSeparator !== -1) {
             this.expectedLength = parseInt(this.messageBuffer.slice(0, indexOfContentLengthHeaderSeparator));
             this.messageBuffer = this.messageBuffer.slice(indexOfContentLengthHeaderSeparator + 1);
@@ -117,5 +121,3 @@ class Messenger extends events.EventEmitter {
         this.checkIfMessageIsComplete();
     }
 }
-
-export = Messenger;

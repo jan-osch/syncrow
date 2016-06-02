@@ -2,15 +2,15 @@
 
 import fs = require('fs');
 import net = require('net');
-import Messenger= require('../helpers/messenger');
+import Messenger= require('../transport/messenger');
 import FileContainer = require("../helpers/file_container");
 import Logger = require('../helpers/logger');
 import EventsHelper from "../helpers/events_helper";
-import TransferQueue from "../helpers/transfer_queue";
+import TransferQueue from "../transport/transfer_queue";
 import Configuration = require('../configuration');
-import TransferActions = require("../helpers/transfer_actions");
+import TransferActions = require("../transport/transfer_actions");
 
-let logger = Logger.getNewLogger('Client', Configuration.client.logLevel);
+let logger = Logger.loggerFor('Client', Configuration.client.logLevel);
 const debug = require('debug')('syncrow:client');
 
 import errorPrinter = require('../utils/error_printer');

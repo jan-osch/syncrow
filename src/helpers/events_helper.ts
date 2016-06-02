@@ -1,6 +1,6 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import Messenger = require("./messenger");
+import {Messenger} from "../transport/messenger";
 
 const debug = require('debug')('syncrow:events');
 

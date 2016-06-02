@@ -4,12 +4,14 @@ import FileContainer = require("../helpers/file_container");
 import net  = require('net');
 import async = require('async');
 import EventsHelper from "../helpers/events_helper";
-import TransferQueue from "../helpers/transfer_queue";
+import TransferQueue from "../transport/transfer_queue";
 import _= require('lodash');
-import Messenger = require("../helpers/messenger");
+import Messenger = require("../transport/messenger");
 import Client = require("../client/client");
-import errorPrinter = require('../utils/error_printer');
-import TransferActions = require("../helpers/transfer_actions");
+import TransferActions = require("../transport/transfer_actions");
+import {loggerFor} from "../helpers/logger";
+
+const logger = loggerFor('BucketOperator');
 
 const debug = require('debug')('syncrow:bucket');
 
@@ -21,7 +23,6 @@ export default class BucketOperator {
     private otherPartiesMessageListeners:Array<Function>;
     private transferJobsQueue:TransferQueue;
 
-    //TODO add configuration support
     constructor(host:string, path:string, transferConcurrency = 10) {
         this.path = path;
         this.host = host;
@@ -88,7 +89,7 @@ export default class BucketOperator {
             return;
 
         } else if (event.type === EventsHelper.events.error) {
-            console.info(`received error message ${JSON.stringify(event.body)}`);
+            logger.warn(`received error message ${JSON.stringify(event.body)}`);
             return;
         }
 

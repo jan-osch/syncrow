@@ -1,13 +1,17 @@
 /// <reference path="../../typings/main.d.ts" />
 
 
-import FileContainer = require("./file_container");
+import FileContainer = require("../helpers/file_container");
 import net  = require('net');
 import {Socket, Server} from "net";
-import EventsHelper from "./events_helper";
-import Messenger = require("./messenger");
+import EventsHelper from "../helpers/events_helper";
+import {Messenger} from "./messenger";
 
-const debug = require('debug')('bucketoperator');
+import * as debugFor from "debug";
+import {loggerFor} from "../helpers/logger";
+
+const debug = debugFor("syncrow:trasfer_actions");
+const logger = loggerFor('TransferActions');
 
 
 class TransferActions {
