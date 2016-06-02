@@ -5,25 +5,29 @@ import FileContainer = require("../helpers/file_container");
 import TransferActions = require("../helpers/transfer_actions");
 import {AsyncQueue} from "async";
 
-const debug = require('debug')('client');
+const debug = require('debug')('transfer:queue');
 
 import errorPrinter = require('../utils/error_printer');
 
 
-export default class TransferEnqueuer {
+export default class TransferQueue {
+
+    private queue:AsyncQueue;
+
+    constructor(concurrency:number) {
+        this.queue = async.queue((job:Function, callback:Function)=>job(callback), concurrency);
+    }
 
     /**
      * @param fileName
      * @param address
      * @param sourceContainer
-     * @param queue
      * @param timingMessage
      */
-    public static addConnectAndUploadJobToQueue(fileName:string,
-                                                address:{port:number, host:string},
-                                                sourceContainer:FileContainer,
-                                                queue:AsyncQueue,
-                                                timingMessage?:string) {
+    public addConnectAndUploadJobToQueue(fileName:string,
+                                         address:{port:number, host:string},
+                                         sourceContainer:FileContainer,
+                                         timingMessage?:string) {
         const job = (uploadingDoneCallback) => {
 
             if (timingMessage) console.time(timingMessage);
@@ -36,7 +40,7 @@ export default class TransferEnqueuer {
             });
         };
 
-        queue.push(job);
+        this.queue.push(job);
     }
 
     /**
@@ -44,14 +48,12 @@ export default class TransferEnqueuer {
      * @param address
      * @param fileName
      * @param destinationContainer
-     * @param queue
      * @param timingMessage
      */
-    public static addConnectAndDownloadJobToQueue(address:{port:number, host:string},
-                                                  fileName:string,
-                                                  destinationContainer:FileContainer,
-                                                  queue:AsyncQueue,
-                                                  timingMessage?:string) {
+    public addConnectAndDownloadJobToQueue(address:{port:number, host:string},
+                                           fileName:string,
+                                           destinationContainer:FileContainer,
+                                           timingMessage?:string) {
         const job = (downloadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);
@@ -65,7 +67,7 @@ export default class TransferEnqueuer {
 
         };
 
-        queue.push(job);
+        this.queue.push(job);
     }
 
     /**
@@ -74,15 +76,13 @@ export default class TransferEnqueuer {
      * @param otherParty
      * @param host
      * @param sourceContainer
-     * @param queue
      * @param timingMessage
      */
-    public static addListenAndUploadJobToQueue(fileName:string,
-                                               otherParty:Messenger,
-                                               host:string,
-                                               sourceContainer:FileContainer,
-                                               queue:AsyncQueue,
-                                               timingMessage?:string) {
+    public  addListenAndUploadJobToQueue(fileName:string,
+                                         otherParty:Messenger,
+                                         host:string,
+                                         sourceContainer:FileContainer,
+                                         timingMessage?:string) {
 
         const job = (uploadingDoneCallback)=> {
 
@@ -97,7 +97,7 @@ export default class TransferEnqueuer {
 
         };
 
-        queue.push(job);
+        this.queue.push(job);
     }
 
     /**
@@ -106,15 +106,13 @@ export default class TransferEnqueuer {
      * @param fileName
      * @param host
      * @param destinationContainer
-     * @param queue
      * @param timingMessage
      */
-    public static addListenAndDownloadJobToQueue(otherParty:Messenger,
-                                                 fileName:string,
-                                                 host:string,
-                                                 destinationContainer:FileContainer,
-                                                 queue:AsyncQueue,
-                                                 timingMessage?:string) {
+    public  addListenAndDownloadJobToQueue(otherParty:Messenger,
+                                           fileName:string,
+                                           host:string,
+                                           destinationContainer:FileContainer,
+                                           timingMessage?:string) {
 
         const job = (downloadingDoneCallback)=> {
 
@@ -129,6 +127,6 @@ export default class TransferEnqueuer {
 
         };
 
-        queue.push(job);
+        this.queue.push(job);
     }
 }

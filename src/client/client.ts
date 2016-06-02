@@ -6,7 +6,7 @@ import Messenger= require('../helpers/messenger');
 import FileContainer = require("../helpers/file_container");
 import Logger = require('../helpers/logger');
 import EventsHelper from "../helpers/events_helper";
-import async from "async";
+import TransferQueue from "../helpers/transfer_queue";
 import Configuration = require('../configuration');
 import TransferActions = require("../helpers/transfer_actions");
 
@@ -20,29 +20,34 @@ import errorPrinter = require('../utils/error_printer');
 //TODO Strategies for offline loading
 //TODO extract the common parts of client and server
 
-
 class Client {
     otherParty:Messenger;
     fileContainer:FileContainer;
     filesToSync:Object;
-    transferJobsQueue:async.AsyncQueue;
+    transferJobsQueue:TransferQueue;
 
     static events = {
-        fileSocket: 'fileSocket',
         listenAndUpload: 'listenAndUpload',
-        getFileList: 'getFileList',
+        listenAndDownload: 'listenAndDownload',
+
         connectAndUpload: 'connectAndUpload',
-        fileOffer: 'fileOffer',
+        connectAndDownload: 'connectAndDownload',
+
+        listeningForDownload: 'listeningForDownload',
+        listeningForUpload: 'listeningForUpload',
+
+        getFileList: 'getFileList',
         getMeta: 'getMeta',
         metaData: 'metaData',
-        createDirectory: 'createDirectory'
+        createDirectory: 'createDirectory',
+        deleted: 'deleted'
     };
 
     constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = Configuration.client.socketsLimit) {
         this.filesToSync = {};
         this.fileContainer = this.createDirectoryWatcher(pathToWatch);
         this.otherParty = this.addOtherPartyMessenger(otherParty);
-        this.transferJobsQueue = async.queue((job:Function, callback:Function)=>job(callback), socketsLimit);
+        this.transferJobsQueue = new TransferQueue(socketsLimit);
     }
 
     /**
@@ -64,23 +69,37 @@ class Client {
     private routeEvent(otherParty:Messenger, message:string) {
         let event = EventsHelper.parseEvent(otherParty, message);
         if (!event) return;
-
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
 
         if (event.type === Client.events.connectAndUpload) {
-            this.addConnectAndUploadJobToQueue(event.body.name, event.body.address);
+            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
+                this.fileContainer, `client - uploading: ${event.body.fileName}`);
+
+        } else if (event.type === Client.events.connectAndDownload) {
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.name,
+                this.fileContainer, `client - downloading: ${event.body.fileName}`)
+
+        } else if (event.type === Client.events.listenAndDownload) {
+            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
+                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`)
 
         } else if (event.type === Client.events.listenAndUpload) {
-            this.addListenAndUploadJobToQueue(event.body.name);
+            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
+                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${event.body.fileName}`);
+
+        } else if (event.type === Client.events.listeningForUpload) {
+            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
+                this.fileContainer, `client - uploading: ${event.body.fileName}`);
+
+        } else if (event.type === Client.events.listeningForDownload) {
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
+                this.fileContainer, `client - uploading: ${event.body.fileName}`);
 
         } else if (event.type === Client.events.metaData) {
             this.addSyncMetaDataFromOtherParty(event.body);
 
         } else if (event.type === Client.events.getMeta) {
             this.fileContainer.recomputeMetaDataForDirectory();
-
-        } else if (event.type === FileContainer.events.created || event.type === FileContainer.events.changed) {
-            this.addListenAndDownloadJobToQueue(event.body.name);
 
         } else if (event.type === FileContainer.events.createdDirectory) {
             this.fileContainer.createDirectory(event.body);
@@ -99,15 +118,22 @@ class Client {
     private createDirectoryWatcher(directoryToWatch:string):FileContainer {
         var fileContainer = new FileContainer(directoryToWatch);
 
-        [FileContainer.events.changed, FileContainer.events.deleted, FileContainer.events.created, FileContainer.events.createdDirectory]
-            .forEach((eventName)=> {
-                fileContainer.on(eventName, (eventContent:any)=> {
-                    debug(`got event: ${eventName} from filecontainer`);
-                    EventsHelper.writeEventToOtherParty(this.otherParty, eventName, eventContent);
-                });
-            });
+        fileContainer.on(FileContainer.events.changed, (eventContent)=> {
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndDownload, eventContent);
+        });
 
-        //TODO remove
+        fileContainer.on(FileContainer.events.created, (eventContent)=> {
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndDownload, eventContent);
+        });
+
+        fileContainer.on(FileContainer.events.deleted, (eventContent)=> {
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.deleted, eventContent);
+        });
+
+        fileContainer.on(FileContainer.events.createdDirectory, (eventContent)=> {
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.createDirectory, eventContent);
+        });
+
         fileContainer.on(FileContainer.events.metaComputed, (metaData)=> {
             this.addSyncMetaDataFromOwnContainer(metaData);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.metaData, metaData);
@@ -118,58 +144,6 @@ class Client {
         return fileContainer;
     }
 
-    private addConnectAndUploadJobToQueue(fileName:string, address:{port:number, host:string}) {
-        const job = (uploadingDoneCallback) => {
-
-            const uploadStamp = `client: uploading file: ${fileName}`;
-            console.time(uploadStamp);
-
-            TransferActions.connectAndUploadFile(fileName, address, this.fileContainer, (err)=> {
-                errorPrinter(err);
-                console.timeEnd(uploadStamp);
-
-                uploadingDoneCallback()
-            });
-        };
-
-        this.transferJobsQueue.push(job);
-    }
-
-    private addListenAndUploadJobToQueue(fileName:string) {
-        const job = (uploadingDoneCallback)=> {
-            
-            const uploadStamp = `client: uploading file: ${fileName}`;
-            console.time(uploadStamp);
-
-            TransferActions.listenAndUploadFile(otherParty, address, this.fileContainer, (err)=> {
-                errorPrinter(err);
-                console.timeEnd(uploadStamp);
-
-                uploadingDoneCallback()
-            });
-            
-        };
-
-        this.transferJobsQueue.push(job);
-    }
-
-    private addListenAndDownloadJobToQueue(fileName:string) {
-        const job = (downloadingDoneCallback)=> {
-
-            const downloadStamp = `client: downloading file: ${fileName}`;
-            console.time(downloadStamp);
-
-            TransferActions.listenAndDownloadFile(this.otherParty, fileName, this.otherParty.getOwnHost(), this.fileContainer, (err)=> {
-                errorPrinter(err);
-                console.timeEnd(downloadStamp);
-
-                downloadingDoneCallback()
-            });
-
-        };
-
-        this.transferJobsQueue.push(job);
-    }
 
     //TODO separate into strategy file
     private addSyncMetaDataFromOtherParty(syncData:{hashCode:string, modified:Date, name:string}):void {

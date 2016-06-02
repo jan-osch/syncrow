@@ -41,32 +41,12 @@ class TransferActions {
                 host: host
             };
 
-            EventsHelper.writeEventToOtherParty(pushingParty, Client.events.connectAndUpload, {
-                file: fileName,
+            EventsHelper.writeEventToOtherParty(pushingParty, Client.events.listeningForUpload, {
+                fileName: fileName,
                 address: address
             });
 
         })
-    }
-
-    /**
-     * Connects with other party and sends the file to it
-     * @param fileName
-     * @param address
-     * @param sourceContainer
-     * @param callback
-     */
-    public static connectAndUploadFile(fileName:string,
-                                       address:{host:string, port:number},
-                                       sourceContainer:FileContainer,
-                                       callback:Function) {
-
-        net.connect(address, (fileSendingSocket)=> {
-            fileSendingSocket.on('end', callback);
-
-            sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
-        })
-
     }
 
     /**
@@ -97,11 +77,31 @@ class TransferActions {
                 host: host
             };
 
-            EventsHelper.writeEventToOtherParty(otherParty, Client.events.fileOffer, {
-                file: fileName,
+            EventsHelper.writeEventToOtherParty(otherParty, Client.events.listeningForDownload, {
+                fileName: fileName,
                 address: address
             });
         })
+    }
+
+    /**
+     * Connects with other party and sends the file to it
+     * @param fileName
+     * @param address
+     * @param sourceContainer
+     * @param callback
+     */
+    public static connectAndUploadFile(fileName:string,
+                                       address:{host:string, port:number},
+                                       sourceContainer:FileContainer,
+                                       callback:Function) {
+
+        net.connect(address, (fileSendingSocket)=> {
+            fileSendingSocket.on('end', callback);
+
+            sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
+        })
+
     }
 
     /**
