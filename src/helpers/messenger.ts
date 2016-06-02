@@ -1,9 +1,9 @@
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../../typings/main.d.ts" />
 
 import net = require('net');
 import events = require('events');
-import Logger = require('./helpers/logger');
-import ConnectionHelper = require("./helpers/connection_helper");
+import Logger = require('./logger');
+import ConnectionHelper = require("./connection_helper");
 import {Socket} from "net";
 
 let logger = Logger.getNewLogger('Messenger');

@@ -2,7 +2,7 @@
 
 
 import fs = require("fs");
-import FileContainer = require("../file_container");
+import FileContainer = require("../helpers/file_container");
 import net  = require('net');
 
 import UserService = require('./user_service');
@@ -10,8 +10,8 @@ import {Socket, Server} from "net";
 
 import async = require('async');
 import _= require('lodash');
-import SocketMessenger = require("../messenger");
-import Client = require("../client");
+import SocketMessenger = require("../helpers/messenger");
+import Client = require("../client/client");
 
 const debug = require('debug')('server:server');
 
@@ -122,7 +122,7 @@ class BucketWrapper {
         let event = Client.parseEvent(socket, message);
 
 
-        if (event.type === Client.events.getFile) {
+        if (event.type === Client.events.listenAndUpload) {
             this.sendFileToSocket(socket, bucketName, event.body, _.noop);
         }
         if (event.type === FileContainer.events.created) {
@@ -149,7 +149,7 @@ class BucketWrapper {
             (socket)=> BucketWrapper.consumeFileFromSocket(socket, fileName, destinationContainer, callback)
         ).listen(()=> {
 
-            Client.writeEventToOtherParty(otherParty, Client.events.pullFile, {
+            Client.writeEventToOtherParty(otherParty, Client.events.connectAndUpload, {
                 file: fileName,
                 address: this.getOwnSocketServerAddress(filePullingServer)
             });
@@ -204,10 +204,5 @@ class BucketWrapper {
         })
     }
 }
-
-const k = new BucketWrapper(90, '.');
-
-k.requestSocketForBucket('', '', ()=> {
-});
 
 export = BucketWrapper;

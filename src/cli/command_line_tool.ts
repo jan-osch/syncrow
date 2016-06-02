@@ -3,8 +3,8 @@
 import program = require('commander');
 import net = require('net');
 import fs = require('fs');
-import SocketMessenger = require("../messenger");
-import Client = require("../client");
+import SocketMessenger = require("../helpers/messenger");
+import Client = require("../client/client");
 import Logger = require('../helpers/logger');
 import ConnectionHelper = require("../helpers/connection_helper");
 

@@ -1,19 +1,19 @@
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../../typings/main.d.ts" />
 
 import fs = require('fs');
 import net = require('net');
-import Messenger= require('./messenger');
-import FileContainer = require("./file_container");
-import Logger = require('./helpers/logger');
-import EventsHelper from "./helpers/events_helper";
+import Messenger= require('../helpers/messenger');
+import FileContainer = require("../helpers/file_container");
+import Logger = require('../helpers/logger');
+import EventsHelper from "../helpers/events_helper";
 import async from "async";
-import Configuration = require('./configuration');
-import TransferActions = require("./syncrow_server/transfer_actions");
+import Configuration = require('../configuration');
+import TransferActions = require("../helpers/transfer_actions");
 
 let logger = Logger.getNewLogger('Client', Configuration.client.logLevel);
 const debug = require('debug')('client');
 
-import errorPrinter = require('./utils/error_printer');
+import errorPrinter = require('../utils/error_printer');
 
 //TODO add support syncing after reestablishing connection
 //TODO add support for deleting offline
@@ -29,9 +29,10 @@ class Client {
 
     static events = {
         fileSocket: 'fileSocket',
-        getFile: 'getFile',
+        listenAndUpload: 'listenAndUpload',
         getFileList: 'getFileList',
-        pullFile: 'pullFile',
+        connectAndUpload: 'connectAndUpload',
+        fileOffer: 'fileOffer',
         getMeta: 'getMeta',
         metaData: 'metaData',
         createDirectory: 'createDirectory'
@@ -66,8 +67,11 @@ class Client {
 
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
 
-        if (event.type === Client.events.pullFile) {
-            this.addPushFileJobToQueue(event.body.name, event.body.address);
+        if (event.type === Client.events.connectAndUpload) {
+            this.addConnectAndUploadJobToQueue(event.body.name, event.body.address);
+
+        } else if (event.type === Client.events.listenAndUpload) {
+            this.addListenAndUploadJobToQueue(event.body.name);
 
         } else if (event.type === Client.events.metaData) {
             this.addSyncMetaDataFromOtherParty(event.body);
@@ -76,7 +80,7 @@ class Client {
             this.fileContainer.recomputeMetaDataForDirectory();
 
         } else if (event.type === FileContainer.events.created || event.type === FileContainer.events.changed) {
-            this.addPullFileJobToQueue(event.body.name);
+            this.addListenAndDownloadJobToQueue(event.body.name);
 
         } else if (event.type === FileContainer.events.createdDirectory) {
             this.fileContainer.createDirectory(event.body);
@@ -114,39 +118,57 @@ class Client {
         return fileContainer;
     }
 
-    private addPushFileJobToQueue(fileName:string, address:{port:number, host:string}) {
-        const pushJob = (pushingDoneCallback) => {
+    private addConnectAndUploadJobToQueue(fileName:string, address:{port:number, host:string}) {
+        const job = (uploadingDoneCallback) => {
 
-            const pushStamp = `pushing ${fileName}`;
-            console.time(pushStamp);
+            const uploadStamp = `client: uploading file: ${fileName}`;
+            console.time(uploadStamp);
 
-            TransferActions.pushFileToAddress(fileName, address, this.fileContainer, (err)=> {
+            TransferActions.connectAndUploadFile(fileName, address, this.fileContainer, (err)=> {
                 errorPrinter(err);
-                console.timeEnd(pushStamp);
+                console.timeEnd(uploadStamp);
 
-                pushingDoneCallback()
+                uploadingDoneCallback()
             });
         };
 
-        this.transferJobsQueue.push(pushJob);
+        this.transferJobsQueue.push(job);
     }
 
-    private addPullFileJobToQueue(fileName:string) {
-        const pullJob = (pullingDoneCallback)=> {
+    private addListenAndUploadJobToQueue(fileName:string) {
+        const job = (uploadingDoneCallback)=> {
+            
+            const uploadStamp = `client: uploading file: ${fileName}`;
+            console.time(uploadStamp);
 
-            const pullStamp = `client: pulling file: ${fileName}`;
-            console.time(pullStamp);
-
-            TransferActions.pullFileFromParty(this.otherParty, fileName, this.otherParty.getOwnHost(), this.fileContainer, (err)=> {
+            TransferActions.listenAndUploadFile(otherParty, address, this.fileContainer, (err)=> {
                 errorPrinter(err);
-                console.timeEnd(pullStamp);
+                console.timeEnd(uploadStamp);
 
-                pullingDoneCallback()
+                uploadingDoneCallback()
+            });
+            
+        };
+
+        this.transferJobsQueue.push(job);
+    }
+
+    private addListenAndDownloadJobToQueue(fileName:string) {
+        const job = (downloadingDoneCallback)=> {
+
+            const downloadStamp = `client: downloading file: ${fileName}`;
+            console.time(downloadStamp);
+
+            TransferActions.listenAndDownloadFile(this.otherParty, fileName, this.otherParty.getOwnHost(), this.fileContainer, (err)=> {
+                errorPrinter(err);
+                console.timeEnd(downloadStamp);
+
+                downloadingDoneCallback()
             });
 
         };
 
-        this.transferJobsQueue.push(pullJob);
+        this.transferJobsQueue.push(job);
     }
 
     //TODO separate into strategy file
@@ -160,7 +182,7 @@ class Client {
             return this.fileContainer.createDirectory(syncData.name);
 
         } else if (!this.fileContainer.isFileInContainer(syncData.name)) {
-            return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, syncData.name);
+            return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndUpload, syncData.name);
         }
     }
 
@@ -175,7 +197,7 @@ class Client {
         Client.checkMetaDataFileIsTheSame(ownMeta, otherPartyMeta);
         if (otherPartyMeta.hashCode !== ownMeta.hashCode && ownMeta.hashCode) {
             if (otherPartyMeta.modified.getTime() > ownMeta.modified.getTime()) {
-                return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, ownMeta.name);
+                return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndUpload, ownMeta.name);
             }
         }
     }

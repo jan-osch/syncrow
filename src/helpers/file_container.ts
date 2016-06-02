@@ -1,21 +1,21 @@
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../../typings/main.d.ts" />
 
 import fs = require('fs');
 import events = require('events');
 import async = require('async');
 import crypto = require('crypto');
 import path = require('path');
-import readTree = require('./helpers/read_tree');
+import readTree = require('./read_tree');
 import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
 import {Stats} from "fs";
-import Logger  = require('./helpers/logger');
-import PathHelper = require('./helpers/path_helper');
-import Configuration = require('./configuration');
+import Logger  = require('./logger');
+import PathHelper = require('./path_helper');
+import Configuration = require('../configuration');
 
 
-let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel);
+let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel); //TODO change to debug
 
 // TODO add conflict resolving
 // TODO refactor to remove metaComputed event - change to callback
@@ -26,7 +26,7 @@ class FileContainer extends events.EventEmitter {
         deleted: 'deleted',
         created: 'created',
         createdDirectory: 'createdDirectory',
-        metaComputed: 'metaComputed'
+        metaComputed: 'metaComputed' // TODO remove
     };
     private directoryToWatch:string;
     private watchedFiles:Object;
@@ -43,6 +43,19 @@ class FileContainer extends events.EventEmitter {
         this.blockedFiles = new Set();
     }
 
+    /**
+     * @param fileName
+     * @returns
+     */
+    public createDirectory(fileName:string) {
+        return mkdirp(this.createAbsolutePath(fileName), (error)=> {
+            if (error) return logger.warn(`/createDirectory - could not create directory, reason: ${error}`);
+        })
+    }
+
+    /**
+     *
+     */
     public getListOfTrackedFilesAndBeginWatching() {
         var that = this;
         this.getFileTree((err, files)=> {
@@ -53,11 +66,17 @@ class FileContainer extends events.EventEmitter {
         });
     }
 
+    /**
+     * @returns {string[]}
+     */
     public getListOfWatchedFiles():Array<string> {
         return Object.keys(this.watchedFiles);
     }
 
-    private getFileTree(callback:(err, files?:Array<string>)=>void) {
+    /**
+     * @param callback
+     */
+    public  getFileTree(callback:(err, files?:Array<string>)=>void) {
         readTree(this.directoryToWatch, {}, (err, results:Array<string>)=> {
             if (err) return callback(err);
 
@@ -65,6 +84,9 @@ class FileContainer extends events.EventEmitter {
         });
     }
 
+    /**
+     * Emits a lot of events
+     */
     public recomputeMetaDataForDirectory() {
         var that = this;
         this.getFileTree((err, files)=> {
@@ -72,9 +94,65 @@ class FileContainer extends events.EventEmitter {
         })
     }
 
+    /**
+     * @param file
+     * @returns {boolean}
+     */
     public isFileInContainer(file:string):boolean {
         return this.watchedFiles[file] !== undefined;
     }
+
+    /**
+     * @param fileName
+     */
+    public deleteFile(fileName:string) {
+        this.blockedFiles.add(fileName);
+        logger.info(`/deleteFile - deleting: ${fileName}`);
+
+        rimraf(this.createAbsolutePath(fileName), (error)=> {
+            if (error) return console.error(error);
+            setTimeout(()=> {
+                this.blockedFiles.delete(fileName);
+            }, FileContainer.watchTimeout);
+        });
+    }
+
+    /**
+     *
+     * @param fileName
+     * @param readStream
+     */
+    public consumeFileStream(fileName:string, readStream:ReadableStream) {
+        try {
+            var that = this;
+            that.blockedFiles.add(fileName);
+
+            var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', ()=> {
+                setTimeout(()=> {
+                    that.blockedFiles.delete(fileName);
+                }, FileContainer.watchTimeout);
+            });
+
+            readStream.pipe(writeStream);
+
+        } catch (error) {
+            logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
+        }
+    }
+
+    /**
+     *
+     * @param fileName
+     * @returns {ReadStream}
+     */
+    public getReadStreamForFile(fileName:string):ReadableStream {
+        try {
+            return fs.createReadStream(this.createAbsolutePath(fileName));
+        } catch (error) {
+            logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+        }
+    }
+
 
     private computeFileMetaDataAndEmit(fileName:string, callback:(err?)=>void) {
         var that = this;
@@ -145,50 +223,6 @@ class FileContainer extends events.EventEmitter {
             hashCode: this.watchedFiles[fileName].hashCode,
             name: fileName
         };
-    }
-
-    public deleteFile(fileName:string) {
-        this.blockedFiles.add(fileName);
-        logger.info(`/deleteFile - deleting: ${fileName}`);
-
-        rimraf(this.createAbsolutePath(fileName), (error)=> {
-            if (error) return console.error(error);
-            setTimeout(()=> {
-                this.blockedFiles.delete(fileName);
-            }, FileContainer.watchTimeout);
-        });
-    }
-
-    public consumeFileStream(fileName:string, readStream:ReadableStream) {
-        try {
-            var that = this;
-            that.blockedFiles.add(fileName);
-
-            var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', ()=> {
-                setTimeout(()=> {
-                    that.blockedFiles.delete(fileName);
-                }, FileContainer.watchTimeout);
-            });
-
-            readStream.pipe(writeStream);
-
-        } catch (error) {
-            logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
-        }
-    }
-
-    public getReadStreamForFile(fileName:string):ReadableStream {
-        try {
-            return fs.createReadStream(this.createAbsolutePath(fileName));
-        } catch (error) {
-            logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
-        }
-    }
-
-    public createDirectory(fileName:string) {
-        return mkdirp(this.createAbsolutePath(fileName), (error)=> {
-            if (error) return logger.warn(`/createDirectory - could not create directory, reason: ${error}`);
-        })
     }
 
     private beginWatching() {

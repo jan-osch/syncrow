@@ -1,28 +1,18 @@
-/**
- * Created by Janusz on 01.06.2016.
- */
-
 /// <reference path="../../typings/main.d.ts" />
 
-
-import fs = require("fs");
-import FileContainer = require("../file_container");
+import FileContainer = require("../helpers/file_container");
 import net  = require('net');
-
-import UserService = require('./user_service');
-
-import async from "async";
-import _= require('lodash');
-import Messenger = require("../messenger");
-import Client = require("../client");
-
-import errorPrinter = require('../utils/error_printer');
-import TransferActions = require("./transfer_actions");
+import async = require('async');
 import EventsHelper from "../helpers/events_helper";
+import _= require('lodash');
+import Messenger = require("../helpers/messenger");
+import Client = require("../client/client");
+import errorPrinter = require('../utils/error_printer');
+import TransferActions = require("../helpers/transfer_actions");
+
 const debug = require('debug')('bucketoperator');
 
-
-class BucketOperator {
+export default class BucketOperator {
     private path:string;
     private host:string;
     private otherParties:Array<Messenger>;
@@ -31,13 +21,13 @@ class BucketOperator {
     private transferJobsQueue:async.AsyncQueue;
 
     //TODO add configuration support
-    constructor(host:string, path:string, transferConcurrency=10) {
+    constructor(host:string, path:string, transferConcurrency = 10) {
         this.path = path;
         this.host = host;
         this.container = new FileContainer(path);
         this.otherParties = [];
         this.otherPartiesMessageListeners = [];
-        this.transferJobsQueue = async.queue((job, callback)=>job(callback), )
+        this.transferJobsQueue = async.queue((job, callback)=>job(callback), transferConcurrency);
     }
 
     /**
@@ -71,15 +61,8 @@ class BucketOperator {
         const event = EventsHelper.parseEvent(otherParty, message);
 
         if (event.type === FileContainer.events.created || event.type === FileContainer.events.changed) {
-            const pullStamp = `pulling file: ${event.body}`;
-            console.time(pullStamp);
-
-            TransferActions.pullFileFromParty(otherParty, event.body, this.host, this.container, (err)=> {
-                errorPrinter(err);
-                console.timeEnd(pullStamp);
-
-                this.broadcastEvent(event, otherParty);
-            });
+            //TODO possible bug here
+            this.addPullJobToTransferQueue(otherParty, event.body);
         }
 
         if (event.type === FileContainer.events.createdDirectory) {
@@ -92,16 +75,41 @@ class BucketOperator {
             this.broadcastEvent(event, otherParty);
         }
 
-        if (event.type === Client.events.pullFile) {
-            const pushStamp = `pushing file: ${event.body.file} to address: ${event.body.address}`;
+        if (event.type === Client.events.connectAndUpload) {
+            this.addPushJobToTransferQueue(event.body.name, event.body.address);
+        }
+    }
+
+    private addPullJobToTransferQueue(otherParty:Messenger, fileName:string) {
+        const pullJob = (pullingDoneCallback)=> {
+            const pullStamp = `pulling file: ${fileName}`;
+            console.time(pullStamp);
+
+            TransferActions.listenAndDownloadFile(otherParty, fileName, this.host, this.container, (err)=> {
+                errorPrinter(err);
+                console.timeEnd(pullStamp);
+                this.broadcastEvent(event, otherParty);
+
+                pullingDoneCallback();
+            })
+        };
+
+        this.transferJobsQueue.push(pullJob);
+    }
+
+    private addPushJobToTransferQueue(fileName:string, address:{port:number, host:string}) {
+        const pushJob = (pushingDoneCallback)=> {
+            const pushStamp = `pushing file: ${fileName} to address: ${address}`;
             console.time(pushStamp);
 
-            TransferActions.pushFileToAddress(event.body.file, event.body.address, this.container, (err)=> {
+            TransferActions.connectAndUploadFile(fileName, address, this.container, (err)=> {
                 errorPrinter(err);
-
                 console.timeEnd(pushStamp);
+                pushingDoneCallback();
             });
-        }
+        };
+
+        this.transferJobsQueue.push(pushJob);
     }
 
     private broadcastEvent(event:{type:string; body?:any}, excludeParty?:Messenger) {
@@ -110,9 +118,7 @@ class BucketOperator {
                 return;
             }
 
-            otherParty.writeMessage(JSON.stringify(event));
+            EventsHelper.writeEventToOtherParty(otherParty, event.type, event.body);
         })
     }
 }
-
-export = BucketOperator;

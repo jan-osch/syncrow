@@ -1,6 +1,6 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import Messenger = require("../messenger");
+import Messenger = require("./messenger");
 
 export default class EventsHelper {
 
