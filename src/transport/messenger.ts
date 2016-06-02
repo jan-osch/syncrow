@@ -62,10 +62,11 @@ export class Messenger extends EventEmitter {
     private addListenersToConnection(connection:Connection) {
         debug('/addListenersToConnection - adding listeners to new socket');
 
-        connection.on(Connection.events.data, (data)=>this.parseData(data));
-        connection.on(Connection.events.disconnected, ()=> this.handleConnectionDied());
-        connection.on(Connection.events.reconnecting, ()=> this.handleConnectionRecovering());
-        connection.on(Connection.events.connected, ()=>this.handleConnectionAlive());
+        this.connection = connection;
+        this.connection.on(Connection.events.data, (data)=>this.parseData(data));
+        this.connection.on(Connection.events.disconnected, ()=> this.handleConnectionDied());
+        this.connection.on(Connection.events.reconnecting, ()=> this.handleConnectionRecovering());
+        this.connection.on(Connection.events.connected, ()=>this.handleConnectionAlive());
 
         if (this.connection.isConnected()) {
             this.handleConnectionAlive();

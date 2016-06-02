@@ -1,17 +1,12 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import program = require('commander');
-import net = require('net');
-import fs = require('fs');
-import SocketMessenger = require("../transport/messenger");
-import Client = require("../client/client");
-import Logger = require('../utils/logger');
-import ConnectionHelper = require("../transport/connection");
-import request = require("request");
+import * as program from "commander";
+import * as request from "request";
 import {debugFor, loggerFor} from "../utils/logger";
 import {ConnectionServer} from "../transport/connection_server";
 import {Messenger} from "../transport/messenger";
 import {getActiveConnection, Connection} from "../transport/connection";
+import {Client} from "../client/client";
 
 const logger = loggerFor("CLI");
 const debug = debugFor("syncrow:cli");
@@ -67,6 +62,8 @@ function start(port:number, host:string, listen:boolean, directory:string, local
 
 function handleConnectionObtained(err:Error, connection?:Connection) {
     if (err) throw err;
+
+    logger.info(`Syncrow connected`);
 
     const messenger = new Messenger(connection);
     new Client(program.directory, messenger);

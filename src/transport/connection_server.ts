@@ -40,6 +40,8 @@ export class ConnectionServer {
     }
 
     private connectSocket(socket:Socket, initialCallback:(err:Error, connection?:Connection)=>any) {
+        debug('socket connected');
+        
         if (!this.connection) {
             this.connection = new Connection(socket, ConnectionStrategy.onProblemListenForConnection);
 

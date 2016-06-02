@@ -53,9 +53,9 @@ export class Connection extends EventEmitter {
      */
     public addSocket(socket:Socket) {
         this.socket = socket;
-        this.socket.on('data', (data)=>this.emit(Connection.events.data, data));
         this.socket.on('error', (error)=>this.handleSocketProblem(error));
         this.socket.on('close', (error)=>this.handleSocketProblem(error));
+        this.socket.on('data', (data)=>this.emit(Connection.events.data, data));
         this.connected = true;
     }
 
@@ -105,6 +105,7 @@ export class Connection extends EventEmitter {
                     logger.error(err);
                     return this.emit(Connection.events.disconnected);
                 }
+                debug(`got new socket to remote`);
 
                 this.addSocket(socket);
             });
@@ -152,8 +153,9 @@ export class Connection extends EventEmitter {
 }
 
 export function getActiveConnection(host:string, port:number, callback:(err:Error, connection?:Connection)=>any) {
-    connect({port: port, host: host},
-        (socket)=> {
+    const socket = connect({port: port, host: host},
+        ()=> {
+            debug(`getActiveConnection obtained a connection`);
             callback(null, new Connection(socket, ConnectionStrategy.onProblemReconnectToRemote, port, host));
         }
     ).on('error', (err)=>callback(err));
