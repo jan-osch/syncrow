@@ -18,7 +18,7 @@ import errorPrinter = require('../utils/error_printer');
 //TODO add support syncing after reestablishing connection
 //TODO add support for deleting offline
 //TODO Strategies for offline loading
-//TODO extract the common parts of client and server
+//TODO extract the common parts of client and bucket
 
 class Client {
     otherParty:Messenger;
@@ -54,7 +54,7 @@ class Client {
 
         socketMessenger.on(Messenger.events.connected, ()=> {
             logger.info('connected with other party beginning to sync');
-            this.fileContainer.recomputeMetaDataForDirectory();
+            // this.fileContainer.recomputeMetaDataForDirectory(); //TODO remove
         });
 
         socketMessenger.on(Messenger.events.disconnected, ()=>logger.info('disconnected, waiting for reconnection'));

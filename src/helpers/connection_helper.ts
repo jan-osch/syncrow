@@ -31,7 +31,7 @@ class ConnectionHelper extends EventEmitter {
         if (this.isServer && !this.server) {
             return this.initializeServer()
         } else if (this.isServer) {
-            return logger.debug('/getSocket - server already initialized - waiting for socket to connect');
+            return logger.debug('/getSocket - bucket already initialized - waiting for socket to connect');
         }
 
         return this.getNewSocketAsClient();

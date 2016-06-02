@@ -13,7 +13,7 @@ let logger = Logger.getNewLogger('CLI');
 program.version('0.0.1')
     .option('-h, --host <host>', 'host for connection', '0.0.0.0')
     .option('-p, --port <port>', 'port for connection', 1234)
-    .option('-s, --server', 'start as server')
+    .option('-s, --bucket', 'start as bucket')
     .option('-d, --directory <directory>', 'directory to watch', '.')
     .parse(process.argv);
 

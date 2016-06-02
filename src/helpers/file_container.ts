@@ -240,7 +240,7 @@ class FileContainer extends events.EventEmitter {
         fs.stat(that.createAbsolutePath(fileName), (error, stats:Stats)=> {
             if (error && that.watchedFiles[fileName]) {
                 delete that.watchedFiles[fileName];
-                return that.emitEventIfFileNotBlocked(FileContainer.events.fileDeleted, fileName);
+                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
 
             } else if (error) {
                 return logger.warn(`/checkRenameEventMeaning - deleted a non-tracked file, filename: ${fileName} reason: ${error}`);
