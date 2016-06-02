@@ -713,7 +713,7 @@ namespace request {
 
     getAgent(): Agent;
     // start(): void;
-    // abort(): void;
+    // onProblemAbort(): void;
     pipeDest(dest: any): void;
     setHeader(name: string, value: string, clobber?: boolean): Request;
     setHeaders(headers: Headers): Request;

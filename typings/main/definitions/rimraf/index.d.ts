@@ -253,7 +253,7 @@ namespace glob {
      */
     options: Options;
     /**
-     * Boolean which is set to true when calling `abort()`. There is no way at this time to continue a glob search after aborting, but you can re-use the statCache to avoid having to duplicate syscalls.
+     * Boolean which is set to true when calling `onProblemAbort()`. There is no way at this time to continue a glob search after aborting, but you can re-use the statCache to avoid having to duplicate syscalls.
      * @type {boolean}
      */
     aborted: boolean;

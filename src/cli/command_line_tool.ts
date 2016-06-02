@@ -6,7 +6,7 @@ import fs = require('fs');
 import SocketMessenger = require("../helpers/messenger");
 import Client = require("../client/client");
 import Logger = require('../helpers/logger');
-import ConnectionHelper = require("../helpers/connection_helper");
+import ConnectionHelper = require("../helpers/connection");
 import request = require("request");
 
 let logger = Logger.getNewLogger('CLI');

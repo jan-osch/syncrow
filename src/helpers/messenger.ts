@@ -3,26 +3,16 @@
 import net = require('net');
 import events = require('events');
 import Logger = require('./logger');
-import ConnectionHelper = require("./connection_helper");
-import {Socket} from "net";
+import Connection = require("./connection");
 
 let logger = Logger.getNewLogger('Messenger');
 const debug = require('debug')('syncrow:messenger');
 
-enum ConnectionStrategy{
-    abort,
-    retry
-}
-
 class Messenger extends events.EventEmitter {
 
-    private socket:net.Socket;
-    private port:number;
-    private host:string;
+    private connection:Connection;
 
-    private strategy:ConnectionStrategy;
-
-    private connected:boolean;
+    private isAlive:boolean;
     private messageBuffer:string;
     private expectedLength:number;
 
@@ -30,73 +20,71 @@ class Messenger extends events.EventEmitter {
 
     static events = {
         message: 'message',
-
-        connected: 'connected',
-        disconnected: 'disconnected',
-        reconnecting: 'reconnecting'
+        alive: 'connected',
+        died: 'disconnected',
+        recovering: 'reconnecting'
     };
 
-    constructor(socket:Socket, port:number, host:string, strategy:ConnectionStrategy) {
+    constructor(connection:Connection) {
         super();
-        this.socket = socket;
-        this.port = port;
-        this.host = host;
-        this.strategy = strategy;
-        this.connected = false;
         this.resetBuffers();
+        this.addListenersToConnection(connection);
     }
 
     /**
      *
      * @param data
-     * @returns {undefined}
+     * @returns
      */
     public writeMessage(data:string) {
-        if (!this.connected) {
+        if (!this.isAlive) {
             return logger.warn('/writeMessage - socket connection is closed will not write data')
         }
         var message = `${data.length}${Messenger.separator}${data}`;
-        this.socket.write(message);
+        this.connection.write(message);
     }
 
     /**
      * @returns {string}
      */
     public getOwnHost():string {
-        return this.socket.address().address;
+        return this.connection.address().address;
     }
-
-    // private obtainNewSocket() {
-    //     this.connectionHelper.once(ConnectionHelper.events.socket, (socket)=> {
-    //         logger.debug('/obtainNewSocket- adding new socket');
-    //         this.socket = socket;
-    //         this.connected = true;
-    //         this.addListenersToSocketAndEmitConnected(this.socket);
-    //     });
-    //
-    //     logger.debug('/obtainNewSocket- requesting new socket');
-    //     this.connectionHelper.getSocket();
-    // }
 
     private resetBuffers() {
         this.messageBuffer = '';
         this.expectedLength = null;
     }
 
-    private addListenersToSocketAndEmitConnected(socket:Socket) {
-        debug('/addListenersToSocketAndEmitConnected - adding listeners to new socket');
+    private addListenersToConnection(connection:Connection) {
+        debug('/addListenersToConnection - adding listeners to new socket');
 
-        socket.on('data', (data)=>this.parseData(data));
-        socket.on('close', ()=> this.handleSocketDisconnected());
+        connection.on(Connection.events.data, (data)=>this.parseData(data));
+        connection.on(Connection.events.disconnected, ()=> this.handleConnectionDied());
+        connection.on(Connection.events.reconnecting, ()=> this.handleConnectionRecovering());
+        connection.on(Connection.events.connected, ()=>this.handleConnectionAlive());
 
-        this.emit(Messenger.events.connected);
+        if (this.connection.isConnected()) {
+            this.handleConnectionAlive();
+        }
     }
 
-    private handleSocketDisconnected() {
-        logger.debug('socket connection closed');
-        this.connected = false;
-        this.obtainNewSocket();
-        this.emit(Messenger.events.disconnected);
+    private handleConnectionDied() {
+        debug('connection disconnected');
+        this.isAlive = false;
+        this.emit(Messenger.events.died);
+    }
+
+    private handleConnectionRecovering() {
+        debug('connection is reconnecting');
+        this.isAlive = false;
+        this.emit(Messenger.events.recovering);
+    }
+
+    private handleConnectionAlive() {
+        debug('connection connected');
+        this.isAlive = true;
+        this.emit(Messenger.events.alive);
     }
 
     private parseData(data:Buffer) {
