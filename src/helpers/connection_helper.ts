@@ -8,6 +8,7 @@ import Configuration = require('../configuration');
 
 let logger = Logger.getNewLogger('ConnectionHelper', Configuration.connectionHelper.logLevel);
 
+//TODO add support also for direct connection(wrapper for socket)
 class ConnectionHelper extends EventEmitter {
     port:number;
     host:string;

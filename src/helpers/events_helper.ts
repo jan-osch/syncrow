@@ -2,6 +2,8 @@
 
 import Messenger = require("./messenger");
 
+const debug = require('debug')('syncrow:events');
+
 //TODO change this class to Event - allow static creation
 export default class EventsHelper {
 
@@ -41,6 +43,7 @@ export default class EventsHelper {
      * @param message
      */
     public static writeEventToOtherParty(otherParty:Messenger, type:string, message?:any) {
+        debug(`writing event: ${type} message: ${message}`);
         otherParty.writeMessage(EventsHelper.createEvent(type, message));
     }
 }

@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "chalk": "registry:npm/chalk#1.0.0+20160211003958"
+    "chalk": "registry:npm/chalk#1.0.0+20160211003958",
+    "request": "registry:npm/request#2.69.0+20160428223725"
   }
 }

@@ -11,7 +11,7 @@ import Client = require("../client/client");
 import errorPrinter = require('../utils/error_printer');
 import TransferActions = require("../helpers/transfer_actions");
 
-const debug = require('debug')('bucketoperator');
+const debug = require('debug')('syncrow:bucket');
 
 export default class BucketOperator {
     private path:string;
@@ -35,10 +35,16 @@ export default class BucketOperator {
      * @param otherParty
      */
     public addOtherParty(otherParty:Messenger) {
+        debug(`adding other party`);
         const messageListener = (message)=>this.handleEvent(otherParty, message);
 
         otherParty.once(Messenger.events.disconnected, ()=>this.removeOtherParty(otherParty));
-        otherParty.on(Messenger.events.message, messageListener);
+        otherParty.on(Messenger.events.message, (message)=>{
+            console.warn('ANYTHING');
+            console.warn('ANYTHING');
+            console.warn('ANYTHING');
+            console.warn('ANYTHING');
+        });
 
         this.otherParties.push(otherParty);
         this.otherPartiesMessageListeners.push(messageListener);
@@ -60,6 +66,8 @@ export default class BucketOperator {
 
     private handleEvent(otherParty:Messenger, message:string) {
         const event = EventsHelper.parseEvent(otherParty, message);
+
+        debug(`got event from other party: ${event}`);
 
         if (this.handleTransferEvent(otherParty, event)) {
             debug('Server handled transfer event');

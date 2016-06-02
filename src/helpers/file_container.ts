@@ -17,6 +17,8 @@ import Configuration = require('../configuration');
 
 let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.logLevel); //TODO change to debug
 
+const debug = require('debug')('syncrow:file_container');
+
 // TODO add conflict resolving
 // TODO refactor to remove metaComputed event - change to callback
 
@@ -80,7 +82,10 @@ class FileContainer extends events.EventEmitter {
         readTree(this.directoryToWatch, {}, (err, results:Array<string>)=> {
             if (err) return callback(err);
 
-            callback(null, results.map(PathHelper.normalizePath))
+            const fileTree = results.map(PathHelper.normalizePath);
+            debug(`detected files: ${fileTree}`);
+
+            callback(null, fileTree)
         });
     }
 
@@ -154,6 +159,20 @@ class FileContainer extends events.EventEmitter {
     }
 
 
+    /**
+     * Starts watching and emitting events
+     */
+    public beginWatching() {
+        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
+        fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
+            debug(`got event: ${event} for file: ${fileName}`);
+
+            if (event === 'rename') return this.checkRenameEventMeaning(PathHelper.normalizePath(fileName));
+
+            return this.emitEventIfFileNotBlocked(FileContainer.events.changed, PathHelper.normalizePath(fileName));
+        });
+    } //TODO add stop
+
     private computeFileMetaDataAndEmit(fileName:string, callback:(err?)=>void) {
         var that = this;
         async.parallel([(parallelCallback)=> {
@@ -225,15 +244,6 @@ class FileContainer extends events.EventEmitter {
         };
     }
 
-    private beginWatching() {
-        var that = this;
-        fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-            if (event === 'rename') return that.checkRenameEventMeaning(PathHelper.normalizePath(fileName));
-
-            return that.emitEventIfFileNotBlocked(FileContainer.events.changed, PathHelper.normalizePath(fileName));
-        });
-    }
-
     private checkRenameEventMeaning(fileName:string) {
         var that = this;
 
@@ -260,6 +270,7 @@ class FileContainer extends events.EventEmitter {
 
     private emitEventIfFileNotBlocked(event:string, fullFileName:string) {
         if (!this.blockedFiles.has(fullFileName)) {
+            debug(`emitting ${event} for file: ${fullFileName}`);
             this.emit(event, fullFileName);
         }
     }

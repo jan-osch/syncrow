@@ -15,7 +15,7 @@ import SocketMessenger = require("../helpers/messenger");
 import Client = require("../client/client");
 import Messenger = require("../helpers/messenger");
 
-const debug = require('debug')('bucket:bucket');
+const debug = require('debug')('syncrow:bucket_service');
 
 export default class BucketService {
     private host:string;
@@ -75,7 +75,7 @@ export default class BucketService {
         const result = new Map();
 
         bucketsList.forEach((bucketName)=> {
-            result.put(bucketName, new BucketOperator(this.host, `${basePath}/${bucketName}`));
+            result.set(bucketName, new BucketOperator(this.host, `${basePath}/${bucketName}`));
         });
 
         return result;

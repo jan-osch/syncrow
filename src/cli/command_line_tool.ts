@@ -7,25 +7,55 @@ import SocketMessenger = require("../helpers/messenger");
 import Client = require("../client/client");
 import Logger = require('../helpers/logger');
 import ConnectionHelper = require("../helpers/connection_helper");
+import request = require("request");
 
 let logger = Logger.getNewLogger('CLI');
 
-program.version('0.0.1')
+const debug = require("debug")("syncrow:cli");
+//TODO add support for direct connection
+
+program.version('0.0.2')
     .option('-h, --host <host>', 'host for connection', '0.0.0.0')
-    .option('-p, --port <port>', 'port for connection', 1234)
-    .option('-s, --bucket', 'start as bucket')
+    .option('-p, --port <port>', 'port for connection')
+    .option('-b, --bucket <bucket>', 'bucket name')
+    .option('-l, --listen', 'listen for connections')
     .option('-d, --directory <directory>', 'directory to watch', '.')
     .parse(process.argv);
 
 
-logger.debug(`host: ${program.host}`);
-logger.debug(`port: ${program.port}`);
-logger.debug(`server: ${program.server}`);
-logger.debug(`directory: ${program.directory}`);
+debug(`host: ${program.host}`);
+debug(`port: ${program.port}`);
+debug(`listen: ${program.listen}`);
+debug(`directory: ${program.directory}`);
+debug(`bucket: ${program.bucket}`);
 
-//TODO add verbose support
+if (program.bucket) {
+    if(!program.port){
+        throw new Error('Port required to connect');
+    }
 
-let connectionHelper = new ConnectionHelper(program.port, program.host, program.server);
-let socketMessenger = new SocketMessenger(connectionHelper);
-new Client(program.directory, socketMessenger);
+    debug(`requesting port for bucket: ${program.bucket}`);
+
+    request({
+        url: `http://${program.host}:${program.port}/bucket/${program.bucket}/port`,
+        json: true
+    }, (err, res, body)=> {
+        if (err) throw err;
+        if (res.statusCode !== 200) throw new Error(`Invalid response code ${res.statusCode}`);
+
+        debug(`got host/port for bucket: ${program.bucket}`);
+
+        start(body.port, body.host, false, program.directory);
+    });
+
+} else {
+    start(program.port, program.host, program.listen, program.directory)
+}
+
+
+function start(port:number, host:string, listen:boolean, directory:string) {
+    let connectionHelper = new ConnectionHelper(port, host, listen);
+    let socketMessenger = new SocketMessenger(connectionHelper);
+    new Client(directory, socketMessenger);
+}
 

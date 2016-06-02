@@ -11,7 +11,7 @@ import Configuration = require('../configuration');
 import TransferActions = require("../helpers/transfer_actions");
 
 let logger = Logger.getNewLogger('Client', Configuration.client.logLevel);
-const debug = require('debug')('client');
+const debug = require('debug')('syncrow:client');
 
 import errorPrinter = require('../utils/error_printer');
 
@@ -128,14 +128,17 @@ class Client {
         var fileContainer = new FileContainer(directoryToWatch);
 
         fileContainer.on(FileContainer.events.changed, (eventContent)=> {
+            debug(`detected file changed: ${eventContent}`);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, eventContent);
         });
 
         fileContainer.on(FileContainer.events.created, (eventContent)=> {
+            debug(`detected file created: ${eventContent}`);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, eventContent);
         });
 
         fileContainer.on(FileContainer.events.deleted, (eventContent)=> {
+            debug(`detected file deleted: ${eventContent}`);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileDeleted, eventContent);
         });
 

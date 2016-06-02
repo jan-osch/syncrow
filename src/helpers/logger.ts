@@ -3,6 +3,7 @@
 import chalk = require('chalk');
 import Configuration = require('../configuration');
 
+//TODO refactor
 class Logger {
     private localLevel:number;
     private context:string;

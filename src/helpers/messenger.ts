@@ -7,39 +7,43 @@ import ConnectionHelper = require("./connection_helper");
 import {Socket} from "net";
 
 let logger = Logger.getNewLogger('Messenger');
+const debug = require('debug')('syncrow:messenger');
 
+enum ConnectionStrategy{
+    abort,
+    retry
+}
 
 class Messenger extends events.EventEmitter {
 
     private socket:net.Socket;
-    private connectionHelper:ConnectionHelper;
+    private port:number;
+    private host:string;
+
+    private strategy:ConnectionStrategy;
+
+    private connected:boolean;
     private messageBuffer:string;
     private expectedLength:number;
+
     private static separator = ':';
-    private connected:boolean;
 
     static events = {
         message: 'message',
+
         connected: 'connected',
-        disconnected: 'disconnected'
+        disconnected: 'disconnected',
+        reconnecting: 'reconnecting'
     };
 
-    constructor(connectionHelper?:ConnectionHelper, socket?:Socket) {
+    constructor(socket:Socket, port:number, host:string, strategy:ConnectionStrategy) {
         super();
+        this.socket = socket;
+        this.port = port;
+        this.host = host;
+        this.strategy = strategy;
+        this.connected = false;
         this.resetBuffers();
-
-        if (socket) {
-            this.socket = socket;
-            this.connected = true;
-            this.addListenersToSocketAndEmitConnected(socket);
-
-        } else if (connectionHelper) {
-            this.connected = false;
-            this.socket = null;
-            this.connectionHelper = connectionHelper;
-            this.obtainNewSocket();
-        }
-
     }
 
     /**
@@ -53,7 +57,6 @@ class Messenger extends events.EventEmitter {
         }
         var message = `${data.length}${Messenger.separator}${data}`;
         this.socket.write(message);
-
     }
 
     /**
@@ -63,17 +66,17 @@ class Messenger extends events.EventEmitter {
         return this.socket.address().address;
     }
 
-    private obtainNewSocket() {
-        this.connectionHelper.once(ConnectionHelper.events.socket, (socket)=> {
-            logger.debug('/obtainNewSocket- adding new socket');
-            this.socket = socket;
-            this.connected = true;
-            this.addListenersToSocketAndEmitConnected(this.socket);
-        });
-
-        logger.debug('/obtainNewSocket- requesting new socket');
-        this.connectionHelper.getSocket();
-    }
+    // private obtainNewSocket() {
+    //     this.connectionHelper.once(ConnectionHelper.events.socket, (socket)=> {
+    //         logger.debug('/obtainNewSocket- adding new socket');
+    //         this.socket = socket;
+    //         this.connected = true;
+    //         this.addListenersToSocketAndEmitConnected(this.socket);
+    //     });
+    //
+    //     logger.debug('/obtainNewSocket- requesting new socket');
+    //     this.connectionHelper.getSocket();
+    // }
 
     private resetBuffers() {
         this.messageBuffer = '';
@@ -81,7 +84,8 @@ class Messenger extends events.EventEmitter {
     }
 
     private addListenersToSocketAndEmitConnected(socket:Socket) {
-        logger.debug('/addListenersToSocketAndEmitConnected - adding listeners to new socket');
+        debug('/addListenersToSocketAndEmitConnected - adding listeners to new socket');
+
         socket.on('data', (data)=>this.parseData(data));
         socket.on('close', ()=> this.handleSocketDisconnected());
 

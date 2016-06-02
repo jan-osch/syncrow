@@ -3,7 +3,7 @@
 import Messenger= require('../helpers/messenger');
 import FileContainer = require("../helpers/file_container");
 import TransferActions = require("../helpers/transfer_actions");
-import {AsyncQueue} from "async";
+import async = require("async");
 
 const debug = require('debug')('transfer:queue');
 
