@@ -49,11 +49,14 @@ export default class TransferQueue {
      * @param fileName
      * @param destinationContainer
      * @param timingMessage
+     * @param callback
      */
     public addConnectAndDownloadJobToQueue(address:{port:number, host:string},
                                            fileName:string,
                                            destinationContainer:FileContainer,
-                                           timingMessage?:string) {
+                                           timingMessage?:string,
+                                           callback?:Function) {
+
         const job = (downloadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);
@@ -67,7 +70,7 @@ export default class TransferQueue {
 
         };
 
-        this.queue.push(job);
+        this.queue.push(job, callback);
     }
 
     /**
@@ -107,12 +110,14 @@ export default class TransferQueue {
      * @param host
      * @param destinationContainer
      * @param timingMessage
+     * @param callback
      */
     public  addListenAndDownloadJobToQueue(otherParty:Messenger,
                                            fileName:string,
                                            host:string,
                                            destinationContainer:FileContainer,
-                                           timingMessage?:string) {
+                                           timingMessage?:string,
+                                           callback?:Function) {
 
         const job = (downloadingDoneCallback)=> {
 
@@ -127,6 +132,6 @@ export default class TransferQueue {
 
         };
 
-        this.queue.push(job);
+        this.queue.push(job, callback);
     }
 }

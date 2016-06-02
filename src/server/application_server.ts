@@ -129,12 +129,12 @@ class BucketWrapper {
             this.pullFileFromParty(socket, event.body, this.containers[bucketName], _.noop);
         }
         if (event.type === FileContainer.events.createdDirectory) {
-            this.containers[bucketName].createDirectory(event.body);
+            this.containers[bucketName].directoryCreated(event.body);
         }
         if (event.type === FileContainer.events.changed) {
             this.pullFileFromParty(socket, event.body, this.containers[bucketName], _.noop);
         }
-        if (event.type === FileContainer.events.deleted) {
+        if (event.type === FileContainer.events.fileDeleted) {
             this.containers[bucketName].deleteFile(event.body);
         }
         if (event.type === Client.events.fileSocket) {

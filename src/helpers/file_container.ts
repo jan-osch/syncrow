@@ -23,7 +23,7 @@ let logger = Logger.getNewLogger('FileContainer', Configuration.fileContainer.lo
 class FileContainer extends events.EventEmitter {
     static events = {
         changed: 'changed',
-        deleted: 'deleted',
+        deleted: 'fileDeleted',
         created: 'created',
         createdDirectory: 'createdDirectory',
         metaComputed: 'metaComputed' // TODO remove
@@ -240,7 +240,7 @@ class FileContainer extends events.EventEmitter {
         fs.stat(that.createAbsolutePath(fileName), (error, stats:Stats)=> {
             if (error && that.watchedFiles[fileName]) {
                 delete that.watchedFiles[fileName];
-                return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
+                return that.emitEventIfFileNotBlocked(FileContainer.events.fileDeleted, fileName);
 
             } else if (error) {
                 return logger.warn(`/checkRenameEventMeaning - deleted a non-tracked file, filename: ${fileName} reason: ${error}`);

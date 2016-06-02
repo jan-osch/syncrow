@@ -4,6 +4,7 @@ import FileContainer = require("../helpers/file_container");
 import net  = require('net');
 import async = require('async');
 import EventsHelper from "../helpers/events_helper";
+import TransferQueue from "../helpers/transfer_queue";
 import _= require('lodash');
 import Messenger = require("../helpers/messenger");
 import Client = require("../client/client");
@@ -18,7 +19,7 @@ export default class BucketOperator {
     private otherParties:Array<Messenger>;
     private container:FileContainer;
     private otherPartiesMessageListeners:Array<Function>;
-    private transferJobsQueue:async.AsyncQueue;
+    private transferJobsQueue:TransferQueue;
 
     //TODO add configuration support
     constructor(host:string, path:string, transferConcurrency = 10) {
@@ -27,7 +28,7 @@ export default class BucketOperator {
         this.container = new FileContainer(path);
         this.otherParties = [];
         this.otherPartiesMessageListeners = [];
-        this.transferJobsQueue = async.queue((job, callback)=>job(callback), transferConcurrency);
+        this.transferJobsQueue = new TransferQueue(transferConcurrency);
     }
 
     /**
@@ -60,65 +61,69 @@ export default class BucketOperator {
     private handleEvent(otherParty:Messenger, message:string) {
         const event = EventsHelper.parseEvent(otherParty, message);
 
-        if (event.type === FileContainer.events.created || event.type === FileContainer.events.changed) {
-            //TODO possible bug here
-            this.addPullJobToTransferQueue(otherParty, event.body);
-        }
+        if (this.handleTransferEvent(otherParty, event)) {
+            debug('Server handled transfer event');
+            return;
 
-        if (event.type === FileContainer.events.createdDirectory) {
+        } else if (event.type === Client.events.directoryCreated) {
             this.container.createDirectory(event.body);
-            this.broadcastEvent(event, otherParty);
-        }
+            this.broadcastEvent(event.type, event.body, otherParty);
+            return;
 
-        if (event.type === FileContainer.events.deleted) {
+        } else if (event.type === Client.events.fileDeleted) {
             this.container.deleteFile(event.body);
-            this.broadcastEvent(event, otherParty);
+            this.broadcastEvent(event.type, event.body, otherParty);
+            return;
+
+        }else  if (event.type === Client.events.getFile) {
+            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.connectAndDownload, event.body);
+            return;
+
+        } else if (event.type === EventsHelper.events.error) {
+            console.info(`received error message ${JSON.stringify(event.body)}`);
+            return;
         }
 
-        if (event.type === Client.events.connectAndUpload) {
-            this.addPushJobToTransferQueue(event.body.name, event.body.address);
+        EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
+    }
+
+    private handleTransferEvent(otherParty:Messenger, event:{type:string, body?:any}):boolean {
+        if (event.type === TransferActions.events.connectAndDownload) {
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
+                this.container, `Server - downloading: ${event.body.fileName}`, ()=> {
+                    this.broadcastEvent(Client.events.fileChanged, event.body.fileName, otherParty);
+                });
+            return true;
+
+        } else if (event.type === TransferActions.events.connectAndUpload) {
+            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fieldName, event.body.address,
+                this.container, `Server - uploading: ${event.body.fieldName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.listenAndDownload) {
+            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName, this.host,
+                this.container, `Server - downloading: ${event.body.fileName}`, ()=> {
+                    this.broadcastEvent(Client.events.fileChanged, event.body.fileName, otherParty);
+                });
+            return true;
+
+        } else if (event.type === TransferActions.events.listenAndUpload) {
+            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty, this.host,
+                this.container, `Server - uploading: ${event.body.fileName}`);
+            return true;
+
         }
+
+        return false;
     }
 
-    private addPullJobToTransferQueue(otherParty:Messenger, fileName:string) {
-        const pullJob = (pullingDoneCallback)=> {
-            const pullStamp = `pulling file: ${fileName}`;
-            console.time(pullStamp);
-
-            TransferActions.listenAndDownloadFile(otherParty, fileName, this.host, this.container, (err)=> {
-                errorPrinter(err);
-                console.timeEnd(pullStamp);
-                this.broadcastEvent(event, otherParty);
-
-                pullingDoneCallback();
-            })
-        };
-
-        this.transferJobsQueue.push(pullJob);
-    }
-
-    private addPushJobToTransferQueue(fileName:string, address:{port:number, host:string}) {
-        const pushJob = (pushingDoneCallback)=> {
-            const pushStamp = `pushing file: ${fileName} to address: ${address}`;
-            console.time(pushStamp);
-
-            TransferActions.connectAndUploadFile(fileName, address, this.container, (err)=> {
-                errorPrinter(err);
-                console.timeEnd(pushStamp);
-                pushingDoneCallback();
-            });
-        };
-
-        this.transferJobsQueue.push(pushJob);
-    }
-
-    private broadcastEvent(event:{type:string; body?:any}, excludeParty?:Messenger) {
+    private broadcastEvent(eventType:string, body:any, excludeParty?:Messenger) {
         this.otherParties.forEach((otherParty)=> {
             if (excludeParty && excludeParty === otherParty) {
                 return;
             }
 
-            EventsHelper.writeEventToOtherParty(otherParty, event.type, event.body);
+            EventsHelper.writeEventToOtherParty(otherParty, eventType, body);
         })
     }
 }

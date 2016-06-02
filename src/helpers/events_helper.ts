@@ -2,6 +2,7 @@
 
 import Messenger = require("./messenger");
 
+//TODO change this class to Event - allow static creation
 export default class EventsHelper {
 
     static events = {

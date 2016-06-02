@@ -6,12 +6,19 @@ import net  = require('net');
 import {Socket, Server} from "net";
 import EventsHelper from "./events_helper";
 import Messenger = require("./messenger");
-import Client = require("../client/client");
 
 const debug = require('debug')('bucketoperator');
 
 
 class TransferActions {
+
+    public static events = {
+        listenAndUpload: 'listenAndUpload',
+        listenAndDownload: 'listenAndDownload',
+
+        connectAndUpload: 'connectAndUpload',
+        connectAndDownload: 'connectAndDownload',
+    };
 
     /**
      * Listens for other party to connect, then downloads the file from it
@@ -28,12 +35,10 @@ class TransferActions {
                                         callback:Function) {
 
         const filePullingServer = net.createServer(
-
             (socket)=> TransferActions.consumeFileFromSocket(socket,
                 fileName,
                 destinationContainer,
                 ()=>TransferActions.closeServer(filePullingServer, callback))
-
         ).listen(()=> {
 
             const address = {
@@ -41,7 +46,7 @@ class TransferActions {
                 host: host
             };
 
-            EventsHelper.writeEventToOtherParty(pushingParty, Client.events.listeningForUpload, {
+            EventsHelper.writeEventToOtherParty(pushingParty, TransferActions.events.connectAndUpload, {
                 fileName: fileName,
                 address: address
             });
@@ -64,12 +69,10 @@ class TransferActions {
                                       callback:Function) {
 
         const fileOfferingServer = net.createServer(
-
             (fileTransferSocket)=> {
                 fileTransferSocket.on('end', ()=>TransferActions.closeServer(fileOfferingServer, callback));
                 sourceContainer.getReadStreamForFile(fileName).pipe(fileTransferSocket);
             }
-
         ).listen(()=> {
 
             const address = {
@@ -77,7 +80,7 @@ class TransferActions {
                 host: host
             };
 
-            EventsHelper.writeEventToOtherParty(otherParty, Client.events.listeningForDownload, {
+            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.connectAndDownload, {
                 fileName: fileName,
                 address: address
             });

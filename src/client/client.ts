@@ -27,21 +27,16 @@ class Client {
     transferJobsQueue:TransferQueue;
 
     static events = {
-        listenAndUpload: 'listenAndUpload',
-        listenAndDownload: 'listenAndDownload',
+        fileChanged: 'fileChanged',
+        fileDeleted: 'fileDeleted',
+        directoryCreated: 'directoryCreated',
 
-        connectAndUpload: 'connectAndUpload',
-        connectAndDownload: 'connectAndDownload',
-
-        listeningForDownload: 'listeningForDownload',
-        listeningForUpload: 'listeningForUpload',
-
+        getFile: 'getFile',
         getFileList: 'getFileList',
         getMeta: 'getMeta',
         metaData: 'metaData',
-        createDirectory: 'createDirectory',
-        deleted: 'deleted'
     };
+
 
     constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = Configuration.client.socketsLimit) {
         this.filesToSync = {};
@@ -55,7 +50,7 @@ class Client {
      * @returns {Messenger}
      */
     public addOtherPartyMessenger(socketMessenger:Messenger) {
-        socketMessenger.on(Messenger.events.message, (message:string)=>this.routeEvent(this.otherParty, message));
+        socketMessenger.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
         socketMessenger.on(Messenger.events.connected, ()=> {
             logger.info('connected with other party beginning to sync');
@@ -66,72 +61,86 @@ class Client {
         return socketMessenger;
     }
 
-    private routeEvent(otherParty:Messenger, message:string) {
+    private handleEvent(otherParty:Messenger, message:string) {
         let event = EventsHelper.parseEvent(otherParty, message);
         if (!event) return;
+
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
 
-        if (event.type === Client.events.connectAndUpload) {
-            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
-                this.fileContainer, `client - uploading: ${event.body.fileName}`);
+        if (this.handleTransferEvents(event, otherParty)) {
+            return debug('routed transfer event');
 
-        } else if (event.type === Client.events.connectAndDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.name,
-                this.fileContainer, `client - downloading: ${event.body.fileName}`)
-
-        } else if (event.type === Client.events.listenAndDownload) {
-            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
-                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`)
-
-        } else if (event.type === Client.events.listenAndUpload) {
-            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
-                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${event.body.fileName}`);
-
-        } else if (event.type === Client.events.listeningForUpload) {
-            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
-                this.fileContainer, `client - uploading: ${event.body.fileName}`);
-
-        } else if (event.type === Client.events.listeningForDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
-                this.fileContainer, `client - uploading: ${event.body.fileName}`);
+        } else if (event.type === Client.events.getFile) {
+            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, event.body);
+            return;
 
         } else if (event.type === Client.events.metaData) {
             this.addSyncMetaDataFromOtherParty(event.body);
+            return;
 
         } else if (event.type === Client.events.getMeta) {
             this.fileContainer.recomputeMetaDataForDirectory();
+            return;
 
         } else if (event.type === FileContainer.events.createdDirectory) {
             this.fileContainer.createDirectory(event.body);
+            return;
 
-        } else if (event.type === FileContainer.events.deleted) {
+        } else if (event.type === Client.events.fileDeleted) {
             this.fileContainer.deleteFile(event.body);
+            return;
 
         } else if (event.type === EventsHelper.events.error) {
             console.info(`received error message ${JSON.stringify(event.body)}`);
-
-        } else {
-            EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
+            return;
         }
+
+        EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
+    }
+
+    private handleTransferEvents(event:{type:string, body?:any}, otherParty:Messenger):boolean {
+        if (event.type === TransferActions.events.connectAndUpload) {
+            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
+                this.fileContainer, `client - uploading: ${event.body.fileName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.connectAndDownload) {
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.name,
+                this.fileContainer, `client - downloading: ${event.body.fileName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.listenAndDownload) {
+            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
+                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.listenAndUpload) {
+            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
+                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${event.body.fileName}`);
+            return true;
+
+        }
+
+        return false;
     }
 
     private createDirectoryWatcher(directoryToWatch:string):FileContainer {
         var fileContainer = new FileContainer(directoryToWatch);
 
         fileContainer.on(FileContainer.events.changed, (eventContent)=> {
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndDownload, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, eventContent);
         });
 
         fileContainer.on(FileContainer.events.created, (eventContent)=> {
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndDownload, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, eventContent);
         });
 
         fileContainer.on(FileContainer.events.deleted, (eventContent)=> {
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.deleted, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileDeleted, eventContent);
         });
 
         fileContainer.on(FileContainer.events.createdDirectory, (eventContent)=> {
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.createDirectory, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.directoryCreated, eventContent);
         });
 
         fileContainer.on(FileContainer.events.metaComputed, (metaData)=> {
@@ -156,7 +165,7 @@ class Client {
             return this.fileContainer.createDirectory(syncData.name);
 
         } else if (!this.fileContainer.isFileInContainer(syncData.name)) {
-            return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndUpload, syncData.name);
+            return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, syncData.name);
         }
     }
 
@@ -171,7 +180,7 @@ class Client {
         Client.checkMetaDataFileIsTheSame(ownMeta, otherPartyMeta);
         if (otherPartyMeta.hashCode !== ownMeta.hashCode && ownMeta.hashCode) {
             if (otherPartyMeta.modified.getTime() > ownMeta.modified.getTime()) {
-                return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.listenAndUpload, ownMeta.name);
+                return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, ownMeta.name);
             }
         }
     }
