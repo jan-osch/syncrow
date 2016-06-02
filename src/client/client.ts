@@ -1,26 +1,21 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import fs = require('fs');
-import net = require('net');
-import Messenger= require('../transport/messenger');
-import FileContainer = require("../helpers/file_container");
-import Logger = require('../helpers/logger');
-import EventsHelper from "../helpers/events_helper";
-import TransferQueue from "../transport/transfer_queue";
-import Configuration = require('../configuration');
-import TransferActions = require("../transport/transfer_actions");
+import {loggerFor, debugFor} from "../helpers/logger";
+import {Messenger} from "../transport/messenger";
+import {FileContainer} from "../helpers/file_container";
+import {TransferQueue} from "../transport/transfer_queue";
+import {EventsHelper} from "../helpers/events_helper";
+import {TransferActions} from "../transport/transfer_actions";
+import config from "../configuration";
 
-let logger = Logger.loggerFor('Client', Configuration.client.logLevel);
-const debug = require('debug')('syncrow:client');
-
-import errorPrinter = require('../utils/error_printer');
+const debug = debugFor("syncrow:client");
+const logger = loggerFor('Client');
 
 //TODO add support syncing after reestablishing connection
 //TODO add support for deleting offline
 //TODO Strategies for offline loading
 //TODO extract the common parts of client and bucket
-
-class Client {
+export class Client {
     otherParty:Messenger;
     fileContainer:FileContainer;
     filesToSync:Object;
@@ -37,8 +32,13 @@ class Client {
         metaData: 'metaData',
     };
 
-
-    constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = Configuration.client.socketsLimit) {
+    /**
+     * End application client
+     * @param pathToWatch
+     * @param otherParty
+     * @param socketsLimit
+     */
+    constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = config.client.socketsLimit) {
         this.filesToSync = {};
         this.fileContainer = this.createDirectoryWatcher(pathToWatch);
         this.otherParty = this.addOtherPartyMessenger(otherParty);
@@ -52,12 +52,12 @@ class Client {
     public addOtherPartyMessenger(socketMessenger:Messenger) {
         socketMessenger.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
-        socketMessenger.on(Messenger.events.connected, ()=> {
+        socketMessenger.on(Messenger.events.alive, ()=> {
             logger.info('connected with other party beginning to sync');
             // this.fileContainer.recomputeMetaDataForDirectory(); //TODO remove
         });
 
-        socketMessenger.on(Messenger.events.disconnected, ()=>logger.info('disconnected, waiting for reconnection'));
+        socketMessenger.on(Messenger.events.alive, ()=>logger.info('disconnected, waiting for reconnection'));
         return socketMessenger;
     }
 
@@ -194,5 +194,3 @@ class Client {
         }
     }
 }
-
-export  = Client;

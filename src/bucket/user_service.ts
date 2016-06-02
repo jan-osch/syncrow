@@ -1,15 +1,26 @@
 /// <reference path="../../typings/main.d.ts" />
 
-class UserService {
+
+import {loggerFor, debugFor} from "../helpers/logger";
+
+const debug = debugFor("syncrow:user_service");
+const logger = loggerFor('UserService');
+
+
+export class UserService {
+    //TODO all
     constructor() {
 
     }
 
-    validateCredentials(login:string, passwordHash:string):boolean {
+    public validateCredentials(login:string, passwordHash:string):boolean {
         return true;
     }
 
-
 }
 
-export = new UserService();
+const instance = new UserService();
+
+export function getUserService(){
+    return instance;
+}

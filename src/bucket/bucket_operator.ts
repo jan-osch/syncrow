@@ -1,21 +1,17 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import FileContainer = require("../helpers/file_container");
-import net  = require('net');
-import async = require('async');
-import EventsHelper from "../helpers/events_helper";
-import TransferQueue from "../transport/transfer_queue";
-import _= require('lodash');
-import Messenger = require("../transport/messenger");
-import Client = require("../client/client");
-import TransferActions = require("../transport/transfer_actions");
-import {loggerFor} from "../helpers/logger";
+import {FileContainer} from "../helpers/file_container";
+import {EventsHelper} from "../helpers/events_helper";
+import {TransferQueue} from "../transport/transfer_queue";
+import {Messenger} from "../transport/messenger";
+import {Client} from "../client/client";
+import {TransferActions} from "../transport/transfer_actions";
+import {loggerFor, debugFor} from "../helpers/logger";
 
+const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
 
-const debug = require('debug')('syncrow:bucket');
-
-export default class BucketOperator {
+export class BucketOperator {
     private path:string;
     private host:string;
     private otherParties:Array<Messenger>;
@@ -39,8 +35,8 @@ export default class BucketOperator {
         debug(`adding other party`);
         const messageListener = (message)=>this.handleEvent(otherParty, message);
 
-        otherParty.once(Messenger.events.disconnected, ()=>this.removeOtherParty(otherParty));
-        otherParty.on(Messenger.events.message, (message)=>{
+        otherParty.once(Messenger.events.died, ()=>this.removeOtherParty(otherParty));
+        otherParty.on(Messenger.events.message, (message)=> {
             console.warn('ANYTHING');
             console.warn('ANYTHING');
             console.warn('ANYTHING');
@@ -84,7 +80,7 @@ export default class BucketOperator {
             this.broadcastEvent(event.type, event.body, otherParty);
             return;
 
-        }else  if (event.type === Client.events.getFile) {
+        } else if (event.type === Client.events.getFile) {
             EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.connectAndDownload, event.body);
             return;
 

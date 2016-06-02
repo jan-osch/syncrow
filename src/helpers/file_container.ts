@@ -1,28 +1,25 @@
 /// <reference path="../../typings/main.d.ts" />
-
-import fs = require('fs');
-import events = require('events');
-import async = require('async');
-import crypto = require('crypto');
-import path = require('path');
+import * as fs from "fs";
+import {Stats} from "fs";
+import {EventEmitter} from "events";
+import * as async from "async";
+import * as crypto from "crypto";
+import * as path from "path";
 import readTree = require('./read_tree');
 import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
-import {Stats} from "fs";
 import Logger  = require('./logger');
 import PathHelper = require('./path_helper');
-import Configuration = require('../configuration');
+import config from '../configuration';
+import {loggerFor, debugFor} from "./logger";
 
-
-let logger = Logger.loggerFor('FileContainer', Configuration.fileContainer.logLevel); //TODO change to debug
-
-const debug = require('debug')('syncrow:file_container');
+const debug = debugFor("syncrow:file_container");
+const logger = loggerFor('FileContainer');
 
 // TODO add conflict resolving
 // TODO refactor to remove metaComputed event - change to callback
-
-export class FileContainer extends events.EventEmitter {
+export class FileContainer extends EventEmitter {
     static events = {
         changed: 'changed',
         deleted: 'fileDeleted',
@@ -34,9 +31,9 @@ export class FileContainer extends events.EventEmitter {
     private watchedFiles:Object;
     private blockedFiles:Set<string>;
 
-    static watchTimeout = Configuration.fileContainer.watchTimeout;
-    static processedFilesLimit = Configuration.fileContainer.processedFilesLimit;
-    static directoryHashConstant = Configuration.fileContainer.directoryHashConstant;
+    static watchTimeout = config.fileContainer.watchTimeout;
+    static processedFilesLimit = config.fileContainer.processedFilesLimit;
+    static directoryHashConstant = config.fileContainer.directoryHashConstant;
 
     constructor(directoryToWatch:string) {
         super();
@@ -115,7 +112,7 @@ export class FileContainer extends events.EventEmitter {
         logger.info(`/deleteFile - deleting: ${fileName}`);
 
         rimraf(this.createAbsolutePath(fileName), (error)=> {
-            if (error) return console.error(error);
+            if (error) return logger.error(error);
             setTimeout(()=> {
                 this.blockedFiles.delete(fileName);
             }, FileContainer.watchTimeout);
@@ -190,12 +187,10 @@ export class FileContainer extends events.EventEmitter {
     }
 
     private computeHashForFile(fileName:string, callback:(err?)=>void) {
-        logger.timeDebug(`computing hash for file ${fileName}`);
         var hash = crypto.createHash('sha256');
         fs.createReadStream(this.createAbsolutePath(fileName)).pipe(hash);
 
         hash.on('finish', ()=> {
-            logger.timeEndDebug(`computing hash for file ${fileName}`);
             this.saveWatchedFileProperty(fileName, 'hashCode', hash.read().toString('hex'));
             callback();
         });

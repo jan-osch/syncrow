@@ -1,5 +1,6 @@
 /// <reference path="../../typings/main.d.ts" />
 
+//TODO remove
 export class LimitedAsyncQueue {
     private limit:number;
     private current:number;

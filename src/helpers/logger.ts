@@ -2,10 +2,15 @@
 
 import * as chalk from "chalk";
 import * as moment from "moment";
+import * as debug from "debug";
 
 export class Logger {
     private context:string;
 
+    /**
+     * Wrapper for console - can be later used to store logs to file
+     * @param context
+     */
     constructor(context:string) {
         this.context = context;
     }
@@ -64,10 +69,19 @@ export class Logger {
 }
 
 /**
- * Convenience function
+ * Convenience function - use instead of console
  * @param context
  * @returns {Logger}
  */
 export function loggerFor(context:string):Logger {
     return new Logger(context);
+}
+
+/**
+ * Convenience function - use for everything that will not be saved
+ * @param routingKey
+ * @returns {debug.Debugger|any}
+ */
+export function debugFor(routingKey:string) {
+    return debug(routingKey);
 }

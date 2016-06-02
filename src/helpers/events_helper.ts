@@ -1,11 +1,11 @@
 /// <reference path="../../typings/main.d.ts" />
-
 import {Messenger} from "../transport/messenger";
+import {debugFor} from "./logger";
 
-const debug = require('debug')('syncrow:events');
+const debug = debugFor('syncrow:events');
 
 //TODO change this class to Event - allow static creation
-export default class EventsHelper {
+export class EventsHelper {
 
     static events = {
         error: 'error'

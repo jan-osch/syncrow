@@ -1,10 +1,9 @@
 /// <reference path="../../typings/main.d.ts" />
 
 
-import FileContainer = require("../helpers/file_container");
-import net  = require('net');
-import {Socket, Server} from "net";
-import EventsHelper from "../helpers/events_helper";
+import {FileContainer} from "../helpers/file_container";
+import {Socket, Server, createServer, connect} from "net";
+import {EventsHelper} from "../helpers/events_helper";
 import {Messenger} from "./messenger";
 
 import * as debugFor from "debug";
@@ -14,7 +13,7 @@ const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
 
 
-class TransferActions {
+export class TransferActions {
 
     public static events = {
         listenAndUpload: 'listenAndUpload',
@@ -38,7 +37,7 @@ class TransferActions {
                                         destinationContainer:FileContainer,
                                         callback:Function) {
 
-        const filePullingServer = net.createServer(
+        const filePullingServer = createServer(
             (socket)=> TransferActions.consumeFileFromSocket(socket,
                 fileName,
                 destinationContainer,
@@ -72,7 +71,7 @@ class TransferActions {
                                       sourceContainer:FileContainer,
                                       callback:Function) {
 
-        const fileOfferingServer = net.createServer(
+        const fileOfferingServer = createServer(
             (fileTransferSocket)=> {
                 fileTransferSocket.on('end', ()=>TransferActions.closeServer(fileOfferingServer, callback));
                 sourceContainer.getReadStreamForFile(fileName).pipe(fileTransferSocket);
@@ -103,7 +102,7 @@ class TransferActions {
                                        sourceContainer:FileContainer,
                                        callback:Function) {
 
-        net.connect(address, (fileSendingSocket)=> {
+        connect(address, (fileSendingSocket)=> {
             fileSendingSocket.on('end', callback);
 
             sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
@@ -123,7 +122,7 @@ class TransferActions {
                                          destinationContainer:FileContainer,
                                          callback:Function) {
 
-        net.connect(address, (fileTransferSocket)=> {
+        connect(address, (fileTransferSocket)=> {
             TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, callback);
         });
     }
@@ -139,5 +138,3 @@ class TransferActions {
         destinationContainer.consumeFileStream(fileName, fileTransferSocket);
     }
 }
-
-export = TransferActions;

@@ -1,29 +1,30 @@
 /// <reference path="../../typings/main.d.ts" />
 
+import {getUserService} from "./user_service";
+import {Server, createServer} from "net";
+import {BucketOperator} from "./bucket_operator";
+import {Messenger} from "../transport/messenger";
+import * as fs from "fs";
+import {Connection} from "../transport/connection";
+import {loggerFor, debugFor} from "../helpers/logger";
 
-import fs = require("fs");
-import FileContainer = require("../helpers/file_container");
-import net  = require('net');
+const debug = debugFor("syncrow:bucket_service");
+const logger = loggerFor('BucketService');
 
-import UserService = require('./user_service');
-import {Server} from "net";
-import BucketOperator from "./bucket_operator";
+const UserService = getUserService();
 
-import async = require('async');
-import _= require('lodash');
-import SocketMessenger = require("../transport/messenger");
-import Client = require("../client/client");
-import Messenger = require("../transport/messenger");
-
-const debug = require('debug')('syncrow:bucket_service');
-
-export default class BucketService {
+export class BucketService {
     private host:string;
     private bucketOperators:Map<string,BucketOperator>;
     private bucketServerPorts:Map<string, number>;
     private bucketsList:Array<string>;
     private bucketIncomingListeners:Map<string, Server>;
 
+    /**
+     * Use as container for buckets and bucket servers
+     * @param host
+     * @param path
+     */
     constructor(host:string, path:string) {
         this.host = host;
         this.bucketsList = this.loadBucketDirectories(path);
@@ -32,7 +33,7 @@ export default class BucketService {
         this.bucketServerPorts = new Map();
         this.bucketIncomingListeners = new Map();
         this.initializeIncomingConnectionListeners(()=> {
-            debug('Bucket Service ready!')
+            logger.info(`Bucket Service ready! Controls: ${this.bucketsList.length} buckets`)
         });
     }
 
@@ -88,13 +89,12 @@ export default class BucketService {
 
             callback
         );
-
     }
 
     private createListenerForBucket(bucketName:string, callback:Function) {
-        const server = net.createServer(
+        const server = createServer(
             (incomingSocket)=> {
-                const otherParty = new Messenger(null, incomingSocket);
+                const otherParty = new Messenger(new Connection(incomingSocket));
                 this.bucketOperators.get(bucketName).addOtherParty(otherParty);
             }
         ).listen(()=> {
