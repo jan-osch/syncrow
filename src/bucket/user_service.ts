@@ -1,7 +1,7 @@
 /// <reference path="../../typings/main.d.ts" />
 
 
-import {loggerFor, debugFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:user_service");
 const logger = loggerFor('UserService');

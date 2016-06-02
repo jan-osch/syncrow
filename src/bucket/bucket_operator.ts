@@ -1,12 +1,12 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import {FileContainer} from "../helpers/file_container";
-import {EventsHelper} from "../helpers/events_helper";
+import {FileContainer} from "../fs_helpers/file_container";
+import {EventsHelper} from "../client/events_helper";
 import {TransferQueue} from "../transport/transfer_queue";
 import {Messenger} from "../transport/messenger";
 import {Client} from "../client/client";
 import {TransferActions} from "../transport/transfer_actions";
-import {loggerFor, debugFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');

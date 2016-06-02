@@ -1,11 +1,11 @@
 /// <reference path="../../typings/main.d.ts" />
 
 import {Messenger} from "./messenger";
-import {FileContainer} from "../helpers/file_container";
+import {FileContainer} from "../fs_helpers/file_container";
 import {TransferActions} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
-import {loggerFor} from "../helpers/logger";
+import {loggerFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:trasfer_queue");
 const logger = loggerFor('TransferQueue');

@@ -2,13 +2,16 @@
 
 import * as express from "express";
 import * as bodyParser from "body-parser";
-import BucketService from "../bucket/bucket_service";
+import {BucketService} from "../bucket/bucket_service";
+import {loggerFor, debugFor} from "../utils/logger";
+
+const logger = loggerFor('ServerApplication');
+const debug = debugFor('syncrow:server_application');
+
 
 const app = express();
 const host = process.argv[2];
 const path = process.argv[3];
-
-const debug = require('debug')('syncrow:application');
 
 debug(process.argv);
 
@@ -34,8 +37,10 @@ app.get('/bucket/:bucketName/port', (req, res) => {
     })
 });
 
-app.listen(3000, function () {
-    console.info("Demo Express server listening on port %d", 3000);
+
+const port = 3000;
+app.listen(port, function () {
+    logger.info(`Syncrow server listening on port: ${port}`)
 });
 
 export var App = app;

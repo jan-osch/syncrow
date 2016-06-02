@@ -1,13 +1,10 @@
 /// <reference path="../../typings/main.d.ts" />
 
-
-import {FileContainer} from "../helpers/file_container";
+import {FileContainer} from "../fs_helpers/file_container";
 import {Socket, Server, createServer, connect} from "net";
-import {EventsHelper} from "../helpers/events_helper";
+import {EventsHelper} from "../client/events_helper";
 import {Messenger} from "./messenger";
-
-import * as debugFor from "debug";
-import {loggerFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');

@@ -2,10 +2,7 @@
 
 import {Socket, Server, createServer} from "net";
 import {Connection, ConnectionStrategy} from "./connection";
-
-
-import * as debugFor from "debug";
-import {loggerFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:connection_server");
 const logger = loggerFor('ConnectionServer');

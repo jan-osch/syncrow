@@ -9,10 +9,10 @@ import readTree = require('./read_tree');
 import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
-import Logger  = require('./logger');
-import PathHelper = require('./path_helper');
+import Logger  = require('../utils/logger');
 import config from '../configuration';
-import {loggerFor, debugFor} from "./logger";
+import {loggerFor, debugFor} from "../utils/logger";
+import {PathHelper} from "./path_helper";
 
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
@@ -35,6 +35,10 @@ export class FileContainer extends EventEmitter {
     static processedFilesLimit = config.fileContainer.processedFilesLimit;
     static directoryHashConstant = config.fileContainer.directoryHashConstant;
 
+    /**
+     * Wrapper over filesystem
+     * @param directoryToWatch
+     */
     constructor(directoryToWatch:string) {
         super();
         this.directoryToWatch = directoryToWatch;

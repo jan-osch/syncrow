@@ -1,10 +1,10 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import {loggerFor, debugFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 import {Messenger} from "../transport/messenger";
-import {FileContainer} from "../helpers/file_container";
+import {FileContainer} from "../fs_helpers/file_container";
 import {TransferQueue} from "../transport/transfer_queue";
-import {EventsHelper} from "../helpers/events_helper";
+import {EventsHelper} from "./events_helper";
 import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
 

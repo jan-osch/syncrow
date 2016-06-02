@@ -5,18 +5,21 @@ import net = require('net');
 import fs = require('fs');
 import SocketMessenger = require("../transport/messenger");
 import Client = require("../client/client");
-import Logger = require('../helpers/logger');
+import Logger = require('../utils/logger');
 import ConnectionHelper = require("../transport/connection");
 import request = require("request");
+import {debugFor, loggerFor} from "../utils/logger";
+import {ConnectionServer} from "../transport/connection_server";
+import {Messenger} from "../transport/messenger";
+import {getActiveConnection, Connection} from "../transport/connection";
 
-let logger = Logger.loggerFor('CLI');
-
-const debug = require("debug")("syncrow:cli");
-//TODO add support for direct connection
+const logger = loggerFor("CLI");
+const debug = debugFor("syncrow:cli");
 
 program.version('0.0.2')
-    .option('-h, --host <host>', 'host for connection', '0.0.0.0')
-    .option('-p, --port <port>', 'port for connection')
+    .option('-h, --host <host>', 'remote host for connection', '0.0.0.0')
+    .option('-p, --port <port>', 'remote port for connection')
+    .option('-c, --local <local>', 'local port for listening')
     .option('-b, --bucket <bucket>', 'bucket name')
     .option('-l, --listen', 'listen for connections')
     .option('-d, --directory <directory>', 'directory to watch', '.')
@@ -25,12 +28,13 @@ program.version('0.0.2')
 
 debug(`host: ${program.host}`);
 debug(`port: ${program.port}`);
+debug(`localPort: ${program.local}`);
 debug(`listen: ${program.listen}`);
 debug(`directory: ${program.directory}`);
 debug(`bucket: ${program.bucket}`);
 
 if (program.bucket) {
-    if(!program.port){
+    if (!program.port) {
         throw new Error('Port required to connect');
     }
 
@@ -49,13 +53,21 @@ if (program.bucket) {
     });
 
 } else {
-    start(program.port, program.host, program.listen, program.directory)
+    start(program.port, program.host, program.listen, program.directory, program.local)
 }
 
+function start(port:number, host:string, listen:boolean, directory:string, localPort?:number) {
 
-function start(port:number, host:string, listen:boolean, directory:string) {
-    let connectionHelper = new ConnectionHelper(port, host, listen);
-    let socketMessenger = new SocketMessenger(connectionHelper);
-    new Client(directory, socketMessenger);
+    if (listen) {
+        new ConnectionServer(localPort, handleConnectionObtained);
+    } else {
+        getActiveConnection(host, port, handleConnectionObtained)
+    }
 }
 
+function handleConnectionObtained(err:Error, connection?:Connection) {
+    if (err) throw err;
+
+    const messenger = new Messenger(connection);
+    new Client(program.directory, messenger);
+}

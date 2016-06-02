@@ -2,10 +2,8 @@
 
 import {EventEmitter} from "events";
 import {Socket, connect} from "net";
-import * as Configuration from "../configuration";
-
-import * as debugFor from "debug";
-import {loggerFor} from "../helpers/logger";
+import config from "../configuration";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:connection");
 const logger = loggerFor('Connection');
@@ -25,7 +23,7 @@ export class Connection extends EventEmitter {
         reconnecting: 'reconnecting',
     };
 
-    static reconnectionInterval = Configuration.connectionHelper.reconnectionInterval;
+    static reconnectionInterval = config.connectionHelper.reconnectionInterval;
 
     private remotePort:number;
     private remoteHost:string;
@@ -34,7 +32,7 @@ export class Connection extends EventEmitter {
     private connected:boolean;
 
     /**
-     * Used to mantain 
+     * Used to mantain
      * @param socket
      * @param strategy
      * @param remotePort
@@ -78,7 +76,7 @@ export class Connection extends EventEmitter {
     /**
      * @param data
      */
-    public write(data:string){
+    public write(data:string) {
         this.socket.write(data);
     }
 
@@ -153,3 +151,10 @@ export class Connection extends EventEmitter {
     }
 }
 
+export function getActiveConnection(host:string, port:number, callback:(err:Error, connection?:Connection)=>any) {
+    connect({port: port, host: host},
+        (socket)=> {
+            callback(null, new Connection(socket, ConnectionStrategy.onProblemReconnectToRemote, port, host));
+        }
+    ).on('error', (err)=>callback(err));
+}

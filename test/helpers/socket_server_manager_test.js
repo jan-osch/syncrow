@@ -4,7 +4,7 @@ const sinon = require('sinon');
 const assert = require('chai').assert;
 const expect = require('chai').expect;
 
-let SocketServerManager = rewire('../../build/helpers/socket_server_manager');
+let SocketServerManager = rewire('../../build/fs_helpers/socket_server_manager');
 
 describe('SocketServerManager', function () {
     it('can be instantiated', function () {

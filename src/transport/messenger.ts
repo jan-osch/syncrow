@@ -2,8 +2,7 @@
 
 import {EventEmitter} from "events";
 import {Connection} from "./connection";
-import * as debugFor from "debug";
-import {loggerFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:messenger");
 const logger = loggerFor('Messenger');

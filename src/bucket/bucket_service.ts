@@ -6,7 +6,7 @@ import {BucketOperator} from "./bucket_operator";
 import {Messenger} from "../transport/messenger";
 import * as fs from "fs";
 import {Connection} from "../transport/connection";
-import {loggerFor, debugFor} from "../helpers/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:bucket_service");
 const logger = loggerFor('BucketService');
