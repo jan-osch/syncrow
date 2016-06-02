@@ -43,7 +43,8 @@ export class EventsHelper {
      * @param message
      */
     public static writeEventToOtherParty(otherParty:Messenger, type:string, message?:any) {
-        debug(`writing event: ${type} message: ${message}`);
-        otherParty.writeMessage(EventsHelper.createEvent(type, message));
+        const  event = EventsHelper.createEvent(type, message);
+        debug(`writing event: ${event}`);
+        otherParty.writeMessage(event);
     }
 }

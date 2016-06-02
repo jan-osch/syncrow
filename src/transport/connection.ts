@@ -2,6 +2,7 @@
 
 import {EventEmitter} from "events";
 import {Socket, connect} from "net";
+import * as async from "async";
 import config from "../configuration";
 import {loggerFor, debugFor} from "../utils/logger";
 
@@ -57,6 +58,7 @@ export class Connection extends EventEmitter {
         this.socket.on('close', (error)=>this.handleSocketProblem(error));
         this.socket.on('data', (data)=>this.emit(Connection.events.data, data));
         this.connected = true;
+        this.emit(Connection.events.connected);
     }
 
     /**
@@ -140,8 +142,7 @@ export class Connection extends EventEmitter {
                     callback();
 
                 }).once('error', (error)=> {
-                    debug(`/getNewSocketAsClient - not connected, reason: ${error}`);
-                    logger.info(`/getNewSocketAsClient - could not connect - next connection attempt in ${Connection.reconnectionInterval} milliseconds`);
+                    logger.info(`/getNewSocketAsClient - could not connect: ${error} - next try in ${Connection.reconnectionInterval} ms`);
 
                     setTimeout(()=>callback(), Connection.reconnectionInterval);
                 })

@@ -152,6 +152,7 @@ export class FileContainer extends EventEmitter {
      * @returns {ReadStream}
      */
     public getReadStreamForFile(fileName:string):ReadableStream {
+        debug(`attempting to get a read stream: ${fileName} current dir ${__dirname}`);
         try {
             return fs.createReadStream(this.createAbsolutePath(fileName));
         } catch (error) {

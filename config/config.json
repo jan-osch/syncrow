@@ -6,7 +6,7 @@
     "logLevel": 3
   },
   "client": {
-    "socketsLimit": 30,
+    "socketsLimit": 300,
     "logLevel": 3
   },
   "connectionHelper": {

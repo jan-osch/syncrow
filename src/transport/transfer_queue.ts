@@ -28,6 +28,8 @@ export class TransferQueue {
                                          address:{port:number, host:string},
                                          sourceContainer:FileContainer,
                                          timingMessage?:string) {
+
+        debug(`adding job: connectAndUploadFile`);
         const job = (uploadingDoneCallback) => {
 
             if (timingMessage) console.time(timingMessage);
@@ -57,6 +59,7 @@ export class TransferQueue {
                                            timingMessage?:string,
                                            callback?:Function) {
 
+        debug(`addingjob: connectAndDownloadFile`);
         const job = (downloadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);
@@ -69,7 +72,6 @@ export class TransferQueue {
             });
 
         };
-
         this.queue.push(job, callback);
     }
 
@@ -87,6 +89,7 @@ export class TransferQueue {
                                          sourceContainer:FileContainer,
                                          timingMessage?:string) {
 
+        debug(`adding job: listenAndUploadFile`);
         const job = (uploadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);
@@ -99,7 +102,6 @@ export class TransferQueue {
             });
 
         };
-
         this.queue.push(job);
     }
 
@@ -119,6 +121,7 @@ export class TransferQueue {
                                            timingMessage?:string,
                                            callback?:Function) {
 
+        debug(`adding job: listenAndDownloadFile - fileName: ${fileName} host: ${host}`);
         const job = (downloadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);
@@ -131,7 +134,6 @@ export class TransferQueue {
             });
 
         };
-
         this.queue.push(job, callback);
     }
 }

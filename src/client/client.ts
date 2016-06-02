@@ -46,19 +46,18 @@ export class Client {
     }
 
     /**
-     * @param socketMessenger
+     * @param otherParty
      * @returns {Messenger}
      */
-    public addOtherPartyMessenger(socketMessenger:Messenger) {
-        socketMessenger.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
+    public addOtherPartyMessenger(otherParty:Messenger) {
+        otherParty.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
-        socketMessenger.on(Messenger.events.alive, ()=> {
+        otherParty.on(Messenger.events.alive, ()=> {
             logger.info('connected with other party beginning to sync');
             // this.fileContainer.recomputeMetaDataForDirectory(); //TODO remove
         });
 
-        socketMessenger.on(Messenger.events.alive, ()=>logger.info('disconnected, waiting for reconnection'));
-        return socketMessenger;
+        return otherParty;
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
@@ -70,8 +69,12 @@ export class Client {
         if (this.handleTransferEvents(event, otherParty)) {
             return debug('routed transfer event');
 
+        } else if (event.type === Client.events.fileChanged) {
+            EventsHelper.writeEventToOtherParty(otherParty, Client.events.getFile, {fileName: event.body.fileName});
+            return;
+
         } else if (event.type === Client.events.getFile) {
-            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, event.body);
+            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, {fileName: event.body.fileName});
             return;
 
         } else if (event.type === Client.events.metaData) {
@@ -82,12 +85,12 @@ export class Client {
             this.fileContainer.recomputeMetaDataForDirectory();
             return;
 
-        } else if (event.type === FileContainer.events.createdDirectory) {
-            this.fileContainer.createDirectory(event.body);
+        } else if (event.type === Client.events.directoryCreated) {
+            this.fileContainer.createDirectory(event.body.fileName);
             return;
 
         } else if (event.type === Client.events.fileDeleted) {
-            this.fileContainer.deleteFile(event.body);
+            this.fileContainer.deleteFile(event.body.fileName);
             return;
 
         } else if (event.type === EventsHelper.events.error) {
@@ -95,6 +98,7 @@ export class Client {
             return;
         }
 
+        logger.warn(`unknown event type: ${event}`);
         EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
     }
 
@@ -105,7 +109,7 @@ export class Client {
             return true;
 
         } else if (event.type === TransferActions.events.connectAndDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.name,
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
                 this.fileContainer, `client - downloading: ${event.body.fileName}`);
             return true;
 
@@ -129,21 +133,21 @@ export class Client {
 
         fileContainer.on(FileContainer.events.changed, (eventContent)=> {
             debug(`detected file changed: ${eventContent}`);
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.created, (eventContent)=> {
             debug(`detected file created: ${eventContent}`);
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.deleted, (eventContent)=> {
             debug(`detected file deleted: ${eventContent}`);
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileDeleted, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileDeleted, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.createdDirectory, (eventContent)=> {
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.directoryCreated, eventContent);
+            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.directoryCreated, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.metaComputed, (metaData)=> {

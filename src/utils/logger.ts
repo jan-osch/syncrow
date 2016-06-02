@@ -36,7 +36,7 @@ export class Logger {
      * @param err
      */
     public error(err?:any) {
-        if (err)console.error(err);
+        if (err)console.error(`pika pika`+err);
     }
 
     /**

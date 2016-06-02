@@ -9,7 +9,7 @@ import {loggerFor, debugFor} from "../utils/logger";
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
 
-
+//TODO add error handling on sockets
 export class TransferActions {
 
     public static events = {
@@ -34,6 +34,7 @@ export class TransferActions {
                                         destinationContainer:FileContainer,
                                         callback:Function) {
 
+        debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
         const filePullingServer = createServer(
             (socket)=> TransferActions.consumeFileFromSocket(socket,
                 fileName,
@@ -68,6 +69,8 @@ export class TransferActions {
                                       sourceContainer:FileContainer,
                                       callback:Function) {
 
+
+        debug(`executing: listenAndUploadFile - fileName: ${fileName}, host: ${host}`);
         const fileOfferingServer = createServer(
             (fileTransferSocket)=> {
                 fileTransferSocket.on('end', ()=>TransferActions.closeServer(fileOfferingServer, callback));
@@ -98,8 +101,8 @@ export class TransferActions {
                                        address:{host:string, port:number},
                                        sourceContainer:FileContainer,
                                        callback:Function) {
-
-        connect(address, (fileSendingSocket)=> {
+        debug(`connectAndUploadFile: connecting to ${address.host}:${address.port}`);
+        const fileSendingSocket = connect(address, ()=> {
             fileSendingSocket.on('end', callback);
 
             sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
@@ -119,7 +122,7 @@ export class TransferActions {
                                          destinationContainer:FileContainer,
                                          callback:Function) {
 
-        connect(address, (fileTransferSocket)=> {
+        const fileTransferSocket = connect(address, ()=> {
             TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, callback);
         });
     }

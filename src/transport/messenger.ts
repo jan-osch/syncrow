@@ -51,7 +51,7 @@ export class Messenger extends EventEmitter {
      * @returns {string}
      */
     public getOwnHost():string {
-        return this.connection.address().address;
+        return this.connection.address();
     }
 
     private resetBuffers() {
