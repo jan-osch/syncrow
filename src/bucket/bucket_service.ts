@@ -5,6 +5,7 @@ import {Server, createServer} from "net";
 import {BucketOperator} from "./bucket_operator";
 import {Messenger} from "../transport/messenger";
 import * as fs from "fs";
+import * as async from "async";
 import {Connection} from "../transport/connection";
 import {loggerFor, debugFor} from "../utils/logger";
 
