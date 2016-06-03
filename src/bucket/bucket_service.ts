@@ -73,7 +73,7 @@ export class BucketService {
         return buckets;
     }
 
-    private initializeBucketOperators(basePath:string, bucketsList:Array<string>):Array<BucketOperator> {
+    private initializeBucketOperators(basePath:string, bucketsList:Array<string>):Map<string,BucketOperator> {
         const result = new Map();
 
         bucketsList.forEach((bucketName)=> {
