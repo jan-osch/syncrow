@@ -7,42 +7,52 @@ import {TransferQueue} from "../transport/transfer_queue";
 import {EventsHelper} from "./events_helper";
 import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
+import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/synchronization_strategy";
+import {AcceptNewestStrategy} from "../sync_strategy/accept_newest_strategy";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
 
-//TODO add support syncing after reestablishing connection
-//TODO add support for deleting offline
-//TODO Strategies for offline loading
-//TODO extract the common parts of client and bucket
-export class Client {
+export class Client implements StrategySubject {
     otherParty:Messenger;
     fileContainer:FileContainer;
-    filesToSync:Object;
     transferJobsQueue:TransferQueue;
 
     static events = {
         fileChanged: 'fileChanged',
+        fileCreated: 'fileCreated',
         fileDeleted: 'fileDeleted',
         directoryCreated: 'directoryCreated',
 
         getFile: 'getFile',
         getFileList: 'getFileList',
-        getMeta: 'getMeta',
-        metaData: 'metaData',
+        getMetaForFile: 'getMetaForFile',
+        metaDataForFile: 'metaDataForFile',
     };
+    private remoteMetaCallbacks:Map<string,(syncData:SyncData)=>any>;
+    private remoteFileListCallback:(result:Array<string>)=>any;
+    private syncStrategy:SynchronizationStrategy;
 
     /**
      * End application client
      * @param pathToWatch
      * @param otherParty
      * @param socketsLimit
+     * @param [syncStrategy]
      */
-    constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = config.client.socketsLimit) {
-        this.filesToSync = {};
+    constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = config.client.socketsLimit, syncStrategy?:SynchronizationStrategy) {
         this.fileContainer = this.createDirectoryWatcher(pathToWatch);
         this.otherParty = this.addOtherPartyMessenger(otherParty);
         this.transferJobsQueue = new TransferQueue(socketsLimit);
+        this.remoteMetaCallbacks = new Map();
+
+        if (!syncStrategy) {
+            this.syncStrategy = new AcceptNewestStrategy(this);
+        } else {
+            this.syncStrategy = syncStrategy;
+        }
+
+        this.fileContainer.beginWatching();
     }
 
     /**
@@ -54,10 +64,89 @@ export class Client {
 
         otherParty.on(Messenger.events.alive, ()=> {
             logger.info('connected with other party beginning to sync');
-            // this.fileContainer.recomputeMetaDataForDirectory(); //TODO remove
+            this.syncStrategy.acknowledgeConnectedWithRemoteParty();
+        });
+
+        otherParty.on(Messenger.events.recovering, ()=> {
+            debug(`lost connection with remote party - recovering`);
+            this.syncStrategy.acknowledgeReconnectingWithRemoteParty();
+        });
+
+        otherParty.on(Messenger.events.died, ()=> {
+            debug(`lost connection with remote party - permanently`);
+            this.syncStrategy.acknowledgeDisconnectedWithRemoteParty();
         });
 
         return otherParty;
+    }
+
+    /**
+     * @param fileName
+     * @param callback
+     */
+    public getLocalFileMeta(fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+        this.fileContainer.getFileMeta(fileName, callback);
+    }
+
+    /**
+     * @param fileName
+     * @param callback
+     */
+    public getRemoteFileMeta(fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+
+        this.remoteMetaCallbacks.set(fileName, (result:SyncData)=> {
+            this.remoteMetaCallbacks.delete(fileName);
+            callback(null, result);
+        });
+
+        EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getMetaForFile, {fileName: fileName});
+    }
+
+    /**
+     * @param callback
+     */
+    public getLocalFileList(callback:(err:Error, fileList?:Array<string>)=>any):any {
+        this.fileContainer.getFileTree(callback);
+    }
+
+    /**
+     * @param callback
+     */
+    public getRemoteFileList(callback:(err:Error, fileList?:Array<string>)=>any):any {
+
+        this.remoteFileListCallback = (result:Array<string>)=> {
+            this.getRemoteFileList = undefined;
+            callback(null, result);
+        };
+
+        EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFileList);
+    }
+
+    /**
+     * @param fileName
+     * @param callback
+     */
+    public requestRemoteFile(fileName:string, callback:Function):any {
+        EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, {fileName: fileName});
+        callback(); //TODO implement strategy to handle callbacks
+    }
+
+    /**
+     * @param fileName
+     * @param callback
+     */
+    public deleteLocalFile(fileName:string, callback:Function):any {
+        this.fileContainer.deleteFile(fileName);
+        callback();//TODO
+    }
+
+    /**
+     * @param directoryName
+     * @param callback
+     */
+    public createLocalDirectory(directoryName:string, callback:Function):any {
+        this.fileContainer.createDirectory(directoryName);
+        callback();//TODO
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
@@ -70,32 +159,29 @@ export class Client {
             return debug('routed transfer event');
 
         } else if (event.type === Client.events.fileChanged) {
-            EventsHelper.writeEventToOtherParty(otherParty, Client.events.getFile, {fileName: event.body.fileName});
-            return;
+            return this.syncStrategy.acknowledgeLocalFileChanged(event.body.fileName);
 
         } else if (event.type === Client.events.getFile) {
-            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, {fileName: event.body.fileName});
-            return;
+            return EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, {fileName: event.body.fileName});
 
-        } else if (event.type === Client.events.metaData) {
-            this.addSyncMetaDataFromOtherParty(event.body);
-            return;
+        } else if (event.type === Client.events.metaDataForFile) {
+            return this.addSyncMetaDataFromOtherParty(event.body);
 
-        } else if (event.type === Client.events.getMeta) {
-            this.fileContainer.recomputeMetaDataForDirectory();
-            return;
+        } else if (event.type === Client.events.getMetaForFile) {
+            return this.fileContainer.getFileMeta(event.body.fileName, (err, syncData)=> {
+                if (err)return logger.error(err);
+
+                EventsHelper.writeEventToOtherParty(otherParty, Client.events.metaDataForFile, syncData)
+            });
 
         } else if (event.type === Client.events.directoryCreated) {
-            this.fileContainer.createDirectory(event.body.fileName);
-            return;
+            return this.syncStrategy.acknowledgeRemoteDirectoryCreated(event.body.fileName);
 
         } else if (event.type === Client.events.fileDeleted) {
-            this.fileContainer.deleteFile(event.body.fileName);
-            return;
+            return this.syncStrategy.acknowledgeRemoteFileDeleted(event.body.fileName);
 
         } else if (event.type === EventsHelper.events.error) {
-            console.info(`received error message ${JSON.stringify(event.body)}`);
-            return;
+            return console.info(`received error message ${JSON.stringify(event.body)}`);
         }
 
         logger.warn(`unknown event type: ${event}`);
@@ -124,77 +210,44 @@ export class Client {
             return true;
 
         }
-
         return false;
     }
 
     private createDirectoryWatcher(directoryToWatch:string):FileContainer {
-        var fileContainer = new FileContainer(directoryToWatch);
+        const fileContainer = new FileContainer(directoryToWatch);
 
         fileContainer.on(FileContainer.events.changed, (eventContent)=> {
             debug(`detected file changed: ${eventContent}`);
+            this.syncStrategy.acknowledgeLocalFileChanged(eventContent);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.created, (eventContent)=> {
             debug(`detected file created: ${eventContent}`);
+            this.syncStrategy.acknowledgeLocalFileCreated(eventContent);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileChanged, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.deleted, (eventContent)=> {
             debug(`detected file deleted: ${eventContent}`);
+            this.syncStrategy.acknowledgeLocalFileDeleted(eventContent);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.fileDeleted, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.createdDirectory, (eventContent)=> {
+            this.syncStrategy.acknowledgeLocalDirectoryCreated(eventContent);
             EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.directoryCreated, {fileName: eventContent});
         });
-
-        fileContainer.on(FileContainer.events.metaComputed, (metaData)=> {
-            this.addSyncMetaDataFromOwnContainer(metaData);
-            EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.metaData, metaData);
-        });
-
-        fileContainer.getListOfTrackedFilesAndBeginWatching();
 
         return fileContainer;
     }
 
-
-    //TODO separate into strategy file
-    private addSyncMetaDataFromOtherParty(syncData:{hashCode:string, modified:Date, name:string}):void {
-        if (this.filesToSync[syncData.name]) {
-            this.compareSyncMetaData(this.filesToSync[syncData.name], syncData);
-            delete this.filesToSync[syncData.name];
-            return;
-
-        } else if (syncData.hashCode === FileContainer.directoryHashConstant && !this.fileContainer.isFileInContainer(syncData.name)) {
-            return this.fileContainer.createDirectory(syncData.name);
-
-        } else if (!this.fileContainer.isFileInContainer(syncData.name)) {
-            return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, syncData.name);
+    private addSyncMetaDataFromOtherParty(syncData:SyncData):void {
+        if (!this.remoteMetaCallbacks.has(syncData.name)) {
+            return logger.error(`Got Metadata that was not requested!`);
         }
-    }
 
-    private addSyncMetaDataFromOwnContainer(syncData:{hashCode:string, modified:Date, name:string}) {
-        if (this.filesToSync[syncData.name]) {
-            this.compareSyncMetaData(syncData, this.filesToSync[syncData.name]);
-            delete this.filesToSync[syncData.name];
-        }
-    }
-
-    private compareSyncMetaData(ownMeta:{hashCode:string, modified:Date, name:string}, otherPartyMeta:{hashCode:string, modified:Date, name:string}) {
-        Client.checkMetaDataFileIsTheSame(ownMeta, otherPartyMeta);
-        if (otherPartyMeta.hashCode !== ownMeta.hashCode && ownMeta.hashCode) {
-            if (otherPartyMeta.modified.getTime() > ownMeta.modified.getTime()) {
-                return EventsHelper.writeEventToOtherParty(this.otherParty, Client.events.getFile, ownMeta.name);
-            }
-        }
-    }
-
-    private static checkMetaDataFileIsTheSame(ownMeta:{hashCode:string; modified:Date; name:string}, otherPartyMeta:{hashCode:string; modified:Date; name:string}) {
-        if (ownMeta.name !== otherPartyMeta.name) {
-            throw new Error('comparing not matching metadata')
-        }
+        const remoteMetaCallback = this.remoteMetaCallbacks.get(syncData.name);
+        remoteMetaCallback(syncData);
     }
 }

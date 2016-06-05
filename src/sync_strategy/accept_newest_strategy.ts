@@ -1,79 +1,42 @@
-import {AbstractSynchronizationStrategy, SyncData, StrategySubject} from "./synchronization_strategy";
+import {SynchronizationStrategy, SyncData, StrategySubject} from "./synchronization_strategy";
 import * as async from "async";
 import * as _ from "lodash";
-/**
- * Created by Janusz on 04.06.2016.
- */
+import {debugFor, loggerFor} from "../utils/logger";
 
-export class AcceptNewestStrategy extends AbstractSynchronizationStrategy {
+const debug = debugFor('syncrow:accept_newest_strategy');
+const logger = loggerFor('AcceptNewestStrategy');
 
-    private connected:boolean;
-    private localMeta:Map<string, SyncData>;
-    private remoteMeta:Map<string, SyncData>;
+export class AcceptNewestStrategy extends SynchronizationStrategy {
 
     /**
      * On every reconnection will accept all newest files
      */
     constructor(subject:StrategySubject) {
         super(subject);
-        this.connected = false; //TODO implement some strategy of handling reconnection
-        this.purgeTempData();
-    }
-
-    /**
-     * @Override
-     * @param fileName
-     */
-    public acknowledgeRemoteFileDeleted(fileName:string):any {
-        this.subject.deleteLocalFile(fileName);
-    }
-
-    /**
-     * @Override
-     * @param fileName
-     */
-    public acknowledgeRemoteFileCreated(fileName:string):any {
-        this.subject.requestRemoteFile(fileName);
-    }
-
-    /**
-     * @Override
-     * @param fileName
-     */
-    public acknowledgeRemoteFileChanged(fileName:string):any {
-        this.subject.requestRemoteFile(fileName);
-    }
-
-    /**
-     * @Override
-     * @param directoryName
-     */
-    public acknowledgeRemoteDirectoryCreated(directoryName:string):any {
-        this.subject.createLocalDirectory(directoryName);
     }
 
     /**
      * @Override
      */
     public acknowledgeConnectedWithRemoteParty():any {
-        this.connected = true;
-        this.purgeTempData();
 
-        // async.parallel(
-        //     (outerCallback)=>{
-        //
-        //     }
-        //
-        // )
-        //
-        //
-        // });
-        // this.emit(AbstractSynchronizationStrategy.events.getRemoteFileList);
+        this.getAllFilesFromBothSides((err, allFiles)=> {
+            async.each(allFiles,
+                (file, callback)=>this.synchronizeFile(file, callback),
+
+                (err:Error)=> {
+                    if (err) return logger.error(err);
+
+                    logger.info('synchronized');
+                }
+            )
+        })
     }
 
-    private getAllFilesFromBothRemoteAndLocak(callback:(err:Error, allFiles?:Array<string>)=>any) {
+    private getAllFilesFromBothSides(callback:(err:Error, allFiles?:Array<string>)=>any) {
         let localFiles;
         let remoteFiles;
+
         async.parallel(
             (parallelCallback)=>this.subject.getLocalFileList((err, fileList:Array<string>)=> {
                 if (err) return parallelCallback(err);
@@ -94,88 +57,38 @@ export class AcceptNewestStrategy extends AbstractSynchronizationStrategy {
         )
     }
 
-    /**
-     * @Override
-     */
-    public acknowledgeReconnectedWithRemoteParty():any {
-        this.acknowledgeConnectedWithRemoteParty();
+    private synchronizeFile(file:string, callback:Function):any {
+        async.parallel({
+            localMeta: (parallelCallback)=> {
+                this.subject.getLocalFileMeta(file, parallelCallback)
+            },
+            remoteMeta: (parallelCallback)=> {
+                this.subject.getLocalFileMeta(file, parallelCallback);
+            }
+        }, (err, result:{localMeta:SyncData, remoteMeta:SyncData})=> {
+            if (err) return callback(err);
+
+            this.issueSubjectCommandsIfNeeded(result.localMeta, result.remoteMeta, callback);
+        });
     }
 
-    /**
-     * @Override
-     */
-    public acknowledgeDisconnectedWithRemoteParty():any {
-        this.hasToSync = false;
-        this.connected = false;
-    }
-
-    /**
-     * @Override
-     * @param fileMeta
-     */
-    public consumeRemoteFileMeta(fileMeta:SyncData):any {
-        this.remoteMeta.set(fileMeta.name, fileMeta);
-        this.compareMeta(fileMeta.name);
-    }
-
-    /**
-     * @Override
-     * @param fileMeta
-     */
-    public consumeLocalFileMeta(fileMeta:SyncData):any {
-        this.localMeta.set(fileMeta.name, fileMeta);
-        this.compareMeta(fileMeta.name);
-    }
-
-    /**
-     * @Override
-     * @param fileList
-     */
-    public consumeRemoteFileList(fileList:Array<string>):any {
-        fileList.forEach(file=>this.emit(AbstractSynchronizationStrategy.events.getRemoteFileMeta));
-    }
-
-    /**
-     * @Override
-     * @param fileList
-     */
-    public consumeLocalFileList(fileList:Array<string>):any {
-        fileList.forEach(file=>this.emit(AbstractSynchronizationStrategy.events.getLocalFileMeta));
-    }
-
-    private purgeTempData() {
-        this.localMeta = new Map<string, SyncData>();
-        this.remoteMeta = new Map<string, SyncData>();
-    }
-
-    private compareMeta(name:string) {
-        if (this.localMeta.has(name) && this.remoteMeta.has(name)) {
-
-            this.emitCommandsIfNeeded(this.localMeta.get(name), this.remoteMeta.get(name));
-
-            this.localMeta.delete(name);
-            this.remoteMeta.delete(name);
-        }
-    }
-
-    private emitCommandsIfNeeded(ownMeta:SyncData, otherMeta:SyncData) {
+    private issueSubjectCommandsIfNeeded(ownMeta:SyncData, otherMeta:SyncData, callback) {
         if (otherMeta.exists) {
             if (!ownMeta.exists) {
                 if (otherMeta.isDirectory) {
-                    this.emit(AbstractSynchronizationStrategy.events.createLocalDirectory, name);
-                    return;
+                    return this.subject.createLocalDirectory(otherMeta.name, callback);
                 }
 
-                this.emit(AbstractSynchronizationStrategy.events.requestRemoteFile, name);
-                return
+                return this.subject.requestRemoteFile(name, callback);
             }
 
             if (otherMeta.hashCode !== ownMeta.hashCode) {
                 if (otherMeta.modified.getTime() > ownMeta.modified.getTime()) {
-                    this.emit(AbstractSynchronizationStrategy.events.requestRemoteFile, name);
-                    return;
+                    return this.subject.requestRemoteFile(name, callback);
                 }
             }
         }
+        debug(`file ${ownMeta.name} does not require any operations`);
+        callback();
     }
 }

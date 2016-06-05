@@ -5,14 +5,15 @@ import {EventEmitter} from "events";
 import * as async from "async";
 import * as crypto from "crypto";
 import * as path from "path";
+import config from "../configuration";
+import {loggerFor, debugFor} from "../utils/logger";
+import {PathHelper} from "./path_helper";
+import {SyncData} from "../sync_strategy/synchronization_strategy";
 import readTree = require('./read_tree');
 import rimraf = require('rimraf');
 import mkdirp = require('mkdirp');
 import ReadableStream = NodeJS.ReadableStream;
 import Logger  = require('../utils/logger');
-import config from '../configuration';
-import {loggerFor, debugFor} from "../utils/logger";
-import {PathHelper} from "./path_helper";
 
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
@@ -273,5 +274,9 @@ export class FileContainer extends EventEmitter {
             debug(`emitting ${event} for file: ${fullFileName}`);
             this.emit(event, fullFileName);
         }
+    }
+
+    public getFileMeta(fileName:string, callback:(err:Error, syncData?:SyncData)=>any) {
+            //TODO
     }
 }

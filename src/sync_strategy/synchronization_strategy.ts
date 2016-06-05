@@ -1,4 +1,5 @@
 import {EventEmitter} from "events";
+import * as _ from "lodash";
 
 export interface SyncData {
     hashCode:string;
@@ -14,13 +15,12 @@ export interface StrategySubject {
     getLocalFileList(callback:(err:Error, fileList?:Array<string>)=>any):any;
     getRemoteFileList(callback:(err:Error, fileList?:Array<string>)=>any):any;
 
-    requestRemoteFile(fileName:string):any;
-    deleteLocalFile(fileName:string):any;
-    createLocalDirectory(directoryName:string):any;
-
+    requestRemoteFile(fileName:string, callback:Function):any;
+    deleteLocalFile(fileName:string, callback:Function):any;
+    createLocalDirectory(directoryName:string, callback:Function):any;
 }
 
-export abstract class AbstractSynchronizationStrategy extends EventEmitter {
+export abstract class SynchronizationStrategy extends EventEmitter {
     protected subject:StrategySubject;
 
     constructor(subject:StrategySubject) {
@@ -31,23 +31,10 @@ export abstract class AbstractSynchronizationStrategy extends EventEmitter {
     /**
      * @param fileName
      */
-    public  acknowledgeRemoteFileCreated(fileName:string):any {
-        return;
-    }
-
-    /**
-     * @param fileName
-     */
     public acknowledgeLocalFileCreated(fileName:string):any {
         return;
     }
 
-    /**
-     * @param fileName
-     */
-    public acknowledgeRemoteFileChanged(fileName:string):any {
-        return;
-    }
 
     /**
      * @param fileName
@@ -56,12 +43,6 @@ export abstract class AbstractSynchronizationStrategy extends EventEmitter {
         return;
     }
 
-    /**
-     * @param fileName
-     */
-    public acknowledgeRemoteFileDeleted(fileName:string):any {
-        return;
-    }
 
     /**
      * @param fileName
@@ -70,12 +51,6 @@ export abstract class AbstractSynchronizationStrategy extends EventEmitter {
         return;
     }
 
-    /**
-     * @param fileName
-     */
-    public acknowledgeRemoteDirectoryCreated(fileName:string):any {
-        return;
-    }
 
     /**
      * @param fileName
@@ -87,13 +62,13 @@ export abstract class AbstractSynchronizationStrategy extends EventEmitter {
     /**
      * @param fileName
      */
-    public acknowledgeConnectedWithRemoteParty(fileName:string):any {
+    public acknowledgeConnectedWithRemoteParty():any {
         return;
     }
 
     /**
      */
-    public acknowledgeReconnectedWithRemoteParty():any {
+    public acknowledgeReconnectingWithRemoteParty():any {
         return;
     }
 
@@ -101,5 +76,30 @@ export abstract class AbstractSynchronizationStrategy extends EventEmitter {
      */
     public acknowledgeDisconnectedWithRemoteParty():any {
         return;
+    }
+
+    public acknowledgeRemoteFileDeleted(fileName:string):any {
+        this.subject.deleteLocalFile(fileName, _.noop);
+    }
+
+    /**
+     * @param fileName
+     */
+    public acknowledgeRemoteFileCreated(fileName:string):any {
+        this.subject.requestRemoteFile(fileName, _.noop);
+    }
+
+    /**
+     * @param fileName
+     */
+    public acknowledgeRemoteFileChanged(fileName:string):any {
+        this.subject.requestRemoteFile(fileName, _.noop);
+    }
+
+    /**
+     * @param directoryName
+     */
+    public acknowledgeRemoteDirectoryCreated(directoryName:string):any {
+        this.subject.createLocalDirectory(directoryName, _.noop);
     }
 }
