@@ -50,7 +50,7 @@ export class FileContainer extends EventEmitter {
         return mkdirp(this.createAbsolutePath(directoryName), (error)=> {
             if (error) logger.warn(`/createDirectory - could not create directory, reason: ${error}`);
             if (callback)return callback();
-        })
+        }) //TODO block directory on write
     }
 
     /**
@@ -94,12 +94,12 @@ export class FileContainer extends EventEmitter {
      */
     public consumeFileStream(fileName:string, readStream:ReadableStream) {
         try {
-            var that = this;
-            that.blockedFiles.add(fileName);
+            this.blockedFiles.add(fileName);
+            debug(`starting to read from remote - file ${fileName} is blocked now`);
 
-            var writeStream = fs.createWriteStream(that.createAbsolutePath(fileName)).on('finish', ()=> {
+            var writeStream = fs.createWriteStream(this.createAbsolutePath(fileName)).on('finish', ()=> {
                 setTimeout(()=> {
-                    that.blockedFiles.delete(fileName);
+                    this.blockedFiles.delete(fileName);
                 }, FileContainer.watchTimeout);
             });
 

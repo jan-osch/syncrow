@@ -68,7 +68,6 @@ export class FileMetaComputingQueue {
             syncData.exists = true;
             syncData.modified = stats.mtime;
             if (stats.isDirectory()) {
-                debug(`${syncData.name} is a directory`);
                 syncData.isDirectory = true;
             }
 
