@@ -6,8 +6,8 @@ import path = require('path');
 import {Stats} from "fs";
 
 
-function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:boolean;},
-                  callback:(err:Error, result:Array<string>)=>any) {
+export function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:boolean;},
+                         callback:(err:Error, result:Array<string>)=>any) {
 
     let results = [];
     let stack = [root];
@@ -32,8 +32,8 @@ function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:bool
         return stack.length !== 0;
     }
 
-    function addToResults(pathToAdd:string){
-        results.push(path.relative(root,pathToAdd));
+    function addToResults(pathToAdd:string) {
+        results.push(path.relative(root, pathToAdd));
     }
 
 
@@ -60,5 +60,3 @@ function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:bool
         return path.join(directory, file)
     }
 }
-
-export = readTree;

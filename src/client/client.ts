@@ -24,8 +24,9 @@ export class Client implements StrategySubject {
         getFileList: 'getFileList',
         getMetaForFile: 'getMetaForFile',
         metaDataForFile: 'metaDataForFile',
+        fileList: 'fileList'
     };
-    
+
     private otherParty:Messenger;
     private fileContainer:FileContainer;
     private transferJobsQueue:TransferQueue;
@@ -41,10 +42,14 @@ export class Client implements StrategySubject {
      * @param [syncStrategy]
      */
     constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = config.client.socketsLimit, syncStrategy?:SynchronizationStrategy) {
+
         this.fileContainer = this.createDirectoryWatcher(pathToWatch);
         this.otherParty = this.addOtherPartyMessenger(otherParty);
         this.transferJobsQueue = new TransferQueue(socketsLimit);
+
         this.remoteMetaCallbacks = new Map();
+
+        this.fileContainer.beginWatching();
 
         if (!syncStrategy) {
             this.syncStrategy = new AcceptNewestStrategy(this);
@@ -52,7 +57,9 @@ export class Client implements StrategySubject {
             this.syncStrategy = syncStrategy;
         }
 
-        this.fileContainer.beginWatching();
+        if (otherParty.isMessengerAlive()) {
+            this.syncStrategy.acknowledgeConnectedWithRemoteParty();
+        }
     }
 
     /**
@@ -116,6 +123,7 @@ export class Client implements StrategySubject {
 
         this.remoteFileListCallback = (result:Array<string>)=> {
             this.getRemoteFileList = undefined;
+            debug('remoteFileList callback called');
             callback(null, result);
         };
 
@@ -136,8 +144,7 @@ export class Client implements StrategySubject {
      * @param callback
      */
     public deleteLocalFile(fileName:string, callback:Function):any {
-        this.fileContainer.deleteFile(fileName);
-        callback();//TODO
+        this.fileContainer.deleteFile(fileName, callback);
     }
 
     /**
@@ -145,8 +152,7 @@ export class Client implements StrategySubject {
      * @param callback
      */
     public createLocalDirectory(directoryName:string, callback:Function):any {
-        this.fileContainer.createDirectory(directoryName);
-        callback();//TODO
+        this.fileContainer.createDirectory(directoryName, callback);
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
@@ -163,6 +169,14 @@ export class Client implements StrategySubject {
 
         } else if (event.type === Client.events.getFile) {
             return EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, {fileName: event.body.fileName});
+        } else if (event.type === Client.events.getFileList) {
+            return this.fileContainer.getFileTree((err,fileList)=> {
+                if(err) return logger.error(err);
+                EventsHelper.writeEventToOtherParty(otherParty, Client.events.fileList, fileList);
+            });
+
+        } else if (event.type === Client.events.fileList) {
+            return this.remoteFileListCallback(event.body);
 
         } else if (event.type === Client.events.metaDataForFile) {
             return this.addSyncMetaDataFromOtherParty(event.body);

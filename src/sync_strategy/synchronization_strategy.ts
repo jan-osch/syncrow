@@ -20,7 +20,7 @@ export interface StrategySubject {
     createLocalDirectory(directoryName:string, callback:Function):any;
 }
 
-export abstract class SynchronizationStrategy extends EventEmitter {
+export class SynchronizationStrategy extends EventEmitter {
     protected subject:StrategySubject;
 
     constructor(subject:StrategySubject) {

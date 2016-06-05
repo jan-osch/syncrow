@@ -36,20 +36,20 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
     private getAllFilesFromBothSides(callback:(err:Error, allFiles?:Array<string>)=>any) {
         let localFiles;
         let remoteFiles;
+        async.parallel([
+                (parallelCallback)=>this.subject.getLocalFileList((err, fileList:Array<string>)=> {
+                    if (err) return parallelCallback(err);
 
-        async.parallel(
-            (parallelCallback)=>this.subject.getLocalFileList((err, fileList:Array<string>)=> {
-                if (err) return parallelCallback(err);
+                    localFiles = fileList;
+                    return parallelCallback();
+                }),
+                (parallelCallback)=>this.subject.getRemoteFileList((err, fileList:Array<string>)=> {
+                    if (err) return parallelCallback(err);
 
-                localFiles = fileList;
-                return parallelCallback();
-            }),
-            (parallelCallback)=>this.subject.getRemoteFileList((err, fileList:Array<string>)=> {
-                if (err) return parallelCallback(err);
-
-                remoteFiles = fileList;
-                return parallelCallback();
-            }), (error:Error)=> {
+                    remoteFiles = fileList;
+                    return parallelCallback();
+                })
+            ], (error:Error)=> {
                 if (error) return callback(error);
 
                 return callback(null, _.union(localFiles, remoteFiles));
@@ -58,12 +58,13 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
     }
 
     private synchronizeFile(file:string, callback:Function):any {
+        debug(`synchronizing file: ${file}`);
         async.parallel({
             localMeta: (parallelCallback)=> {
                 this.subject.getLocalFileMeta(file, parallelCallback)
             },
             remoteMeta: (parallelCallback)=> {
-                this.subject.getLocalFileMeta(file, parallelCallback);
+                this.subject.getRemoteFileMeta(file, parallelCallback);
             }
         }, (err, result:{localMeta:SyncData, remoteMeta:SyncData})=> {
             if (err) return callback(err);
@@ -76,15 +77,18 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
         if (otherMeta.exists) {
             if (!ownMeta.exists) {
                 if (otherMeta.isDirectory) {
+                    debug(`remote: ${otherMeta.name} a directory, is missing locally and should be created`);
                     return this.subject.createLocalDirectory(otherMeta.name, callback);
                 }
 
-                return this.subject.requestRemoteFile(name, callback);
+                debug(`remote ${otherMeta.name} a file, is missing locally and should be downloaded`);
+                return this.subject.requestRemoteFile(otherMeta.name, callback);
             }
 
             if (otherMeta.hashCode !== ownMeta.hashCode) {
                 if (otherMeta.modified.getTime() > ownMeta.modified.getTime()) {
-                    return this.subject.requestRemoteFile(name, callback);
+                    debug(`remote ${otherMeta.name} a file, is in older version locally and should be downloaded`);
+                    return this.subject.requestRemoteFile(otherMeta.name, callback);
                 }
             }
         }

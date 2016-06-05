@@ -29,7 +29,7 @@ export class EventsHelper {
      * @param message
      * @returns {any}
      */
-    public static parseEvent(otherParty:Messenger, message:string):{type:string, body?:any} {
+    public static parseEvent(otherParty:Messenger, message:string):Event{
         try {
             return JSON.parse(message.toString());
         } catch (e) {
@@ -43,8 +43,13 @@ export class EventsHelper {
      * @param message
      */
     public static writeEventToOtherParty(otherParty:Messenger, type:string, message?:any) {
-        const  event = EventsHelper.createEvent(type, message);
+        const event = EventsHelper.createEvent(type, message);
         debug(`writing event: ${event}`);
         otherParty.writeMessage(event);
     }
+}
+
+export interface Event {
+    type:string,
+    body:any
 }

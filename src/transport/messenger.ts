@@ -48,6 +48,13 @@ export class Messenger extends EventEmitter {
     }
 
     /**
+     * @returns {boolean}
+     */
+    public isMessengerAlive(){
+        return this.isAlive;
+    }
+
+    /**
      * @returns {string}
      */
     public getOwnHost():string {

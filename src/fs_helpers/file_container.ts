@@ -29,8 +29,6 @@ export class FileContainer extends EventEmitter {
     private fileMetaQueue:FileMetaComputingQueue;
 
     static watchTimeout = config.fileContainer.watchTimeout;
-    static processedFilesLimit = config.fileContainer.processedFilesLimit;
-    static directoryHashConstant = config.fileContainer.directoryHashConstant;
 
     /**
      * Wrapper over filesystem
@@ -41,7 +39,7 @@ export class FileContainer extends EventEmitter {
         this.directoryToWatch = directoryToWatch;
         this.watchedFiles = {};
         this.blockedFiles = new Set();
-        this.fileMetaQueue = new FileMetaComputingQueue(config.fileContainer.processedFilesLimit);
+        this.fileMetaQueue = new FileMetaComputingQueue(config.fileContainer.processedFilesLimit, this.directoryToWatch);
     }
 
     /**
@@ -59,6 +57,7 @@ export class FileContainer extends EventEmitter {
      * @param callback
      */
     public  getFileTree(callback:(err, files?:Array<string>)=>void) {
+        debug(`obtaining file tree`);
         readTree(this.directoryToWatch, {}, (err, results:Array<string>)=> {
             if (err) return callback(err);
 
@@ -154,7 +153,7 @@ export class FileContainer extends EventEmitter {
     private checkRenameEventMeaning(fileName:string) {
         var that = this;
 
-        fs.stat(that.createAbsolutePath(fileName), (error, stats:Stats)=> {
+        fs.stat(that.createAbsolutePath(fileName), (error, stats:fs.Stats)=> {
             if (error && that.watchedFiles[fileName]) {
                 delete that.watchedFiles[fileName];
                 return that.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
