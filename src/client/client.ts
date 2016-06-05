@@ -14,10 +14,6 @@ const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
 
 export class Client implements StrategySubject {
-    otherParty:Messenger;
-    fileContainer:FileContainer;
-    transferJobsQueue:TransferQueue;
-
     static events = {
         fileChanged: 'fileChanged',
         fileCreated: 'fileCreated',
@@ -29,9 +25,13 @@ export class Client implements StrategySubject {
         getMetaForFile: 'getMetaForFile',
         metaDataForFile: 'metaDataForFile',
     };
+    
+    private otherParty:Messenger;
+    private fileContainer:FileContainer;
+    private transferJobsQueue:TransferQueue;
+    private syncStrategy:SynchronizationStrategy;
     private remoteMetaCallbacks:Map<string,(syncData:SyncData)=>any>;
     private remoteFileListCallback:(result:Array<string>)=>any;
-    private syncStrategy:SynchronizationStrategy;
 
     /**
      * End application client
