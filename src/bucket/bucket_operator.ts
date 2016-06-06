@@ -36,12 +36,8 @@ export class BucketOperator {
         const messageListener = (message)=>this.handleEvent(otherParty, message);
 
         otherParty.once(Messenger.events.died, ()=>this.removeOtherParty(otherParty));
-        otherParty.on(Messenger.events.message, (message)=> {
-            console.warn('ANYTHING');
-            console.warn('ANYTHING');
-            console.warn('ANYTHING');
-            console.warn('ANYTHING');
-        });
+        otherParty.once(Messenger.events.recovering, ()=>this.removeOtherParty(otherParty));
+        otherParty.on(Messenger.events.message, (message)=> messageListener(message));
 
         this.otherParties.push(otherParty);
         this.otherPartiesMessageListeners.push(messageListener);
@@ -118,7 +114,6 @@ export class BucketOperator {
             return true;
 
         }
-
         return false;
     }
 
