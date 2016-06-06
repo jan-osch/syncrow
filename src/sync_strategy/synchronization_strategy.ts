@@ -69,6 +69,11 @@ export class SynchronizationStrategy extends EventEmitter {
     /**
      */
     public acknowledgeReconnectingWithRemoteParty():any {
+        console.warn('czy ty cos zmieniasz')
+        console.warn('czy ty cos zmieniasz')
+        console.warn('czy ty cos zmieniasz')
+        console.warn('czy ty cos zmieniasz')
+        console.warn('czy ty cos zmieniasz')
         return;
     }
 

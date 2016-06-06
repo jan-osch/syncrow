@@ -9,6 +9,7 @@ import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/synchronization_strategy";
 import {AcceptNewestStrategy} from "../sync_strategy/accept_newest_strategy";
+import {handleTransferEvents} from "../transport/handle_trasnfer_evens";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
@@ -76,11 +77,15 @@ export class Client implements StrategySubject {
 
         otherParty.on(Messenger.events.recovering, ()=> {
             debug(`lost connection with remote party - recovering`);
+            this.remoteMetaCallbacks.clear();
+            delete this.remoteFileListCallback;
             this.syncStrategy.acknowledgeReconnectingWithRemoteParty();
         });
 
         otherParty.on(Messenger.events.died, ()=> {
             debug(`lost connection with remote party - permanently`);
+            this.remoteMetaCallbacks.clear();
+            delete this.remoteFileListCallback;
             this.syncStrategy.acknowledgeDisconnectedWithRemoteParty();
         });
 
@@ -122,7 +127,7 @@ export class Client implements StrategySubject {
     public getRemoteFileList(callback:(err:Error, fileList?:Array<string>)=>any):any {
 
         this.remoteFileListCallback = (result:Array<string>)=> {
-            this.getRemoteFileList = undefined;
+            delete  this.getRemoteFileList;
             debug('remoteFileList callback called');
             callback(null, result);
         };
@@ -161,7 +166,7 @@ export class Client implements StrategySubject {
 
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
 
-        if (this.handleTransferEvents(event, otherParty)) {
+        if (handleTransferEvents(event, otherParty, this.fileContainer, this.transferJobsQueue, 'Client', 'Client')) {
             return debug('routed transfer event');
 
         } else if (event.type === Client.events.fileChanged) {
@@ -169,9 +174,10 @@ export class Client implements StrategySubject {
 
         } else if (event.type === Client.events.getFile) {
             return EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.listenAndDownload, {fileName: event.body.fileName});
+
         } else if (event.type === Client.events.getFileList) {
-            return this.fileContainer.getFileTree((err,fileList)=> {
-                if(err) return logger.error(err);
+            return this.fileContainer.getFileTree((err, fileList)=> {
+                if (err) return logger.error(err);
                 EventsHelper.writeEventToOtherParty(otherParty, Client.events.fileList, fileList);
             });
 
@@ -200,31 +206,6 @@ export class Client implements StrategySubject {
 
         logger.warn(`unknown event type: ${event}`);
         EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
-    }
-
-    private handleTransferEvents(event:{type:string, body?:any}, otherParty:Messenger):boolean {
-        if (event.type === TransferActions.events.connectAndUpload) {
-            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
-                this.fileContainer, `client - uploading: ${event.body.fileName}`);
-            return true;
-
-        } else if (event.type === TransferActions.events.connectAndDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
-                this.fileContainer, `client - downloading: ${event.body.fileName}`);
-            return true;
-
-        } else if (event.type === TransferActions.events.listenAndDownload) {
-            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
-                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`);
-            return true;
-
-        } else if (event.type === TransferActions.events.listenAndUpload) {
-            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
-                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${event.body.fileName}`);
-            return true;
-
-        }
-        return false;
     }
 
     private createDirectoryWatcher(directoryToWatch:string):FileContainer {
