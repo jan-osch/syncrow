@@ -1,11 +1,12 @@
 {
   "name": "syncrow",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Easy directory synchronization over the network",
   "main": "index.js",
   "scripts": {
     "test": "mocha --recursive test",
-    "build": "tsc || true"
+    "build": "tsc || true",
+    "postinstall": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -15,6 +16,10 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/jan-osch/syncrow/issues"
+  },
+  "bin": {
+    "syncrow": "bin/syncrow.js",
+    "syncrow-server": "bin/syncrow-server.js"
   },
   "homepage": "https://github.com/jan-osch/syncrow#readme",
   "dependencies": {

@@ -4,43 +4,25 @@ import * as express from "express";
 import * as bodyParser from "body-parser";
 import {BucketService} from "../bucket/bucket_service";
 import {loggerFor, debugFor} from "../utils/logger";
+import {bucketRouter} from "./bucket_router";
 
 const logger = loggerFor('ServerApplication');
 const debug = debugFor('syncrow:server_application');
 
 
-const app = express();
-const host = process.argv[2];
-const path = process.argv[3];
+export function applicationServer(host:string, port:number, path:string) {
+    debug(`initializing an application server with arguments: ${arguments}`);
 
-debug(process.argv);
+    const app = express();
+    const bucketService = new BucketService(host, path);
 
-const bucketService = new BucketService(host, path);
+    app.use(bodyParser.urlencoded({extended: true}));
+    app.use(bodyParser.json());
 
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
+    app.use('/bucket', bucketRouter(host, bucketService));
 
-app.get('/bucket', (req, res) => {
+    app.listen(port, function () {
+        logger.info(`Syncrow server listening on port: ${port}`)
+    });
+}
 
-    bucketService.getBucketsList((err, buckets)=> {
-        res.json({buckets: buckets});
-    })
-
-});
-
-app.get('/bucket/:bucketName/port', (req, res) => {
-    bucketService.requestPortForBucket('', '', req.params.bucketName, (err, port)=> {
-        res.json({
-            host: host,
-            port: port
-        });
-    })
-});
-
-
-const port = 3000;
-app.listen(port, function () {
-    logger.info(`Syncrow server listening on port: ${port}`)
-});
-
-export var App = app;
