@@ -1,16 +1,12 @@
 {
   "fileContainer": {
     "watchTimeout": 50,
-    "processedFilesLimit": 500,
-    "directoryHashConstant": "directory",
-    "logLevel": 3
+    "processedFilesLimit": 500
   },
   "client": {
-    "socketsLimit": 300,
-    "logLevel": 3
+    "socketsLimit": 300
   },
   "connectionHelper": {
-    "reconnectionInterval": 4000,
-    "logLevel": 3
+    "reconnectionInterval": 4000
   }
 }
