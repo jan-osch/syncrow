@@ -1,10 +1,10 @@
-/// <reference path="../../../typings/main.d.ts" />
+/// <reference path="../../typings/main.d.ts" />
 
 import {EventEmitter} from "events";
 import {Socket, connect} from "net";
 import * as async from "async";
-import config from "../../configuration";
-import {loggerFor, debugFor} from "../../utils/logger";
+import config from "../configuration";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:connection");
 const logger = loggerFor('Connection');

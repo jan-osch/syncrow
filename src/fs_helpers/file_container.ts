@@ -154,6 +154,7 @@ export class FileContainer extends EventEmitter {
      */
     public getFileMeta(fileName:string, callback:(err:Error, syncData?:SyncData)=>any) {
         if (this.cachedSyncData.has(fileName)) {
+            debug(`found cached sync data for file ${fileName}`);
             return callback(null, this.cachedSyncData.get(fileName));
         }
         this.fileMetaQueue.computeFileMeta(fileName, (err, syncData)=> {

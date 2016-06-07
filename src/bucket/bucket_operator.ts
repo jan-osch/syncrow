@@ -94,7 +94,7 @@ export class BucketOperator implements StrategySubject {
      * @param callback
      * @returns {undefined}
      */
-    requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
+    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
         this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, fileName, this.host, this.container, `BucketOperator: downloading ${fileName}`, callback);
     }
 
@@ -110,11 +110,11 @@ export class BucketOperator implements StrategySubject {
             return debug(`Handled event via callbackHelper`)
 
         } else if (event.type === Client.events.directoryCreated) {
-            this.container.createDirectory(event.body);
-            return this.broadcastEvent(event.type, event.body, otherParty);
+            this.container.createDirectory(event.body.fileName);
+            return this.broadcastEvent(event.type, {fileName:event.body.fileName}, otherParty);
 
         } else if (event.type === Client.events.fileDeleted) {
-            this.container.deleteFile(event.body);
+            this.container.deleteFile(event.body.fileName);
             return this.broadcastEvent(event.type, event.body, otherParty);
 
         } else if (event.type === Client.events.fileChanged) {
@@ -131,7 +131,7 @@ export class BucketOperator implements StrategySubject {
         } else if (event.type === Client.events.getMetaForFile) {
             return this.container.getFileMeta(event.body.fileName, (err, syncData)=> {
                 if (err)return logger.error(err);
-                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData);
+                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData, event.id);
             })
 
         } else if (event.type === EventsHelper.events.error) {

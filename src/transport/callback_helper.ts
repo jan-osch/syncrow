@@ -1,5 +1,8 @@
 import {Messenger} from "../connection/messenger";
 import {Event, EventsHelper} from "../client/events_helper";
+import {debugFor} from "../utils/logger";
+
+const debug = debugFor('syncrow:callback_helper');
 
 //TODO add timeout ability
 //TODO add clear ability - delete all callbacks that are awaiting from otherParty that disconnected
@@ -34,6 +37,7 @@ export class CallbackHelper {
     public checkResponse(event:Event):boolean {
 
         if (event.id && this.callbackMap.has(event.id)) {
+            debug(`found callback for stored id`);
             const callback = this.callbackMap.get(event.id);
             this.callbackMap.delete(event.id);
             callback(null, event);

@@ -1,8 +1,8 @@
-/// <reference path="../../../typings/main.d.ts" />
+/// <reference path="../../typings/main.d.ts" />
 
 import {EventEmitter} from "events";
-import {Connection} from "./";
-import {loggerFor, debugFor} from "../../utils/logger";
+import {Connection} from "./connection";
+import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:messenger");
 const logger = loggerFor('Messenger');

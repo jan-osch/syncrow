@@ -45,14 +45,10 @@ export class Client implements StrategySubject {
         this.otherParty = this.addOtherPartyMessenger(otherParty);
         this.transferJobsQueue = new TransferQueue(socketsLimit);
         this.callbackHelper = new CallbackHelper();
-
         this.fileContainer.beginWatching();
+        this.syncStrategy = new AcceptNewestStrategy(this, this.fileContainer);
 
-        if (!syncStrategy) {
-            this.syncStrategy = new AcceptNewestStrategy(this, this.fileContainer);
-        } else {
-            this.syncStrategy = syncStrategy;
-        }
+        if (this.otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
     }
 
     /**
@@ -74,9 +70,6 @@ export class Client implements StrategySubject {
         otherParty.on(Messenger.events.died, ()=> {
             debug(`lost connection with remote party - permanently`);
         });
-
-        if (otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
-
 
         return otherParty;
     }
