@@ -2,6 +2,7 @@ import {SynchronizationStrategy, SyncData, StrategySubject} from "./sync_strateg
 import * as async from "async";
 import * as _ from "lodash";
 import {debugFor, loggerFor} from "../utils/logger";
+import {FileContainer} from "../fs_helpers/file_container";
 
 const debug = debugFor('syncrow:accept_newest_strategy');
 const logger = loggerFor('AcceptNewestStrategy');
@@ -11,14 +12,14 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
     /**
      * On every reconnection will accept all newest files
      */
-    constructor(subject:StrategySubject) {
-        super(subject);
+    constructor(subject:StrategySubject, container:FileContainer) {
+        super(subject, container);
     }
 
     /**
      * @Override
      */
-    public acknowledgeConnectedWithRemoteParty():any {
+    public synchronize():any {
 
         this.getAllFilesFromBothSides((err, allFiles)=> {
             async.each(allFiles,
@@ -37,13 +38,13 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
         let localFiles;
         let remoteFiles;
         async.parallel([
-                (parallelCallback)=>this.subject.getLocalFileList((err, fileList:Array<string>)=> {
+                (parallelCallback)=>this.container.getFileTree((err, fileList:Array<string>)=> {
                     if (err) return parallelCallback(err);
 
                     localFiles = fileList;
                     return parallelCallback();
                 }),
-                (parallelCallback)=>this.subject.getRemoteFileList((err, fileList:Array<string>)=> {
+                (parallelCallback)=>this.subject.getRemoteFileList(this.otherParty, (err, fileList:Array<string>)=> {
                     if (err) return parallelCallback(err);
 
                     remoteFiles = fileList;
@@ -61,10 +62,10 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
         debug(`synchronizing file: ${file}`);
         async.parallel({
             localMeta: (parallelCallback)=> {
-                this.subject.getLocalFileMeta(file, parallelCallback)
+                this.container.getFileMeta(file, parallelCallback)
             },
             remoteMeta: (parallelCallback)=> {
-                this.subject.getRemoteFileMeta(file, parallelCallback);
+                this.subject.getRemoteFileMeta(this.otherParty, file, parallelCallback);
             }
         }, (err, result:{localMeta:SyncData, remoteMeta:SyncData})=> {
             if (err) return callback(err);
@@ -78,7 +79,7 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
             if (!ownMeta.exists) {
                 if (otherMeta.isDirectory) {
                     debug(`remote: ${otherMeta.name} a directory, is missing locally and should be created`);
-                    return this.subject.createLocalDirectory(otherMeta.name, callback);
+                    return this.container.createDirectory(otherMeta.name, callback);
                 }
 
                 debug(`remote ${otherMeta.name} a file, is missing locally and should be downloaded`);

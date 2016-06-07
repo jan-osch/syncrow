@@ -21,7 +21,6 @@ export class Client implements StrategySubject {
         fileDeleted: 'fileDeleted',
         directoryCreated: 'directoryCreated',
 
-        getFile: 'getFile',
         getFileList: 'getFileList',
         getMetaForFile: 'getMetaForFile',
         metaDataForFile: 'metaDataForFile',
@@ -64,6 +63,7 @@ export class Client implements StrategySubject {
         otherParty.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
         otherParty.on(Messenger.events.alive, ()=> {
+            this.syncStrategy.synchronize();
             logger.info('connected with other party beginning to sync');
         });
 
@@ -74,6 +74,10 @@ export class Client implements StrategySubject {
         otherParty.on(Messenger.events.died, ()=> {
             debug(`lost connection with remote party - permanently`);
         });
+
+        if (otherParty.isMessengerAlive()) {
+            this.syncStrategy.synchronize();
+        }
 
         return otherParty;
     }
@@ -105,7 +109,7 @@ export class Client implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
+    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
         EventsHelper.sendEvent(otherParty, Client.events.getFile, {fileName: fileName});
         callback(); //TODO implement strategy to handle callbacks
     }
@@ -116,39 +120,33 @@ export class Client implements StrategySubject {
 
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
 
-        if (handleTransferEvents(event, otherParty, this.fileContainer, this.transferJobsQueue, 'Client', 'Client')) {
+        if (this.handleTransferEvents(event, otherParty)) {
             return debug('routed transfer event');
 
-        } else if (event.type === Client.events.fileChanged) {
-            return this.syncStrategy.acknowledgeLocalFileChanged(event.body.fileName);//TODO
+        } else if (this.callbackHelper.checkResponse(event)) {
+            return debug('routed event with callback');
 
-        } else if (event.type === Client.events.getFile) {
-            return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndDownload, {fileName: event.body.fileName});
+        } else if (event.type === Client.events.fileChanged) {
+            return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: event.body.fileName});
 
         } else if (event.type === Client.events.getFileList) {
             return this.fileContainer.getFileTree((err, fileList)=> {
                 if (err) return logger.error(err);
-                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList);
+                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList, event.id);
             });
-
-        } else if (event.type === Client.events.fileList) {
-            return this.remoteFileListCallback(event.body);
-
-        } else if (event.type === Client.events.metaDataForFile) {
-            return this.addSyncMetaDataFromOtherParty(event.body);
 
         } else if (event.type === Client.events.getMetaForFile) {
             return this.fileContainer.getFileMeta(event.body.fileName, (err, syncData)=> {
                 if (err)return logger.error(err);
 
-                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData)
+                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData, event.id)
             });
 
         } else if (event.type === Client.events.directoryCreated) {
-            return this.syncStrategy.acknowledgeRemoteDirectoryCreated(event.body.fileName);
+            return this.fileContainer.createDirectory(event.body.fileName);
 
         } else if (event.type === Client.events.fileDeleted) {
-            return this.syncStrategy.acknowledgeRemoteFileDeleted(event.body.fileName);
+            return this.fileContainer.deleteFile(event.body.fileName);
 
         } else if (event.type === EventsHelper.events.error) {
             return console.info(`received error message ${JSON.stringify(event.body)}`);
@@ -156,6 +154,31 @@ export class Client implements StrategySubject {
 
         logger.warn(`unknown event type: ${event}`);
         EventsHelper.sendEvent(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
+    }
+
+    private handleTransferEvents(event:{type:string, body?:any}, otherParty:Messenger):boolean {
+        if (event.type === TransferActions.events.connectAndUpload) {
+            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
+                this.fileContainer, `client - uploading: ${event.body.fileName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.connectAndDownload) {
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
+                this.fileContainer, `client - downloading: ${event.body.fileName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.listenAndDownload) {
+            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
+                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`);
+            return true;
+
+        } else if (event.type === TransferActions.events.listenAndUpload) {
+            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
+                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${event.body.fileName}`);
+            return true;
+
+        }
+        return false;
     }
 
     private createDirectoryWatcher(directoryToWatch:string):FileContainer {

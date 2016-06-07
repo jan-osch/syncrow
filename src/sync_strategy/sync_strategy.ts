@@ -19,10 +19,18 @@ export interface StrategySubject {
 export class SynchronizationStrategy extends EventEmitter {
     protected subject:StrategySubject;
     protected container:FileContainer;
+    protected otherParty:Messenger;
 
-    constructor(subject:StrategySubject, container:FileContainer) {
+    constructor(subject:StrategySubject, container:FileContainer, otherParty:Messenger) {
         super();
         this.subject = subject;
         this.container = container;
+        this.otherParty = otherParty;
+    }
+
+    /**
+     */
+    public  synchronize() {
+        return;
     }
 }
