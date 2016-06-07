@@ -29,7 +29,7 @@ export class TransferQueue {
                                          sourceContainer:FileContainer,
                                          timingMessage?:string) {
 
-        debug(`adding job: connectAndUploadFile`);
+        debug(`adding job: connectAndUploadFile: ${fileName}`);
         const job = (uploadingDoneCallback) => {
 
             if (timingMessage) console.time(timingMessage);
@@ -59,7 +59,7 @@ export class TransferQueue {
                                            timingMessage?:string,
                                            callback?:Function) {
 
-        debug(`addingjob: connectAndDownloadFile`);
+        debug(`adding job: connectAndDownloadFile: ${fileName}`);
         const job = (downloadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);
@@ -89,7 +89,7 @@ export class TransferQueue {
                                          sourceContainer:FileContainer,
                                          timingMessage?:string) {
 
-        debug(`adding job: listenAndUploadFile`);
+        debug(`adding job: listenAndUploadFile ${fileName}`);
         const job = (uploadingDoneCallback)=> {
 
             if (timingMessage) console.time(timingMessage);

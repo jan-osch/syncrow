@@ -14,12 +14,14 @@ export class EventsHelper {
     /**
      * @param type
      * @param body
+     * @param id
      * @returns {string}
      */
-    public static createEvent(type:string, body = {}):string {
+    public static createEvent(type:string, body = {}, id?:number):string {
         return JSON.stringify({
             type: type,
-            body: body
+            body: body,
+            id:id
         });
     }
 
@@ -29,11 +31,11 @@ export class EventsHelper {
      * @param message
      * @returns {any}
      */
-    public static parseEvent(otherParty:Messenger, message:string):Event{
+    public static parseEvent(otherParty:Messenger, message:string):Event {
         try {
             return JSON.parse(message.toString());
         } catch (e) {
-            EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, 'bad event');
+            EventsHelper.sendEvent(otherParty, EventsHelper.events.error, 'bad event');
         }
     }
 
@@ -41,9 +43,10 @@ export class EventsHelper {
      * @param otherParty
      * @param type
      * @param message
+     * @param id
      */
-    public static writeEventToOtherParty(otherParty:Messenger, type:string, message?:any) {
-        const event = EventsHelper.createEvent(type, message);
+    public static sendEvent(otherParty:Messenger, type:string, message?:any, id?:number) {
+        const event = EventsHelper.createEvent(type, message, id);
         debug(`writing event: ${event}`);
         otherParty.writeMessage(event);
     }
@@ -51,5 +54,6 @@ export class EventsHelper {
 
 export interface Event {
     type:string,
-    body:any
+    body:any,
+    id:number
 }

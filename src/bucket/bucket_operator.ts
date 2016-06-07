@@ -39,12 +39,14 @@ export class BucketOperator {
         otherParty.once(Messenger.events.recovering, ()=>this.removeOtherParty(otherParty));
         otherParty.on(Messenger.events.message, (message)=> messageListener(message));
 
+        EventsHelper.sendEvent(otherParty, Client.events.getFileList);
+
         this.otherParties.push(otherParty);
         this.otherPartiesMessageListeners.push(messageListener);
     }
 
     /**
-     * Completely removes otherParty from operaor
+     * Completely removes otherParty from operator
      * @param otherParty
      */
     public removeOtherParty(otherParty:Messenger) {
@@ -77,15 +79,35 @@ export class BucketOperator {
             return;
 
         } else if (event.type === Client.events.getFile) {
-            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.connectAndDownload, event.body);
-            return;
+            return this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
+                this.host, this.container, `BucketOperator - uploading ${event.body.fileName}`)
+
+        } else if (event.type === Client.events.getFileList) {
+            return this.container.getFileTree((err, fileList)=> {
+                if (err) return logger.error(err);
+                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList);
+            });
+
+        } else if (event.type === Client.events.fileList) {
+            return event.body.forEach((file)=> {
+                this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, file,
+                    this.host, this.container, `BucketOperator - uploading ${file}`, ()=> {
+                        this.broadcastEvent(Client.events.fileChanged, file, otherParty)
+                    });
+            });
+
+        } else if (event.type === Client.events.getMetaForFile) {
+            return this.container.getFileMeta(event.body.fileName, (err, syncData)=> {
+                if (err)return logger.error(err);
+                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData);
+            })
 
         } else if (event.type === EventsHelper.events.error) {
             logger.warn(`received error message ${JSON.stringify(event.body)}`);
             return;
         }
 
-        EventsHelper.writeEventToOtherParty(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
+        EventsHelper.sendEvent(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
     }
 
     private handleTransferEvent(otherParty:Messenger, event:{type:string, body?:any}):boolean {
@@ -123,7 +145,7 @@ export class BucketOperator {
                 return;
             }
 
-            EventsHelper.writeEventToOtherParty(otherParty, eventType, body);
+            EventsHelper.sendEvent(otherParty, eventType, body);
         })
     }
 }

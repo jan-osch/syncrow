@@ -2,7 +2,7 @@
 import * as async from "async";
 import * as fs from "fs";
 import * as crypto from "crypto";
-import {SyncData} from "../sync_strategy/synchronization_strategy";
+import {SyncData} from "../sync_strategy/sync_strategy";
 import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:file_meta_queue');

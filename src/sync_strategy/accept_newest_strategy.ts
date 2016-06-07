@@ -1,4 +1,4 @@
-import {SynchronizationStrategy, SyncData, StrategySubject} from "./synchronization_strategy";
+import {SynchronizationStrategy, SyncData, StrategySubject} from "./sync_strategy";
 import * as async from "async";
 import * as _ from "lodash";
 import {debugFor, loggerFor} from "../utils/logger";

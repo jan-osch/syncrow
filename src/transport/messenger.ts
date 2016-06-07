@@ -14,8 +14,10 @@ export class Messenger extends EventEmitter {
     private isAlive:boolean;
     private messageBuffer:string;
     private expectedLength:number;
+    private id:number;
 
     private static separator = ':';
+    private static id;
 
     static events = {
         message: 'message',
@@ -32,6 +34,7 @@ export class Messenger extends EventEmitter {
         super();
         this.resetBuffers();
         this.addListenersToConnection(connection);
+        this.id = Messenger.id++;
     }
 
     /**
@@ -50,7 +53,7 @@ export class Messenger extends EventEmitter {
     /**
      * @returns {boolean}
      */
-    public isMessengerAlive(){
+    public isMessengerAlive() {
         return this.isAlive;
     }
 

@@ -47,7 +47,7 @@ export class TransferActions {
                 host: host
             };
 
-            EventsHelper.writeEventToOtherParty(pushingParty, TransferActions.events.connectAndUpload, {
+            EventsHelper.sendEvent(pushingParty, TransferActions.events.connectAndUpload, {
                 fileName: fileName,
                 address: address
             });
@@ -83,7 +83,7 @@ export class TransferActions {
                 host: host
             };
 
-            EventsHelper.writeEventToOtherParty(otherParty, TransferActions.events.connectAndDownload, {
+            EventsHelper.sendEvent(otherParty, TransferActions.events.connectAndDownload, {
                 fileName: fileName,
                 address: address
             });
@@ -122,6 +122,7 @@ export class TransferActions {
                                          destinationContainer:FileContainer,
                                          callback:Function) {
 
+        debug(`connectAndDownloadFile: connecting to ${address.host}:${address.port}`);
         const fileTransferSocket = connect(address, ()=> {
             TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, callback);
         });
