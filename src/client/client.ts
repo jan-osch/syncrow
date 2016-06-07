@@ -1,7 +1,7 @@
 /// <reference path="../../typings/main.d.ts" />
 
 import {loggerFor, debugFor} from "../utils/logger";
-import {Messenger} from "../transport/messenger";
+import {Messenger} from "../connection/messenger";
 import {FileContainer} from "../fs_helpers/file_container";
 import {TransferQueue} from "../transport/transfer_queue";
 import {EventsHelper} from "./events_helper";
@@ -63,7 +63,7 @@ export class Client implements StrategySubject {
         otherParty.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
         otherParty.on(Messenger.events.alive, ()=> {
-            this.syncStrategy.synchronize();
+            this.syncStrategy.synchronize(otherParty); //TODO add better places for this
             logger.info('connected with other party beginning to sync');
         });
 
@@ -75,9 +75,8 @@ export class Client implements StrategySubject {
             debug(`lost connection with remote party - permanently`);
         });
 
-        if (otherParty.isMessengerAlive()) {
-            this.syncStrategy.synchronize();
-        }
+        if (otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
+
 
         return otherParty;
     }
@@ -110,7 +109,7 @@ export class Client implements StrategySubject {
      * @param callback
      */
     public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
-        EventsHelper.sendEvent(otherParty, Client.events.getFile, {fileName: fileName});
+        EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: fileName});
         callback(); //TODO implement strategy to handle callbacks
     }
 

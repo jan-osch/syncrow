@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {FileContainer} from "../fs_helpers/file_container";
-import {Messenger} from "../transport/messenger";
+import {Messenger} from "../connection/messenger";
 
 export interface SyncData {
     hashCode:string;
@@ -19,18 +19,17 @@ export interface StrategySubject {
 export class SynchronizationStrategy extends EventEmitter {
     protected subject:StrategySubject;
     protected container:FileContainer;
-    protected otherParty:Messenger;
 
-    constructor(subject:StrategySubject, container:FileContainer, otherParty:Messenger) {
+    constructor(subject:StrategySubject, container:FileContainer) {
         super();
         this.subject = subject;
         this.container = container;
-        this.otherParty = otherParty;
     }
 
     /**
+     * @param otherParty
      */
-    public  synchronize() {
+    public  synchronize(otherParty:Messenger) {
         return;
     }
 }

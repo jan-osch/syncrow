@@ -3,21 +3,26 @@
 import {FileContainer} from "../fs_helpers/file_container";
 import {EventsHelper} from "../client/events_helper";
 import {TransferQueue} from "../transport/transfer_queue";
-import {Messenger} from "../transport/messenger";
+import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
 import {TransferActions} from "../transport/transfer_actions";
 import {loggerFor, debugFor} from "../utils/logger";
+import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
+import {CallbackHelper} from "../transport/callback_helper";
+import {AcceptNewestStrategy} from "../sync_strategy/accept_newest_strategy";
 
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
 
-export class BucketOperator {
+export class BucketOperator implements StrategySubject {
     private path:string;
     private host:string;
     private otherParties:Array<Messenger>;
     private container:FileContainer;
     private otherPartiesMessageListeners:Array<Function>;
     private transferJobsQueue:TransferQueue;
+    private callbackHelper:CallbackHelper;
+    private syncStrategy:SynchronizationStrategy;
 
     constructor(host:string, path:string, transferConcurrency = 10) {
         this.path = path;
@@ -26,6 +31,8 @@ export class BucketOperator {
         this.otherParties = [];
         this.otherPartiesMessageListeners = [];
         this.transferJobsQueue = new TransferQueue(transferConcurrency);
+        this.callbackHelper = new CallbackHelper();
+        this.syncStrategy = new AcceptNewestStrategy(this, this.container);
     }
 
     /**
@@ -39,7 +46,8 @@ export class BucketOperator {
         otherParty.once(Messenger.events.recovering, ()=>this.removeOtherParty(otherParty));
         otherParty.on(Messenger.events.message, (message)=> messageListener(message));
 
-        EventsHelper.sendEvent(otherParty, Client.events.getFileList);
+        if (otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
+
 
         this.otherParties.push(otherParty);
         this.otherPartiesMessageListeners.push(messageListener);
@@ -59,41 +67,65 @@ export class BucketOperator {
         this.otherPartiesMessageListeners.splice(index, 1);
     }
 
+    /**
+     * @param otherParty
+     * @param fileName
+     * @param callback
+     */
+    public getRemoteFileMeta(otherParty:Messenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+        this.callbackHelper.sendWrapped(otherParty, Client.events.getMetaForFile, {fileName: fileName}, (err, event)=> {
+            callback(err, event.body);
+        });
+    }
+
+    /**
+     * @param otherParty
+     * @param callback
+     */
+    public getRemoteFileList(otherParty:Messenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
+        this.callbackHelper.sendWrapped(otherParty, Client.events.getFileList, {}, (err, event)=> {
+            callback(err, event.body);
+        });
+    }
+
+    /**
+     * @param otherParty
+     * @param fileName
+     * @param callback
+     * @returns {undefined}
+     */
+    requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
+        this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, fileName, this.host, this.container, `BucketOperator: downloading ${fileName}`, callback);
+    }
+
     private handleEvent(otherParty:Messenger, message:string) {
         const event = EventsHelper.parseEvent(otherParty, message);
 
         debug(`got event from other party: ${event}`);
 
         if (this.handleTransferEvent(otherParty, event)) {
-            debug('Server handled transfer event');
-            return;
+            return debug('Server handled transfer event');
+
+        } else if (this.callbackHelper.checkResponse(event)) {
+            return debug(`Handled event via callbackHelper`)
 
         } else if (event.type === Client.events.directoryCreated) {
             this.container.createDirectory(event.body);
-            this.broadcastEvent(event.type, event.body, otherParty);
-            return;
+            return this.broadcastEvent(event.type, event.body, otherParty);
 
         } else if (event.type === Client.events.fileDeleted) {
             this.container.deleteFile(event.body);
-            this.broadcastEvent(event.type, event.body, otherParty);
-            return;
+            return this.broadcastEvent(event.type, event.body, otherParty);
 
-        } else if (event.type === Client.events.getFile) {
-            return this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
-                this.host, this.container, `BucketOperator - uploading ${event.body.fileName}`)
+        } else if (event.type === Client.events.fileChanged) {
+            this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
+                this.broadcastEvent(event.type, event.body, otherParty);
+            })
 
         } else if (event.type === Client.events.getFileList) {
             return this.container.getFileTree((err, fileList)=> {
                 if (err) return logger.error(err);
-                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList);
-            });
-
-        } else if (event.type === Client.events.fileList) {
-            return event.body.forEach((file)=> {
-                this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, file,
-                    this.host, this.container, `BucketOperator - uploading ${file}`, ()=> {
-                        this.broadcastEvent(Client.events.fileChanged, file, otherParty)
-                    });
+                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList, event.id);
             });
 
         } else if (event.type === Client.events.getMetaForFile) {

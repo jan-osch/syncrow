@@ -3,6 +3,7 @@ import * as async from "async";
 import * as _ from "lodash";
 import {debugFor, loggerFor} from "../utils/logger";
 import {FileContainer} from "../fs_helpers/file_container";
+import {Messenger} from "../connection/messenger";
 
 const debug = debugFor('syncrow:accept_newest_strategy');
 const logger = loggerFor('AcceptNewestStrategy');
@@ -19,11 +20,11 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
     /**
      * @Override
      */
-    public synchronize():any {
+    public synchronize(otherParty:Messenger):any {
 
-        this.getAllFilesFromBothSides((err, allFiles)=> {
+        this.getAllFilesFromBothSides(otherParty, (err, allFiles)=> {
             async.each(allFiles,
-                (file, callback)=>this.synchronizeFile(file, callback),
+                (file, callback)=>this.synchronizeFile(otherParty, file, callback),
 
                 (err:Error)=> {
                     if (err) return logger.error(err);
@@ -34,7 +35,7 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
         })
     }
 
-    private getAllFilesFromBothSides(callback:(err:Error, allFiles?:Array<string>)=>any) {
+    private getAllFilesFromBothSides(otherParty:Messenger, callback:(err:Error, allFiles?:Array<string>)=>any) {
         let localFiles;
         let remoteFiles;
         async.parallel([
@@ -44,7 +45,7 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
                     localFiles = fileList;
                     return parallelCallback();
                 }),
-                (parallelCallback)=>this.subject.getRemoteFileList(this.otherParty, (err, fileList:Array<string>)=> {
+                (parallelCallback)=>this.subject.getRemoteFileList(otherParty, (err, fileList:Array<string>)=> {
                     if (err) return parallelCallback(err);
 
                     remoteFiles = fileList;
@@ -58,23 +59,23 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
         )
     }
 
-    private synchronizeFile(file:string, callback:Function):any {
+    private synchronizeFile(otherParty:Messenger, file:string, callback:Function):any {
         debug(`synchronizing file: ${file}`);
         async.parallel({
             localMeta: (parallelCallback)=> {
                 this.container.getFileMeta(file, parallelCallback)
             },
             remoteMeta: (parallelCallback)=> {
-                this.subject.getRemoteFileMeta(this.otherParty, file, parallelCallback);
+                this.subject.getRemoteFileMeta(otherParty, file, parallelCallback);
             }
         }, (err, result:{localMeta:SyncData, remoteMeta:SyncData})=> {
             if (err) return callback(err);
 
-            this.issueSubjectCommandsIfNeeded(result.localMeta, result.remoteMeta, callback);
+            this.issueSubjectCommandsIfNeeded(otherParty, result.localMeta, result.remoteMeta, callback);
         });
     }
 
-    private issueSubjectCommandsIfNeeded(ownMeta:SyncData, otherMeta:SyncData, callback) {
+    private issueSubjectCommandsIfNeeded(otherParty:Messenger, ownMeta:SyncData, otherMeta:SyncData, callback) {
         if (otherMeta.exists) {
             if (!ownMeta.exists) {
                 if (otherMeta.isDirectory) {
@@ -83,13 +84,13 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
                 }
 
                 debug(`remote ${otherMeta.name} a file, is missing locally and should be downloaded`);
-                return this.subject.requestRemoteFile(otherMeta.name, callback);
+                return this.subject.requestRemoteFile(otherParty, otherMeta.name, callback);
             }
 
             if (otherMeta.hashCode !== ownMeta.hashCode) {
                 if (otherMeta.modified.getTime() > ownMeta.modified.getTime()) {
                     debug(`remote ${otherMeta.name} a file, is in older version locally and should be downloaded`);
-                    return this.subject.requestRemoteFile(otherMeta.name, callback);
+                    return this.subject.requestRemoteFile(otherParty, otherMeta.name, callback);
                 }
             }
         }

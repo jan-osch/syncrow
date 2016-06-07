@@ -3,7 +3,7 @@
 import {FileContainer} from "../fs_helpers/file_container";
 import {Socket, Server, createServer, connect} from "net";
 import {EventsHelper} from "../client/events_helper";
-import {Messenger} from "./messenger";
+import {Messenger} from "../connection/messenger";
 import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:trasfer_actions");

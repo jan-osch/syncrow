@@ -1,8 +1,8 @@
-/// <reference path="../../typings/main.d.ts" />
+/// <reference path="../../../typings/main.d.ts" />
 
 import {Socket, Server, createServer} from "net";
-import {Connection, ConnectionStrategy} from "./connection";
-import {loggerFor, debugFor} from "../utils/logger";
+import {Connection, ConnectionStrategy} from "./";
+import {loggerFor, debugFor} from "../../utils/logger";
 
 const debug = debugFor("syncrow:connection_server");
 const logger = loggerFor('ConnectionServer');

@@ -1,6 +1,6 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import {Messenger} from "./messenger";
+import {Messenger} from "../connection/messenger";
 import {FileContainer} from "../fs_helpers/file_container";
 import {TransferActions} from "./transfer_actions";
 import * as async from "async";

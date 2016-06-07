@@ -3,10 +3,10 @@
 import {getUserService} from "./user_service";
 import {Server, createServer} from "net";
 import {BucketOperator} from "./bucket_operator";
-import {Messenger} from "../transport/messenger";
+import {Messenger} from "../connection/messenger";
 import * as fs from "fs";
 import * as async from "async";
-import {Connection} from "../transport/connection";
+import {Connection} from "../connection/connection";
 import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:bucket_service");

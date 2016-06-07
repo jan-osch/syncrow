@@ -1,5 +1,5 @@
 /// <reference path="../../typings/main.d.ts" />
-import {Messenger} from "../transport/messenger";
+import {Messenger} from "../connection/messenger";
 import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:events');

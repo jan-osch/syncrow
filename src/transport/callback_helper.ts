@@ -1,4 +1,4 @@
-import {Messenger} from "./messenger";
+import {Messenger} from "../connection/messenger";
 import {Event, EventsHelper} from "../client/events_helper";
 
 //TODO add timeout ability

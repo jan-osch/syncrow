@@ -3,9 +3,9 @@
 import * as program from "commander";
 import * as request from "request";
 import {debugFor, loggerFor} from "../utils/logger";
-import {ConnectionServer} from "../transport/connection_server";
-import {Messenger} from "../transport/messenger";
-import {getActiveConnection, Connection} from "../transport/connection";
+import {ConnectionServer} from "../connection/connection_server";
+import {Messenger} from "../connection/messenger";
+import {getActiveConnection, Connection} from "../connection/connection";
 import {Client} from "../client/client";
 
 const logger = loggerFor("CLI");
