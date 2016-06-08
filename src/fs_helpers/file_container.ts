@@ -173,7 +173,7 @@ export class FileContainer extends EventEmitter {
         if (!this.blockedFiles.has(fileName)) throw new Error('Attempting to unblock a file that is not blocked');
 
         setTimeout(()=> {
-            debug(`uncblocking file: ${fileName}`);
+            debug(`unblocking file: ${fileName}`);
             this.blockedFiles.delete(fileName);
         }, FileContainer.watchTimeout);
     }
