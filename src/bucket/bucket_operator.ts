@@ -118,7 +118,7 @@ export class BucketOperator implements StrategySubject {
             return this.broadcastEvent(event.type, event.body, otherParty);
 
         } else if (event.type === Client.events.fileChanged) {
-            this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
+            return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
                 this.broadcastEvent(event.type, event.body, otherParty);
             })
 
@@ -135,8 +135,7 @@ export class BucketOperator implements StrategySubject {
             })
 
         } else if (event.type === EventsHelper.events.error) {
-            logger.warn(`received error message ${JSON.stringify(event.body)}`);
-            return;
+            return logger.warn(`received error message ${JSON.stringify(event.body)}`);
         }
 
         EventsHelper.sendEvent(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);

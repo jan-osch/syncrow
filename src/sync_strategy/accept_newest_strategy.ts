@@ -36,8 +36,8 @@ export class AcceptNewestStrategy extends SynchronizationStrategy {
     }
 
     private getAllFilesFromBothSides(otherParty:Messenger, callback:(err:Error, allFiles?:Array<string>)=>any) {
-        let localFiles;
-        let remoteFiles;
+        let localFiles:Array<string>;
+        let remoteFiles:Array<string>;
         async.parallel([
                 (parallelCallback)=>this.container.getFileTree((err, fileList:Array<string>)=> {
                     if (err) return parallelCallback(err);
