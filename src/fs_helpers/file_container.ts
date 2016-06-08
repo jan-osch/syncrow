@@ -25,7 +25,6 @@ export class FileContainer extends EventEmitter {
     };
 
     private directoryToWatch:string;
-    private watchedFiles:Set<string>;
     private blockedFiles:Set<string>;
     private cachedSyncData:Map<string,SyncData>;
     private fileMetaQueue:FileMetaComputingQueue;
@@ -40,7 +39,6 @@ export class FileContainer extends EventEmitter {
         super();
         this.directoryToWatch = directoryToWatch;
         this.blockedFiles = new Set();
-        this.watchedFiles = new Set();
         this.cachedSyncData = new Map();
         this.fileMetaQueue = new FileMetaComputingQueue(config.fileContainer.processedFilesLimit, this.directoryToWatch);
     }
@@ -125,39 +123,22 @@ export class FileContainer extends EventEmitter {
         }
     }
 
-
     /**
      * Starts watching and emitting events
      */
-    public beginWatchin2() {
-        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
-
-        this.getFileTree((err, fileTree:Array<string>)=> {
-            if (err) return logger.error(err);
-
-            this.watchedFiles = new Set(fileTree);
-
-            fs.watch(this.directoryToWatch, {recursive: true}).on('change', (event, fileName)=> {
-                debug(`got event: ${event} for file: ${fileName}`);
-
-                this.cachedSyncData.delete(fileName);
-
-                if (event === 'rename') return this.checkRenameEventMeaning(PathHelper.normalizePath(fileName));
-
-                return this.emitEventIfFileNotBlocked(FileContainer.events.changed, PathHelper.normalizePath(fileName));
-            });
-        });
-    }
-
     public beginWatching() {
-        const watcher = chokidar.watch(this.directoryToWatch, {persistent: true});
-        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
+        const watcher = chokidar.watch(this.directoryToWatch, {persistent: true, ignoreInitial: true});
 
-        watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path));
-        watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
-        watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
-        watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
-        watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
+        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
+        watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, this.relativeToDirectory(path)));
+        watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, this.relativeToDirectory(path)));
+        watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, this.relativeToDirectory(path)));
+        watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, this.relativeToDirectory(path)));
+        watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, this.relativeToDirectory(path)));
+
+        watcher.on('ready', ()=> {
+            debug(`initial scan ready: watched files: ${watcher.getWatched().length}`)
+        });
     }
 
     /**
@@ -176,27 +157,12 @@ export class FileContainer extends EventEmitter {
         });
     }
 
-    private createAbsolutePath(file):string { // TODO check where paths should be normalized
+    private createAbsolutePath(file):string {
         return PathHelper.normalizePath(path.join(this.directoryToWatch, file));
     }
 
-    private checkRenameEventMeaning(fileName:string) {
-        fs.stat(this.createAbsolutePath(fileName), (error, stats:fs.Stats)=> {
-            if (error && this.watchedFiles.has(fileName)) {
-                this.watchedFiles.delete(fileName);
-                return this.emitEventIfFileNotBlocked(FileContainer.events.deleted, fileName);
-
-            } else if (error) return logger.warn(`/checkRenameEventMeaning - deleted a non-tracked file, filename: ${fileName} reason: ${error}`);
-
-            else if (!this.watchedFiles.has(fileName)) {
-                this.watchedFiles.add(fileName);
-
-                if (stats.isDirectory())return this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, fileName);
-
-                return this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, fileName);
-            }
-            return this.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
-        });
+    private relativeToDirectory(file:string):string {
+        return path.relative(this.directoryToWatch, file);
     }
 
     private blockFile(fileName:string) {
