@@ -126,8 +126,8 @@ export function getPublicSuffix (hostname: string): string;
  * the spirit of the RFC sorting: older cookies go first. This works great for
  * MemoryCookieStore, since Set-Cookie headers are parsed in order, but may not
  * be so great for distributed systems. Sophisticated Stores may wish to set this
- * to some other logical clock such that if cookies A and B are created in the
- * same millisecond, but cookie A is created before cookie B, then
+ * to some other logical clock such that if cookies A and B are fileCreated in the
+ * same millisecond, but cookie A is fileCreated before cookie B, then
  * A.creationIndex < B.creationIndex. If you want to alter the global counter,
  * which you probably shouldn't do, it's stored in Cookie.cookiesCreated.
  */
@@ -422,7 +422,7 @@ export interface CookieJarOptions {
 
 /**
  * Simply use new CookieJar(). If you'd like to use a custom store, pass that
- * to the constructor otherwise a MemoryCookieStore will be created and used.
+ * to the constructor otherwise a MemoryCookieStore will be fileCreated and used.
  */
 export class CookieJar {
   enableLooseMode: boolean;
@@ -495,12 +495,12 @@ export class CookieJar {
   toJSON (): Object;
 
   /**
-   * A new Jar is created and the serialized Cookies are added to the
+   * A new Jar is fileCreated and the serialized Cookies are added to the
    * underlying store. Each Cookie is added via store.putCookie in the order
    * in which they appear in the serialization.
    *
    * The store argument is optional, but should be an instance of Store. By
-   * default, a new instance of MemoryCookieStore is created.
+   * default, a new instance of MemoryCookieStore is fileCreated.
    *
    * As a convenience, if serialized is a string, it is passed through
    * JSON.parse first. If that throws an error, this is passed to the callback.
@@ -524,7 +524,7 @@ export class CookieJar {
    * affect the clone, and vice versa.
    *
    * The store argument is optional, but should be an instance of Store. By
-   * default, a new instance of MemoryCookieStore is created. Transferring
+   * default, a new instance of MemoryCookieStore is fileCreated. Transferring
    * between store types is supported so long as the source implements
    * .getAllCookies() and the destination implements .putCookie().
    */

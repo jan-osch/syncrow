@@ -10,6 +10,7 @@ import {FileMetaComputingQueue} from "./file_meta_queue";
 import {readTree} from "./read_tree";
 import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
+import * as chokidar from "chokidar";
 import ReadableStream = NodeJS.ReadableStream;
 
 const debug = debugFor("syncrow:file_container");
@@ -19,7 +20,7 @@ export class FileContainer extends EventEmitter {
     static events = {
         changed: 'changed',
         deleted: 'deleted',
-        created: 'created',
+        fileCreated: 'fileCreated',
         createdDirectory: 'createdDirectory',
     };
 
@@ -128,7 +129,7 @@ export class FileContainer extends EventEmitter {
     /**
      * Starts watching and emitting events
      */
-    public beginWatching() {
+    public beginWatchin2() {
         debug(`beginning to watch a directory: ${this.directoryToWatch}`);
 
         this.getFileTree((err, fileTree:Array<string>)=> {
@@ -146,6 +147,17 @@ export class FileContainer extends EventEmitter {
                 return this.emitEventIfFileNotBlocked(FileContainer.events.changed, PathHelper.normalizePath(fileName));
             });
         });
+    }
+
+    public beginWatching() {
+        const watcher = chokidar.watch(this.directoryToWatch, {persistent: true});
+        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
+
+        watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path));
+        watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
+        watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
+        watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
+        watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
     }
 
     /**
@@ -181,7 +193,7 @@ export class FileContainer extends EventEmitter {
 
                 if (stats.isDirectory())return this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, fileName);
 
-                return this.emitEventIfFileNotBlocked(FileContainer.events.created, fileName);
+                return this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, fileName);
             }
             return this.emitEventIfFileNotBlocked(FileContainer.events.changed, fileName);
         });

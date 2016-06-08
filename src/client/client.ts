@@ -185,7 +185,7 @@ export class Client implements StrategySubject {
             EventsHelper.sendEvent(this.otherParty, Client.events.fileChanged, {fileName: eventContent});
         });
 
-        fileContainer.on(FileContainer.events.created, (eventContent)=> {
+        fileContainer.on(FileContainer.events.fileCreated, (eventContent)=> {
             debug(`detected file created: ${eventContent}`);
             EventsHelper.sendEvent(this.otherParty, Client.events.fileChanged, {fileName: eventContent});
         });

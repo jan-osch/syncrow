@@ -162,7 +162,7 @@ declare var Buffer:{
      *
      * If the list has no items, or if the totalLength is 0, then it returns a zero-length buffer.
      * If the list has exactly one item, then the first item of the list is returned.
-     * If the list has more than one item, then a new Buffer is created.
+     * If the list has more than one item, then a new Buffer is fileCreated.
      *
      * @param list An array of Buffer objects to concatenate
      * @param totalLength Total length of the buffers when concatenated.
