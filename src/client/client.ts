@@ -104,6 +104,7 @@ export class Client implements StrategySubject {
     public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
         EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: fileName});
         callback(); //TODO implement strategy to handle callbacks
+        //TODO: FILE_REQUEST_CALLBACK_STRATEGY - store callback here in callbackHelper
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
@@ -120,6 +121,7 @@ export class Client implements StrategySubject {
 
         } else if (event.type === Client.events.fileChanged) {
             return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: event.body.fileName});
+            //TODO  FILE_REQUEST_CALLBACK_STRATEGY use here requestRemoteFile
 
         } else if (event.type === Client.events.getFileList) {
             return this.fileContainer.getFileTree((err, fileList)=> {
@@ -158,11 +160,13 @@ export class Client implements StrategySubject {
             this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
                 this.fileContainer, `client - downloading: ${event.body.fileName}`);
             return true;
+            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbaks in callback helper
 
         } else if (event.type === TransferActions.events.listenAndDownload) {
             this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
                 otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`);
             return true;
+            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbacks
 
         } else if (event.type === TransferActions.events.listenAndUpload) {
             this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
