@@ -127,18 +127,21 @@ export class FileContainer extends EventEmitter {
      * Starts watching and emitting events
      */
     public beginWatching() {
-        const watcher = chokidar.watch(this.directoryToWatch, {persistent: true, ignoreInitial: true});
+        const watcher = chokidar.watch(this.directoryToWatch, {
+            persistent: true,
+            ignoreInitial: true,
+            usePolling: true,
+            cwd: this.directoryToWatch,
+            ignored:'.idea'
+        });
 
         debug(`beginning to watch a directory: ${this.directoryToWatch}`);
-        watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, this.relativeToDirectory(path)));
-        watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, this.relativeToDirectory(path)));
-        watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, this.relativeToDirectory(path)));
-        watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, this.relativeToDirectory(path)));
-        watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, this.relativeToDirectory(path)));
 
-        watcher.on('ready', ()=> {
-            debug(`initial scan ready: watched files: ${watcher.getWatched().length}`)
-        });
+        watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path));
+        watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
+        watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
+        watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
+        watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
     }
 
     /**
@@ -159,10 +162,6 @@ export class FileContainer extends EventEmitter {
 
     private createAbsolutePath(file):string {
         return PathHelper.normalizePath(path.join(this.directoryToWatch, file));
-    }
-
-    private relativeToDirectory(file:string):string {
-        return path.relative(this.directoryToWatch, file);
     }
 
     private blockFile(fileName:string) {

@@ -8,7 +8,6 @@ import {EventsHelper} from "./events_helper";
 import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
-import {AcceptNewestStrategy} from "../sync_strategy/accept_newest_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 
 const debug = debugFor("syncrow:client");
@@ -46,7 +45,7 @@ export class Client implements StrategySubject {
         this.transferJobsQueue = new TransferQueue(socketsLimit);
         this.callbackHelper = new CallbackHelper();
         this.fileContainer.beginWatching();
-        this.syncStrategy = new AcceptNewestStrategy(this, this.fileContainer);
+        this.syncStrategy = new SynchronizationStrategy(this, this.fileContainer);
 
         if (this.otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
     }

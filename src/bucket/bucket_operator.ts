@@ -9,7 +9,6 @@ import {TransferActions} from "../transport/transfer_actions";
 import {loggerFor, debugFor} from "../utils/logger";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
-import {AcceptNewestStrategy} from "../sync_strategy/accept_newest_strategy";
 
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
@@ -32,7 +31,7 @@ export class BucketOperator implements StrategySubject {
         this.otherPartiesMessageListeners = [];
         this.transferJobsQueue = new TransferQueue(transferConcurrency);
         this.callbackHelper = new CallbackHelper();
-        this.syncStrategy = new AcceptNewestStrategy(this, this.container);
+        this.syncStrategy = new SynchronizationStrategy(this, this.container);
     }
 
     /**
@@ -111,7 +110,7 @@ export class BucketOperator implements StrategySubject {
 
         } else if (event.type === Client.events.directoryCreated) {
             this.container.createDirectory(event.body.fileName);
-            return this.broadcastEvent(event.type, {fileName:event.body.fileName}, otherParty);
+            return this.broadcastEvent(event.type, {fileName: event.body.fileName}, otherParty);
 
         } else if (event.type === Client.events.fileDeleted) {
             this.container.deleteFile(event.body.fileName);

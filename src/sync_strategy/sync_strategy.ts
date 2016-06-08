@@ -1,6 +1,10 @@
 import {EventEmitter} from "events";
 import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
+import {loggerFor} from "../utils/logger";
+
+
+const logger = loggerFor(`SynchronizationStrategy`);
 
 export interface SyncData {
     hashCode:string;
@@ -30,6 +34,6 @@ export class SynchronizationStrategy extends EventEmitter {
      * @param otherParty
      */
     public  synchronize(otherParty:Messenger) {
-        return;
+        logger.info(`no action needed`);
     }
 }
