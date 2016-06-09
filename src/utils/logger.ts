@@ -36,7 +36,7 @@ export class Logger {
      * @param err
      */
     public error(err?:any) {
-        if (err)console.error(`pika pika`+err);
+        if (err) this.logInColor(`ERROR:`+err, 'red');
     }
 
     /**
