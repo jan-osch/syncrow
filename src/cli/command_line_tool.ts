@@ -10,6 +10,7 @@ import {Client} from "../client/client";
 import * as fs from "fs";
 import * as _ from "lodash";
 import * as net from "net";
+import * as path from "path";
 import {SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import {PullStrategy} from "../sync_strategy/pull_everything_strategy";
@@ -37,7 +38,7 @@ function main() {
     printDebugAboutConfig(chosenConfig);
 
     const chosenStrategy = getStrategy(chosenConfig.strategy);
-    const filterFunction = createFilterFunction(chosenConfig.filter);
+    const filterFunction = createFilterFunction(chosenConfig.filter, path.resolve(chosenConfig.directory));
 
     if (chosenConfig.listen) {
         return listenAndStart(chosenConfig.port, chosenConfig.directory, chosenStrategy, filterFunction);
@@ -75,19 +76,20 @@ function getConfigFromCommandLine():ProgramOptions {
         .option('-l, --listen', 'listen for connections', false)
         .option('-s, --strategy <strategy>', 'synchronization strategy (pull|no|newest) [no]', 'no')
         .option('-d, --directory <directory>', 'directory to watch', '.')
-        .option('-i, --init', 'save configuration to file')
-        .option('-f, --filter', 'comma separated filter patterns', '')
+        .option('-i, --init', 'save configuration to file', false)
+        .option('-f, --filter <filter>', 'comma separated filter patterns', '')
         .parse(process.argv);
 
     return program;
 }
 
-function createFilterFunction(filterString:string) {
+function createFilterFunction(filterString:string, baseDir:string) {
     const patterns = filterString.split(',');
+    const baseLength = baseDir.length + 1;
 
     if (patterns.length > 0) {
         return (s:string)=> {
-            return anymatch(patterns, s);
+            return anymatch(patterns, s.substring(baseLength));
         }
     }
 
@@ -120,7 +122,7 @@ function chooseConfig(commandLineConfig:ProgramOptions, savedConfig:ProgramOptio
 }
 
 
-function saveConfigIfNeeded(config:ProgramOptions, path) {
+function saveConfigIfNeeded(config:ProgramOptions, pathToSave) {
     if (config.init) {
         debug('Saving configuration to file');
 
@@ -129,7 +131,7 @@ function saveConfigIfNeeded(config:ProgramOptions, path) {
         configurationToSave.directory = path.resolve(configurationToSave.directory);
         delete configurationToSave.init;
 
-        fs.writeFileSync(`${config.directory}/${path}`, JSON.stringify(configurationToSave, null, 2));
+        fs.writeFileSync(`${config.directory}/${pathToSave}`, JSON.stringify(configurationToSave, null, 2));
     }
 }
 
@@ -140,7 +142,7 @@ function printDebugAboutConfig(finalConfig:ProgramOptions) {
     debug(`directory: ${finalConfig.directory}`);
     debug(`bucket: ${finalConfig.bucket}`);
     debug(`strategy: ${finalConfig.strategy}`);
-    debug(`filter: ${finalConfig.filter.split(',')}`);
+    debug(`filter: ${finalConfig.filter}`);
 }
 
 
