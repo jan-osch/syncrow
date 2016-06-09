@@ -2,16 +2,24 @@
 
 import {loggerFor, debugFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
-import {FileContainer} from "../fs_helpers/file_container";
+import {FileContainer, FileContainerOptions} from "../fs_helpers/file_container";
 import {TransferQueue} from "../transport/transfer_queue";
 import {EventsHelper} from "./events_helper";
 import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
+import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
+import * as _ from "lodash";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
+
+export interface ClientOptions{
+    socketsLimit?:number
+    strategy?:SynchronizationStrategy,
+    filter?:(s:string)=>boolean;
+}
 
 export class Client implements StrategySubject {
     static events = {
@@ -30,17 +38,21 @@ export class Client implements StrategySubject {
     private fileContainer:FileContainer;
     private transferJobsQueue:TransferQueue;
     private syncStrategy:SynchronizationStrategy;
+    private filterFunction:(s:string)=>boolean;
 
     /**
      * End application client
      * @param pathToWatch
      * @param otherParty
-     * @param socketsLimit
-     * @param [syncStrategy]
+     * @param options
      */
-    constructor(pathToWatch:string, otherParty:Messenger, syncStrategy:SynchronizationStrategy, socketsLimit = config.client.socketsLimit) {
+    constructor(pathToWatch:string, otherParty:Messenger, options:ClientOptions={}) {
 
-        this.fileContainer = this.createDirectoryWatcher(pathToWatch);
+        const socketsLimit = options.socketsLimit ?  options.socketsLimit : config.client.socketsLimit;
+        const syncStrategy = options.strategy ? options.strategy : new NoActionStrategy();
+        this.filterFunction = options.filter ? options.filter: s => false;
+
+        this.fileContainer = this.createDirectoryWatcher(pathToWatch, {filter:this.filterFunction});
         this.otherParty = this.addOtherPartyMessenger(otherParty);
         this.transferJobsQueue = new TransferQueue(socketsLimit);
         this.callbackHelper = new CallbackHelper();
@@ -48,7 +60,7 @@ export class Client implements StrategySubject {
         this.syncStrategy = syncStrategy;
         this.syncStrategy.setData(this, this.fileContainer);
 
-        if (this.otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
+        if (this.otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty, _.noop);
     }
 
     /**
@@ -59,7 +71,7 @@ export class Client implements StrategySubject {
         otherParty.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
         otherParty.on(Messenger.events.alive, ()=> {
-            this.syncStrategy.synchronize(otherParty); //TODO add better places for this
+            this.syncStrategy.synchronize(otherParty, _.noop); //TODO add better places for this
             logger.info('connected with other party beginning to sync');
         });
 
@@ -177,8 +189,8 @@ export class Client implements StrategySubject {
         return false;
     }
 
-    private createDirectoryWatcher(directoryToWatch:string):FileContainer {
-        const fileContainer = new FileContainer(directoryToWatch);
+    private createDirectoryWatcher(directoryToWatch:string, options:FileContainerOptions):FileContainer {
+        const fileContainer = new FileContainer(directoryToWatch, options);
 
         fileContainer.on(FileContainer.events.changed, (eventContent)=> {
             debug(`detected file changed: ${eventContent}`);

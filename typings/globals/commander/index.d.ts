@@ -33,7 +33,7 @@ declare namespace commander {
          *        .version('0.0.1')
          *        .option('-C, --chdir <path>', 'change the working directory')
          *        .option('-c, --SyncrowConfig <path>', 'set SyncrowConfig path. defaults to ./deploy.conf')
-         *        .option('-T, --no-tests', 'ignore test hook')
+         *        .option('-T, --no-tests', 'filter test hook')
          *
          *      finalConfig
          *        .command('setup')

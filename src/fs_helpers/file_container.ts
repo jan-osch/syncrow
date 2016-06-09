@@ -1,4 +1,5 @@
 /// <reference path="../../typings/main.d.ts" />
+
 import * as fs from "fs";
 import * as path from "path";
 import {EventEmitter} from "events";
@@ -16,6 +17,12 @@ import ReadableStream = NodeJS.ReadableStream;
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
 
+export interface FileContainerOptions {
+    timeout?:number;
+    fileLimit?:number;
+    filter?:(s:string)=>boolean;
+}
+
 export class FileContainer extends EventEmitter {
     static events = {
         changed: 'changed',
@@ -28,19 +35,25 @@ export class FileContainer extends EventEmitter {
     private blockedFiles:Set<string>;
     private cachedSyncData:Map<string,SyncData>;
     private fileMetaQueue:FileMetaComputingQueue;
-
-    static watchTimeout = config.fileContainer.watchTimeout;
+    private filterFunction:(s:string)=>boolean;
+    private watchTimeout:number;
 
     /**
      * Wrapper over filesystem
      * @param directoryToWatch
+     * @param options
      */
-    constructor(directoryToWatch:string) {
+    constructor(directoryToWatch:string, options:FileContainerOptions = {}) {
         super();
+
+        const fileLimit = options.fileLimit ? options.fileLimit : config.fileContainer.processedFilesLimit;
+        this.filterFunction = options.filter ? options.filter : s => false;
+        this.watchTimeout = options.timeout ? options.timeout : config.fileContainer.watchTimeout;
+
         this.directoryToWatch = directoryToWatch;
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();
-        this.fileMetaQueue = new FileMetaComputingQueue(config.fileContainer.processedFilesLimit, this.directoryToWatch);
+        this.fileMetaQueue = new FileMetaComputingQueue(fileLimit, this.directoryToWatch);
     }
 
     /**
@@ -132,7 +145,7 @@ export class FileContainer extends EventEmitter {
             ignoreInitial: true,
             usePolling: true,
             cwd: this.directoryToWatch,
-            ignored: ['ado']
+            ignored: this.filterFunction
         });
 
         debug(`beginning to watch a directory: ${this.directoryToWatch}`);
@@ -178,7 +191,7 @@ export class FileContainer extends EventEmitter {
         setTimeout(()=> {
             debug(`unblocking file: ${fileName}`);
             this.blockedFiles.delete(fileName);
-        }, FileContainer.watchTimeout);
+        }, this.watchTimeout);
     }
 
     private emitEventIfFileNotBlocked(event:string, fullFileName:string) {
