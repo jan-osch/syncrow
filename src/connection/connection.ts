@@ -162,6 +162,7 @@ export function getAbortConnection(host:string, port:number, callback:(err:Error
 }
 
 function getConnectionWithStrategy(host:string, port:number, callback:(err:Error, connection?:Connection)=>any, strategy:ConnectionStrategy, debugLog:string) {
+    debug(`obtaining connection with ${host}:${port}`);
     const socket = connect({port: port, host: host},
         ()=> {
             debug(debugLog);

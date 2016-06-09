@@ -13,6 +13,6 @@ export class NoActionStrategy extends SynchronizationStrategy {
      */
     public synchronize(otherParty:Messenger, callback:Function) {
         logger.info(`no action needed`);
-        callback();
+        if (callback) callback();
     }
 }
