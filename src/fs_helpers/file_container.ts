@@ -127,12 +127,12 @@ export class FileContainer extends EventEmitter {
      * Starts watching and emitting events
      */
     public beginWatching() {
-        const watcher = chokidar.watch(this.directoryToWatch, {
+        const watcher = chokidar.watch(path.resolve(this.directoryToWatch), {
             persistent: true,
             ignoreInitial: true,
             usePolling: true,
             cwd: this.directoryToWatch,
-            ignored:'.idea'
+            ignored: ['ado']
         });
 
         debug(`beginning to watch a directory: ${this.directoryToWatch}`);
@@ -142,6 +142,10 @@ export class FileContainer extends EventEmitter {
         watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
         watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
         watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
+
+        watcher.on('ready', ()=> {
+            debug(`initial scan ready - watching ${JSON.stringify(watcher.getWatched())} directories`)
+        })
     }
 
     /**

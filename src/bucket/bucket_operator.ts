@@ -10,6 +10,8 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 
+import config from "../configuration";
+
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
 
@@ -23,7 +25,7 @@ export class BucketOperator implements StrategySubject {
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
 
-    constructor(host:string, path:string, transferConcurrency = 10) {
+    constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize) {
         this.path = path;
         this.host = host;
         this.container = new FileContainer(path);
@@ -46,7 +48,6 @@ export class BucketOperator implements StrategySubject {
         otherParty.on(Messenger.events.message, (message)=> messageListener(message));
 
         if (otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
-
 
         this.otherParties.push(otherParty);
         this.otherPartiesMessageListeners.push(messageListener);
@@ -91,7 +92,6 @@ export class BucketOperator implements StrategySubject {
      * @param otherParty
      * @param fileName
      * @param callback
-     * @returns {undefined}
      */
     public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
         this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, fileName, this.host, this.container, `BucketOperator: downloading ${fileName}`, callback);

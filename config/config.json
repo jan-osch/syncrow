@@ -1,12 +1,15 @@
 {
   "fileContainer": {
-    "watchTimeout": 50,
-    "processedFilesLimit": 500
+    "watchTimeout": 101,
+    "processedFilesLimit": 600
   },
   "client": {
     "socketsLimit": 300
   },
   "connectionHelper": {
     "reconnectionInterval": 4000
+  },
+  "server":{
+    "transferQueueSize": 1000
   }
 }

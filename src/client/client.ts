@@ -45,7 +45,7 @@ export class Client implements StrategySubject {
         this.transferJobsQueue = new TransferQueue(socketsLimit);
         this.callbackHelper = new CallbackHelper();
         this.fileContainer.beginWatching();
-        this.syncStrategy = new SynchronizationStrategy(this, this.fileContainer);
+        this.syncStrategy = syncStrategy ? syncStrategy : new SynchronizationStrategy(this, this.fileContainer);
 
         if (this.otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
     }
