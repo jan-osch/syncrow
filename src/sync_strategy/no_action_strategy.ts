@@ -9,8 +9,10 @@ export class NoActionStrategy extends SynchronizationStrategy {
     /**
      * Takes no action when connected
      * @param otherParty
+     * @param callback
      */
-    public synchronize(otherParty:Messenger) {
+    public synchronize(otherParty:Messenger, callback:Function) {
         logger.info(`no action needed`);
+        callback();
     }
 }

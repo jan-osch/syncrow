@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --recursive test",
-    "build": "tsc || true",
+    "build": "tsc --target es5 || true",
     "postinstall": "npm run build"
   },
   "repository": {

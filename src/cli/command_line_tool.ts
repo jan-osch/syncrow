@@ -63,7 +63,7 @@ if (finalConfig.init) {
     debug('Saving configuration to file');
     const configurationToSave = _.pick(finalConfig, getGoodProgramKeys(program));
     configurationToSave.directory = path.resolve(configurationToSave.directory);
-    fs.writeFileSync(`${finalConfig.directory}/.syncrow.json`, JSON.stringify(configurationToSave));
+    fs.writeFileSync(`${finalConfig.directory}/.syncrow.json`, JSON.stringify(configurationToSave, null, 2));
 }
 
 debug(`host: ${finalConfig.host}`);
