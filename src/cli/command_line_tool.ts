@@ -88,7 +88,7 @@ function createFilterFunction(filterString:string, baseDir:string) {
     const baseLength = baseDir.length + 1;
     if (filterString !== '') {
         return (s:string)=> {
-            const actual = s.indexOf(baseDir) !== 0 ? s.substring(baseLength) : s;
+            const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
             return anymatch(patterns, actual);
         }
     }

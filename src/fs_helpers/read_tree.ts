@@ -5,15 +5,24 @@ import  fs = require('fs');
 import path = require('path');
 import {Stats} from "fs";
 
+export interface ReadTreeOptions {
+    filter?:(s:string)=>boolean;
+    onlyFiles?:boolean
+}
 
-export function readTree(root:string, options:{excluded?:Array<string>; onlyFiles?:boolean;},
+
+export function readTree(root:string, options:ReadTreeOptions,
                          callback:(err:Error, result:Array<string>)=>any) {
-
+    const filter = options.filter ? options.filter : s=> false;
     let results = [];
     let stack = [root];
 
     async.whilst(shouldFinish, (whilstCallback)=> {
         let currentDir = stack.pop();
+
+        if (filter(currentDir)) {
+            return whilstCallback();
+        }
 
         if (!options.onlyFiles && currentDir != root) {
             addToResults(currentDir);
@@ -33,9 +42,10 @@ export function readTree(root:string, options:{excluded?:Array<string>; onlyFile
     }
 
     function addToResults(pathToAdd:string) {
-        results.push(path.relative(root, pathToAdd));
+        if (!filter(pathToAdd)) {
+            results.push(path.relative(root, pathToAdd));
+        }
     }
-
 
     function processListOfFiles(currentDir:string, fileList:Array<string>, callback) {
         async.mapSeries(fileList, (file, seriesCallback:(err?)=>any)=> {
