@@ -10,7 +10,7 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
-import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
+import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
@@ -25,7 +25,7 @@ export class BucketOperator implements StrategySubject {
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
 
-    constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize, strategy = new NoActionStrategy()) {
+    constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize, strategy = new NewestStrategy()) {
         this.path = path;
         this.host = host;
         this.container = new FileContainer(path);

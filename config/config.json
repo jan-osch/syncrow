@@ -1,6 +1,6 @@
 {
   "fileContainer": {
-    "watchTimeout": 101,
+    "watchTimeout": 250,
     "processedFilesLimit": 600
   },
   "client": {
@@ -9,7 +9,7 @@
   "connectionHelper": {
     "reconnectionInterval": 4000
   },
-  "server":{
+  "server": {
     "transferQueueSize": 1000
   }
 }

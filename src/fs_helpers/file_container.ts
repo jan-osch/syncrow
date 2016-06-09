@@ -116,7 +116,9 @@ export class FileContainer extends EventEmitter {
 
             writeStream.on('finish', ()=> this.unBlockFileWithTimeout(fileName));
 
-            readStream.pipe(writeStream);
+            readStream.pipe(writeStream).on('error', (error)=> {
+                logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
+            });
 
         } catch (error) {
             logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
@@ -130,7 +132,10 @@ export class FileContainer extends EventEmitter {
     public getReadStreamForFile(fileName:string):ReadableStream {
         debug(`attempting to get a read stream: ${fileName} current dir ${__dirname}`);
         try {
-            return fs.createReadStream(this.createAbsolutePath(fileName));
+            return fs.createReadStream(this.createAbsolutePath(fileName)).on('error', (error)=> {
+                logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+            });
+            
         } catch (error) {
             logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
         }
