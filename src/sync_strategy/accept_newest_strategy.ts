@@ -5,12 +5,12 @@ import {debugFor, loggerFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 
 const debug = debugFor('syncrow:accept_newest_strategy');
-const logger = loggerFor('AcceptNewestStrategy');
+const logger = loggerFor('NewestStrategy');
 
 /**
  * On every reconnection will accept all newest files
  */
-export class AcceptNewestStrategy extends SynchronizationStrategy {
+export class NewestStrategy extends SynchronizationStrategy {
 
 
     /**

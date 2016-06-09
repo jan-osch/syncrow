@@ -10,7 +10,7 @@ const debug = debugFor("syncrow:cli");
 program.version('0.0.1')
     .option('-h, --host <host>', 'own host for connection', '127.0.0.1')
     .option('-d, --directory <directory>', 'location where the buckets reside', '.')
-    .option('-p, --port <port>', 'port to listen on', 3000)
+    .option('-p, --port <port>', 'port to listen on', 2510)
     .parse(process.argv);
 
 

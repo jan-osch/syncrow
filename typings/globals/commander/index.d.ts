@@ -29,34 +29,34 @@ declare namespace commander {
          *
          * Examples:
          *
-         *      program
+         *      finalConfig
          *        .version('0.0.1')
          *        .option('-C, --chdir <path>', 'change the working directory')
          *        .option('-c, --config <path>', 'set config path. defaults to ./deploy.conf')
          *        .option('-T, --no-tests', 'ignore test hook')
          *
-         *      program
+         *      finalConfig
          *        .command('setup')
          *        .description('run remote setup commands')
          *        .action(function(){
          *          console.log('setup');
          *        });
          *
-         *      program
+         *      finalConfig
          *        .command('exec <cmd>')
          *        .description('run the given remote command')
          *        .action(function(cmd){
          *          console.log('exec "%s"', cmd);
          *        });
          *
-         *      program
+         *      finalConfig
          *        .command('*')
          *        .description('deploy the given env')
          *        .action(function(env){
          *          console.log('deploying "%s"', env);
          *        });
          *
-         *      program.parse(process.argv);
+         *      finalConfig.parse(process.argv);
          *
          * @param {String} name
          * @param {String} [desc]
@@ -90,7 +90,7 @@ declare namespace commander {
          *
          * Examples:
          *
-         *      program
+         *      finalConfig
          *        .command('help')
          *        .description('display verbose help')
          *        .action(function(){
@@ -118,31 +118,31 @@ declare namespace commander {
          * Examples:
          *
          *     // simple boolean defaulting to false
-         *     program.option('-p, --pepper', 'add pepper');
+         *     finalConfig.option('-p, --pepper', 'add pepper');
          *
          *     --pepper
-         *     program.pepper
+         *     finalConfig.pepper
          *     // => Boolean
          *
          *     // simple boolean defaulting to true
-         *     program.option('-C, --no-cheese', 'remove cheese');
+         *     finalConfig.option('-C, --no-cheese', 'remove cheese');
          *
-         *     program.cheese
+         *     finalConfig.cheese
          *     // => true
          *
          *     --no-cheese
-         *     program.cheese
+         *     finalConfig.cheese
          *     // => false
          *
          *     // required argument
-         *     program.option('-C, --chdir <path>', 'change the working directory');
+         *     finalConfig.option('-C, --chdir <path>', 'change the working directory');
          *
          *     --chdir /tmp
-         *     program.chdir
+         *     finalConfig.chdir
          *     // => "/tmp"
          *
          *     // optional argument
-         *     program.option('-c, --cheese [type]', 'add cheese [marble]');
+         *     finalConfig.option('-c, --cheese [type]', 'add cheese [marble]');
          *
          * @param {String} flags
          * @param {String} description
@@ -259,7 +259,7 @@ declare namespace commander {
         unknownOption(flag:string):void;
 
         /**
-         * Set the program version to `str`.
+         * Set the finalConfig version to `str`.
          *
          * This method auto-registers the "-V, --version" flag
          * which will print the version number when passed.
@@ -335,7 +335,7 @@ declare namespace commander {
         commandHelp():string;
 
         /**
-         * Return program help documentation.
+         * Return finalConfig help documentation.
          *
          * @return {String}
          * @api private

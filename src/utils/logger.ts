@@ -24,7 +24,7 @@ export class Logger {
     }
 
     /**
-     * When state is invalid, but program no error
+     * When state is invalid, but finalConfig no error
      * @param message
      */
     public warn(message?:string) {

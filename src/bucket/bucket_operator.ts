@@ -9,8 +9,8 @@ import {TransferActions} from "../transport/transfer_actions";
 import {loggerFor, debugFor} from "../utils/logger";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
-
 import config from "../configuration";
+import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
@@ -33,7 +33,7 @@ export class BucketOperator implements StrategySubject {
         this.otherPartiesMessageListeners = [];
         this.transferJobsQueue = new TransferQueue(transferConcurrency);
         this.callbackHelper = new CallbackHelper();
-        this.syncStrategy = new SynchronizationStrategy(this, this.container);
+        this.syncStrategy = new NoActionStrategy(this, this.container);
     }
 
     /**
