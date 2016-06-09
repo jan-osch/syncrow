@@ -21,8 +21,16 @@ export abstract class SynchronizationStrategy extends EventEmitter {
     protected subject:StrategySubject;
     protected container:FileContainer;
 
-    constructor(subject:StrategySubject, container:FileContainer) {
+    constructor() {
         super();
+    }
+
+    /**
+     * Used to inject properties by clients
+     * @param subject
+     * @param container
+     */
+    public setData(subject:StrategySubject, container:FileContainer){
         this.subject = subject;
         this.container = container;
     }

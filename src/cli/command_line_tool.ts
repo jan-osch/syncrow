@@ -5,12 +5,17 @@ import * as request from "request";
 import {debugFor, loggerFor} from "../utils/logger";
 import {ConnectionServer} from "../connection/connection_server";
 import {Messenger} from "../connection/messenger";
-import {getActiveConnection, Connection} from "../connection/connection";
+import {getActiveConnection, Connection, getAbortConnection} from "../connection/connection";
 import {Client} from "../client/client";
 import * as fs from "fs";
 import * as _ from "lodash";
 import * as path from "path";
+import {SynchronizationStrategy} from "../sync_strategy/sync_strategy";
+import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
+import {PullStrategy} from "../sync_strategy/pull_everything_strategy";
+import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 import Program = ts.Program;
+import breakIntoCharacterSpans = ts.breakIntoCharacterSpans;
 
 const logger = loggerFor("CLI");
 const debug = debugFor("syncrow:cli");
@@ -26,6 +31,8 @@ program.version('0.0.2')
     .option('-i, --init', 'save configuration to file')
     .parse(process.argv);
 
+
+//TODO what a mess
 function getGoodProgramKeys(program) {
     const keys = Object.keys(program);
 
@@ -55,8 +62,8 @@ if (savedConfig && !program.init) {
 if (finalConfig.init) {
     debug('Saving configuration to file');
     const configurationToSave = _.pick(finalConfig, getGoodProgramKeys(program));
-    configurationToSave.directory  = path.resolve(configurationToSave.directory);
-    fs.writeFileSync(`${finalConfig.directory}/.syncrow.json`,JSON.stringify(configurationToSave));
+    configurationToSave.directory = path.resolve(configurationToSave.directory);
+    fs.writeFileSync(`${finalConfig.directory}/.syncrow.json`, JSON.stringify(configurationToSave));
 }
 
 debug(`host: ${finalConfig.host}`);
@@ -66,6 +73,23 @@ debug(`listen: ${finalConfig.listen}`);
 debug(`directory: ${finalConfig.directory}`);
 debug(`bucket: ${finalConfig.bucket}`);
 debug(`strategy: ${finalConfig.strategy}`);
+
+
+function getStrategy(codeName):SynchronizationStrategy {
+    let strategy;
+    switch (codeName) {
+        case 'no':
+            strategy = new NoActionStrategy();
+            break;
+        case 'pull':
+            strategy = new PullStrategy();
+            break;
+        case 'newest':
+            strategy = new NewestStrategy();
+            break;
+    }
+    return strategy;
+}
 
 if (finalConfig.bucket) {
     if (!finalConfig.port) {
@@ -83,19 +107,21 @@ if (finalConfig.bucket) {
 
         debug(`got host/port for bucket: ${finalConfig.bucket}`);
 
-        start(body.port, body.host, false, finalConfig.directory);
+        start(body.port, body.host, false, finalConfig.directory, false);
     });
 
 } else {
-    start(finalConfig.port, finalConfig.host, finalConfig.listen, finalConfig.directory, finalConfig.local)
+    start(finalConfig.port, finalConfig.host, finalConfig.listen, finalConfig.directory, false, finalConfig.local)
 }
 
-function start(port:number, host:string, listen:boolean, directory:string, localPort?:number) {
+function start(port:number, host:string, listen:boolean, directory:string, retry:boolean, localPort?:number) {
 
     if (listen) {
         new ConnectionServer(localPort, handleConnectionObtained);
+    } else if (retry) {
+        getActiveConnection(host, port, handleConnectionObtained);
     } else {
-        getActiveConnection(host, port, handleConnectionObtained)
+        getAbortConnection(host, port, handleConnectionObtained);
     }
 }
 
@@ -105,5 +131,5 @@ function handleConnectionObtained(err:Error, connection?:Connection) {
     logger.info(`Syncrow connected`);
 
     const messenger = new Messenger(connection);
-    new Client(finalConfig.directory, messenger);
+    new Client(finalConfig.directory, messenger, getStrategy(finalConfig.strategy));
 }

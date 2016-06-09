@@ -9,7 +9,6 @@ import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
-import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
@@ -39,14 +38,15 @@ export class Client implements StrategySubject {
      * @param socketsLimit
      * @param [syncStrategy]
      */
-    constructor(pathToWatch:string, otherParty:Messenger, socketsLimit = config.client.socketsLimit, syncStrategy?:SynchronizationStrategy) {
+    constructor(pathToWatch:string, otherParty:Messenger, syncStrategy:SynchronizationStrategy, socketsLimit = config.client.socketsLimit) {
 
         this.fileContainer = this.createDirectoryWatcher(pathToWatch);
         this.otherParty = this.addOtherPartyMessenger(otherParty);
         this.transferJobsQueue = new TransferQueue(socketsLimit);
         this.callbackHelper = new CallbackHelper();
         this.fileContainer.beginWatching();
-        this.syncStrategy = syncStrategy ? syncStrategy : new NewestStrategy(this, this.fileContainer);
+        this.syncStrategy = syncStrategy;
+        this.syncStrategy.setData(this, this.fileContainer);
 
         if (this.otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
     }

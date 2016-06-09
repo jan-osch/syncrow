@@ -154,10 +154,18 @@ export class Connection extends EventEmitter {
 }
 
 export function getActiveConnection(host:string, port:number, callback:(err:Error, connection?:Connection)=>any) {
+    getConnectionWithStrategy(host, port, callback, ConnectionStrategy.onProblemReconnectToRemote, `getActiveConnection obtained a connection`);
+}
+
+export function getAbortConnection(host:string, port:number, callback:(err:Error, connection?:Connection)=>any) {
+    getConnectionWithStrategy(host, port, callback, ConnectionStrategy.onProblemAbort, `getAbortConnection obtained a connection`);
+}
+
+function getConnectionWithStrategy(host:string, port:number, callback:(err:Error, connection?:Connection)=>any, strategy:ConnectionStrategy, debugLog:string) {
     const socket = connect({port: port, host: host},
         ()=> {
-            debug(`getActiveConnection obtained a connection`);
-            callback(null, new Connection(socket, ConnectionStrategy.onProblemReconnectToRemote, port, host));
+            debug(debugLog);
+            callback(null, new Connection(socket, strategy, port, host));
         }
     ).on('error', (err)=>callback(err));
 }

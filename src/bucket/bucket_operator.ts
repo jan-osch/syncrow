@@ -25,7 +25,7 @@ export class BucketOperator implements StrategySubject {
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
 
-    constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize) {
+    constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize, strategy = new NoActionStrategy()) {
         this.path = path;
         this.host = host;
         this.container = new FileContainer(path);
@@ -33,7 +33,8 @@ export class BucketOperator implements StrategySubject {
         this.otherPartiesMessageListeners = [];
         this.transferJobsQueue = new TransferQueue(transferConcurrency);
         this.callbackHelper = new CallbackHelper();
-        this.syncStrategy = new NoActionStrategy(this, this.container);
+        this.syncStrategy = strategy;
+        this.syncStrategy.setData(this, this.container);
     }
 
     /**
