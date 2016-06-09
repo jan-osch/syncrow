@@ -81,7 +81,7 @@ export class FileContainer extends EventEmitter {
             if (err) return callback(err);
 
             const fileTree = results.map(PathHelper.normalizePath);
-            debug(`detected files: ${fileTree}`);
+            debug(`detected files: ${fileTree.length}`);
             callback(null, fileTree)
         });
     }
@@ -161,8 +161,11 @@ export class FileContainer extends EventEmitter {
         watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
 
         watcher.on('ready', ()=> {
-            debug(`initial scan ready - watching ${JSON.stringify(watcher.getWatched())} directories`)
-        })
+            debug(`initial scan ready - watching ${Object.keys(watcher.getWatched()).length} directories`)
+        });
+        watcher.on('error', (err)=>{
+            logger.error(`watcher emitted: ${err}`);
+        });
     }
 
     /**
