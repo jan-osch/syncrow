@@ -83,7 +83,7 @@ export class FileContainer extends EventEmitter {
             const fileTree = results.map(PathHelper.normalizePath);
             debug(`detected files: ${fileTree}`);
 
-            callback(null, fileTree)
+            callback(null, fileTree.filter(s => !this.filterFunction(s)))
         });
     }
 
@@ -135,7 +135,7 @@ export class FileContainer extends EventEmitter {
             return fs.createReadStream(this.createAbsolutePath(fileName)).on('error', (error)=> {
                 logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
             });
-            
+
         } catch (error) {
             logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
         }
