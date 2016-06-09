@@ -10,6 +10,7 @@ const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
 
 //TODO add error handling on sockets
+//TODO implement proper ERROR handling
 export class TransferActions {
 
     public static events = {
@@ -52,7 +53,7 @@ export class TransferActions {
                 address: address
             });
 
-        })
+        }).on('error', callback);
     }
 
     /**
@@ -87,7 +88,7 @@ export class TransferActions {
                 fileName: fileName,
                 address: address
             });
-        })
+        }).on('error', callback);
     }
 
     /**
@@ -106,7 +107,7 @@ export class TransferActions {
             fileSendingSocket.on('end', callback);
 
             sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
-        })
+        }).on('error', callback)
 
     }
 
@@ -125,7 +126,7 @@ export class TransferActions {
         debug(`connectAndDownloadFile: connecting to ${address.host}:${address.port}`);
         const fileTransferSocket = connect(address, ()=> {
             TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, callback);
-        });
+        }).on('error', callback);
     }
 
     private static closeServer(server:Server, callback:Function) {
