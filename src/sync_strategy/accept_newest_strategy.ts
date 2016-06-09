@@ -1,21 +1,17 @@
-import {SynchronizationStrategy, SyncData, StrategySubject} from "./sync_strategy";
+import {SynchronizationStrategy, SyncData} from "./sync_strategy";
 import * as async from "async";
 import * as _ from "lodash";
 import {debugFor, loggerFor} from "../utils/logger";
-import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
 
 const debug = debugFor('syncrow:accept_newest_strategy');
 const logger = loggerFor('AcceptNewestStrategy');
 
+/**
+ * On every reconnection will accept all newest files
+ */
 export class AcceptNewestStrategy extends SynchronizationStrategy {
 
-    /**
-     * On every reconnection will accept all newest files
-     */
-    constructor(subject:StrategySubject, container:FileContainer) {
-        super(subject, container);
-    }
 
     /**
      * @Override

@@ -20,7 +20,7 @@ export interface StrategySubject {
     requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any;
 }
 
-export class SynchronizationStrategy extends EventEmitter {
+export abstract class SynchronizationStrategy extends EventEmitter {
     protected subject:StrategySubject;
     protected container:FileContainer;
 
@@ -32,8 +32,7 @@ export class SynchronizationStrategy extends EventEmitter {
 
     /**
      * @param otherParty
+     * @param callback
      */
-    public  synchronize(otherParty:Messenger) {
-        logger.info(`no action needed`);
-    }
+    public abstract synchronize(otherParty:Messenger, callback?:Function)
 }
