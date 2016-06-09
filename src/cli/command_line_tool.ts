@@ -26,6 +26,9 @@ const debug = debugFor("syncrow:cli");
  */
 main();
 
+//TODO add command - pull - download everything from bucket
+//TODO add command - push - upload everything to bucket
+
 function main() {
     const configPath = '.syncrow.json';
 
@@ -236,7 +239,10 @@ function connectWithBucketAndStart(remoteHost:string,
                     const newSocket = net.connect(newBucketPort, remoteHost, ()=> {
                         connection.addSocket(newSocket);
                     }).on('error', (err)=> {
-                        throw err
+                        logger.info(`Could not connect - reatempting in ${10000} ms`); //TODO load from config
+                        setTimeout(()=> {
+                            connection.emit(Connection.events.disconnected);
+                        }, 10000)
                     })
                 });
             });
