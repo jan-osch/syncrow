@@ -3,6 +3,7 @@
 logs
 *.log
 npm-debug.log*
+.syncrow.json
 
 src/*.js
 src/*.js.map

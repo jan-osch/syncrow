@@ -86,8 +86,7 @@ function getConfigFromCommandLine():ProgramOptions {
 function createFilterFunction(filterString:string, baseDir:string) {
     const patterns = filterString.split(',');
     const baseLength = baseDir.length + 1;
-
-    if (patterns.length > 0) {
+    if (filterString !== '') {
         return (s:string)=> {
             return anymatch(patterns, s.substring(baseLength));
         }
