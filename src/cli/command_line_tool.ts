@@ -16,7 +16,6 @@ import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import {PullStrategy} from "../sync_strategy/pull_strategy";
 import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 import * as anymatch from "anymatch";
-import Program = ts.Program;
 
 const logger = loggerFor("CLI");
 const debug = debugFor("syncrow:cli");
@@ -32,9 +31,10 @@ main();
 function main() {
     const configPath = '.syncrow.json';
 
+    const defaultConfig = getDefaultConfig();
+    const savedConfig = loadConfigFromFile(configPath);
     const commandLineConfig = getConfigFromCommandLine();
-    const savedConfig = loadConfigFromFile(`${commandLineConfig.directory}/${configPath}`);
-    const chosenConfig = chooseConfig(commandLineConfig, savedConfig);
+    const chosenConfig = chooseConfig(defaultConfig, savedConfig, commandLineConfig);
 
     validateConfig(chosenConfig);
     saveConfigIfNeeded(chosenConfig, configPath);
@@ -60,37 +60,47 @@ function main() {
 }
 
 interface ProgramOptions {
-    host?:string,
-    port?:number,
-    bucket?:string,
-    strategy?:string,
-    directory?:string,
-    init?:boolean,
-    filter?:string,
-    listen?:boolean,
+    host?: string,
+    port?: number,
+    bucket?: string,
+    strategy?: string,
+    directory?: string,
+    init?: boolean,
+    filter?: string,
+    listen?: boolean,
 }
 
-function getConfigFromCommandLine():ProgramOptions {
+function getConfigFromCommandLine(): ProgramOptions {
     program.version('0.0.2')
-        .option('-h, --host <host>', 'remote host for connection', '0.0.0.0')
-        .option('-p, --port <port>', 'remote port for connection', 2510)
+
+        .option('-h, --host <host>', 'remote host for connection')
+        .option('-p, --port <port>', 'remote port for connection')
         .option('-c, --local <local>', 'local port for listening')
         .option('-b, --bucket <bucket>', 'bucket name')
-        .option('-l, --listen', 'listen for connections', false)
-        .option('-s, --strategy <strategy>', 'synchronization strategy (pull|no|newest) [no]', 'no')
-        .option('-d, --directory <directory>', 'directory to watch', '.')
-        .option('-i, --init', 'save configuration to file', false)
-        .option('-f, --filter <filter>', 'comma separated filter patterns', '')
+        .option('-l, --listen', 'listen for connections')
+        .option('-s, --strategy <strategy>', 'synchronization strategy (pull|no|newest) [no]')
+        .option('-d, --directory <directory>', 'directory to watch')
+        .option('-i, --init', 'save configuration to file')
+        .option('-f, --filter <filter>', 'comma separated filter patterns')
         .parse(process.argv);
 
-    return program;
+    return _.pick(program, getGoodProgramKeys(program));
 }
 
-function createFilterFunction(filterString:string, baseDir:string) {
+function getDefaultConfig(): ProgramOptions {
+    return {
+        host: "0.0.0.0",
+        port: 2510,
+        strategy: "no",
+        directory: "."
+    }
+}
+
+function createFilterFunction(filterString: string, baseDir: string) {
     const patterns = filterString.split(',');
     const baseLength = baseDir.length + 1;
-    if (filterString !== '') {
-        return (s:string)=> {
+    if (filterString && filterString !== '') {
+        return (s: string) => {
             const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
             return anymatch(patterns, actual);
         }
@@ -99,7 +109,7 @@ function createFilterFunction(filterString:string, baseDir:string) {
     return s => false;
 }
 
-function getGoodProgramKeys(program):Array<string> {
+function getGoodProgramKeys(program): Array<string> {
     const keys = Object.keys(program);
 
     return keys.filter(e => {
@@ -107,38 +117,36 @@ function getGoodProgramKeys(program):Array<string> {
     });
 }
 
-function loadConfigFromFile(path:string):ProgramOptions {
+function loadConfigFromFile(path: string): ProgramOptions {
     try {
-        return JSON.parse(fs.readFileSync(path));
+        const result = JSON.parse(fs.readFileSync(path));
+
+        debug(`found configuration in file`);
+
+        return result;
     } catch (e) {
-        return;
+        return {};
     }
 }
 
 
-function chooseConfig(commandLineConfig:ProgramOptions, savedConfig:ProgramOptions):ProgramOptions {
-    if (!commandLineConfig.init && savedConfig) {
-        debug(`Found a stored configuration file`);
-        return savedConfig;
-    }
-    return commandLineConfig;
+function chooseConfig(defaultConfig: ProgramOptions, savedConfig: ProgramOptions, commandLineConfig: ProgramOptions): ProgramOptions {
+    let config = _.extend(defaultConfig, savedConfig);
+    return _.extend(config, commandLineConfig);
 }
 
 
-function saveConfigIfNeeded(config:ProgramOptions, pathToSave) {
+function saveConfigIfNeeded(config: ProgramOptions, pathToSave) {
     if (config.init) {
         debug('Saving configuration to file');
 
-        const configurationToSave:ProgramOptions = _.pick(config, getGoodProgramKeys(config));
+        delete config.init;
 
-        configurationToSave.directory = path.resolve(configurationToSave.directory);
-        delete configurationToSave.init;
-
-        fs.writeFileSync(`${config.directory}/${pathToSave}`, JSON.stringify(configurationToSave, null, 2));
+        fs.writeFileSync(`${config.directory}/${pathToSave}`, JSON.stringify(config, null, 2));
     }
 }
 
-function printDebugAboutConfig(finalConfig:ProgramOptions) {
+function printDebugAboutConfig(finalConfig: ProgramOptions) {
     debug(`host: ${finalConfig.host}`);
     debug(`port: ${finalConfig.port}`);
     debug(`listen: ${finalConfig.listen}`);
@@ -153,13 +161,16 @@ function validateConfig(config) {
     if (config.bucket && !config.port || !config.host) {
         throw new Error('Port required to connect');
     }
-    if (config.listen && !config.local) {
+    if (config.listen && !config.port) {
         throw new Error('Local Port required to listen');
+    }
+    if (config.init && config.directory !== '.') {
+        throw new Error('Cannot save config when directory is not current working dir');
     }
 }
 
 
-function getStrategy(codeName):SynchronizationStrategy {
+function getStrategy(codeName): SynchronizationStrategy {
     let strategy;
     switch (codeName) {
         case 'no':
@@ -182,7 +193,7 @@ function getPortForBucket(host, port, bucket, callback) {
     request({
         url: requestUrl,
         json: true
-    }, (err, res, body)=> {
+    }, (err, res, body) => {
         if (err) return callback(err);
 
         if (res.statusCode !== 200) return callback(new Error(`Invalid response code ${res.statusCode}`));
@@ -194,53 +205,53 @@ function getPortForBucket(host, port, bucket, callback) {
 }
 
 
-function listenAndStart(localPort:number, directory:string, strategy:SynchronizationStrategy, filterFunction:(s:string)=>boolean) {
-    new ConnectionServer(localPort, (err, connection)=> {
+function listenAndStart(localPort: number, directory: string, strategy: SynchronizationStrategy, filterFunction: (s: string) => boolean) {
+    new ConnectionServer(localPort, (err, connection) => {
         ifErrorThrow(err);
 
         logger.info('Connected');
 
         const messenger = new Messenger(connection);
-        const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+        const client = new Client(directory, messenger, { strategy: strategy, filter: filterFunction });
     });
 }
 
 
-function connectWithRetryAndStart(remoteHost:string,
-                                  remotePort:number,
-                                  directory:string,
-                                  strategy:SynchronizationStrategy,
-                                  filterFunction:(s:string)=>boolean) {
+function connectWithRetryAndStart(remoteHost: string,
+    remotePort: number,
+    directory: string,
+    strategy: SynchronizationStrategy,
+    filterFunction: (s: string) => boolean) {
 
-    getActiveConnection(remoteHost, remotePort, (err, connection)=> {
+    getActiveConnection(remoteHost, remotePort, (err, connection) => {
         ifErrorThrow(err);
 
         logger.info('Connected');
 
         const messenger = new Messenger(connection);
-        const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+        const client = new Client(directory, messenger, { strategy: strategy, filter: filterFunction });
     })
 }
 
-function connectWithBucketAndStart(remoteHost:string,
-                                   servicePort:number,
-                                   bucketName:string,
-                                   directory:string,
-                                   strategy:SynchronizationStrategy,
-                                   filterFunction:(s:string)=>boolean) {
+function connectWithBucketAndStart(remoteHost: string,
+    servicePort: number,
+    bucketName: string,
+    directory: string,
+    strategy: SynchronizationStrategy,
+    filterFunction: (s: string) => boolean) {
 
-    getPortForBucket(remoteHost, servicePort, bucketName, (err, bucketPort)=> {
+    getPortForBucket(remoteHost, servicePort, bucketName, (err, bucketPort) => {
         ifErrorThrow(err);
-        getAbortConnection(remoteHost, bucketPort, (err, connection)=> {
+        getAbortConnection(remoteHost, bucketPort, (err, connection) => {
             ifErrorThrow(err);
 
-            connection.on(Connection.events.disconnected, ()=> {
-                getPortForBucket(remoteHost, servicePort, bucketName, (err, newBucketPort)=> {
-                    const newSocket = net.connect(newBucketPort, remoteHost, ()=> {
+            connection.on(Connection.events.disconnected, () => {
+                getPortForBucket(remoteHost, servicePort, bucketName, (err, newBucketPort) => {
+                    const newSocket = net.connect(newBucketPort, remoteHost, () => {
                         connection.addSocket(newSocket);
-                    }).on('error', (err)=> {
+                    }).on('error', (err) => {
                         logger.info(`Could not connect - reatempting in ${10000} ms`); //TODO load from config
-                        setTimeout(()=> {
+                        setTimeout(() => {
                             connection.emit(Connection.events.disconnected);
                         }, 10000)
                     })
@@ -250,11 +261,11 @@ function connectWithBucketAndStart(remoteHost:string,
             logger.info('Connected');
 
             const messenger = new Messenger(connection);
-            const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+            const client = new Client(directory, messenger, { strategy: strategy, filter: filterFunction });
         });
     })
 }
 
-function ifErrorThrow(err?:Error) {
+function ifErrorThrow(err?: Error) {
     if (err) throw err;
 }
