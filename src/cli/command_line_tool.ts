@@ -13,7 +13,7 @@ import * as net from "net";
 import * as path from "path";
 import {SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
-import {PullStrategy} from "../sync_strategy/pull_everything_strategy";
+import {PullStrategy} from "../sync_strategy/pull_strategy";
 import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 import * as anymatch from "anymatch";
 import Program = ts.Program;

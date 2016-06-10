@@ -84,7 +84,7 @@ export class NewestStrategy extends SynchronizationStrategy {
             }
 
             if (otherMeta.hashCode !== ownMeta.hashCode) {
-
+                debug(`hashes do not match: ${otherMeta.hashCode} own: ${ownMeta.hashCode}`)
                 if (new Date(otherMeta.modified).getTime() > new Date(ownMeta.modified).getTime()) {
                     debug(`remote ${otherMeta.name} a file, is in older version locally and should be downloaded`);
                     return this.subject.requestRemoteFile(otherParty, otherMeta.name, callback);
