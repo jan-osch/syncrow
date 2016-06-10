@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
-
+import * as _ from "lodash";
 
 export interface SyncData {
     hashCode:string;
@@ -15,6 +15,7 @@ export interface StrategySubject {
     getRemoteFileMeta(otherParty:Messenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any;
     getRemoteFileList(otherParty:Messenger, callback:(err:Error, fileList?:Array<string>)=>any):any;
     requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any;
+    pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any;
 }
 
 export class SynchronizationStrategy extends EventEmitter {
@@ -39,7 +40,7 @@ export class SynchronizationStrategy extends EventEmitter {
      * @param otherParty
      * @param callback
      */
-    public synchronize(otherParty:Messenger, callback:Function) {
+    public synchronize(otherParty:Messenger, callback:Function = _.noop) {
         throw new Error('unimplemented');
     }
 }

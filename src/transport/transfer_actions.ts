@@ -9,6 +9,15 @@ import {loggerFor, debugFor} from "../utils/logger";
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
 
+export interface TransferStatusEvent {
+    file:string,
+    download:boolean,
+    success:boolean,
+    error:string,
+    type:'transferStatus',
+    id:string
+}
+
 //TODO add error handling on sockets
 //TODO implement proper ERROR handling
 export class TransferActions {
@@ -21,6 +30,13 @@ export class TransferActions {
         connectAndDownload: 'connectAndDownload',
     };
 
+
+    //TODO
+    /** 1: DODAJ TO JAKO subtyp PUSH PULL
+     *
+     */
+    //TODO
+
     /**
      * Listens for other party to connect, then downloads the file from it
      * @param pushingParty
@@ -28,12 +44,13 @@ export class TransferActions {
      * @param host
      * @param destinationContainer
      * @param callback
+     * @param remoteId
      */
     public static listenAndDownloadFile(pushingParty:Messenger,
                                         fileName:string,
                                         host:string,
                                         destinationContainer:FileContainer,
-                                        callback:Function) {
+                                        callback:Function, remoteId:string='TODO') {
 
         debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
         const filePullingServer = createServer(

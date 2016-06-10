@@ -15,10 +15,41 @@ import * as _ from "lodash";
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
 
-export interface ClientOptions{
+export interface ClientOptions {
     socketsLimit?:number
     strategy?:SynchronizationStrategy,
     filter?:(s:string)=>boolean;
+}
+
+//TODO
+export interface Pull {
+    type:'pull',
+    fileName:string,
+    id:string
+}
+
+export interface PullResponse {
+    type:'pullResponse',
+    fileName:string,
+    id:string
+    command:string,
+    address?:string
+    host?:string
+}
+
+export interface Push {
+    type:'push',
+    fileName:string,
+    id:string
+}
+
+export interface PushResponse {
+    type:'pushResponse',
+    fileName:string,
+    id:string
+    command:string,
+    address?:string
+    host?:string
 }
 
 export class Client implements StrategySubject {
@@ -46,13 +77,13 @@ export class Client implements StrategySubject {
      * @param otherParty
      * @param options
      */
-    constructor(pathToWatch:string, otherParty:Messenger, options:ClientOptions={}) {
+    constructor(pathToWatch:string, otherParty:Messenger, options:ClientOptions = {}) {
 
-        const socketsLimit = options.socketsLimit ?  options.socketsLimit : config.client.socketsLimit;
+        const socketsLimit = options.socketsLimit ? options.socketsLimit : config.client.socketsLimit;
         const syncStrategy = options.strategy ? options.strategy : new NoActionStrategy();
-        this.filterFunction = options.filter ? options.filter: s => false;
+        this.filterFunction = options.filter ? options.filter : s => false;
 
-        this.fileContainer = this.createDirectoryWatcher(pathToWatch, {filter:this.filterFunction});
+        this.fileContainer = this.createDirectoryWatcher(pathToWatch, {filter: this.filterFunction});
         this.otherParty = this.addOtherPartyMessenger(otherParty);
         this.transferJobsQueue = new TransferQueue(socketsLimit);
         this.callbackHelper = new CallbackHelper();
@@ -95,6 +126,16 @@ export class Client implements StrategySubject {
         this.callbackHelper.sendWrapped(otherParty, Client.events.getMetaForFile, {fileName: fileName}, (err, event)=> {
             return callback(err, event.body);
         });
+    }
+
+    /**
+     * @param otherParty
+     * @param fileName
+     * @param callback
+     * @returns {undefined}
+     */
+    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
+        return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: event.body.fileName});
     }
 
     /**
