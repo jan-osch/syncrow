@@ -6,6 +6,7 @@ import {TransferActions} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
 import {loggerFor} from "../utils/logger";
+import {Pull, PullResponse} from "../client/events";
 
 const debug = debugFor("syncrow:trasfer_queue");
 const logger = loggerFor('TransferQueue');
@@ -15,7 +16,7 @@ export class TransferQueue {
     private queue:AsyncQueue;
     private name:string;
 
-    constructor(concurrency:number, name:string='') {
+    constructor(concurrency:number, name:string = '') {
         this.queue = async.queue((job:Function, callback:Function)=>job(callback), concurrency);
         this.name = name;
     }
@@ -52,29 +53,29 @@ export class TransferQueue {
      * @param address
      * @param fileName
      * @param destinationContainer
-     * @param timingMessage
-     * @param callback
+     * @param doneCallback
      */
     public addConnectAndDownloadJobToQueue(address:{port:number, host:string},
                                            fileName:string,
                                            destinationContainer:FileContainer,
-                                           timingMessage?:string,
-                                           callback?:Function) {
+                                           doneCallback?:(err:Error)=>any) {
 
         debug(`adding job: connectAndDownloadFile: ${fileName}`);
+
+        const timingMessage = `${this.name} - connecting and downloading file: ${fileName}`;
+
         const job = (downloadingDoneCallback)=> {
 
-            if (timingMessage) console.time(timingMessage);
+            console.time(timingMessage);
 
             TransferActions.connectAndDownloadFile(fileName, address, destinationContainer, (err)=> {
-                logger.error(err);
-                if (timingMessage)console.timeEnd(timingMessage);
+                console.timeEnd(timingMessage);
 
-                downloadingDoneCallback()
+                downloadingDoneCallback(err);
             });
-
         };
-        this.queue.push(job, callback);
+
+        this.queue.push(job, doneCallback);
     }
 
     /**
@@ -118,8 +119,8 @@ export class TransferQueue {
     public  addListenAndDownloadJobToQueue(fileName:string,
                                            host:string,
                                            destinationContainer:FileContainer,
-                                           doneCallback:(err:Error)=>any,
-                                           listeningCallback:(address:{host:string,port:number})=>any) {
+                                           listeningCallback:(address:{host:string,port:number})=>any,
+                                           doneCallback:(err:Error)=>any) {
 
         debug(`adding job: listenAndDownloadFile - fileName: ${fileName} host: ${host}`);
 
@@ -132,7 +133,7 @@ export class TransferQueue {
             TransferActions.listenAndDownloadFile(fileName, host, destinationContainer, (err)=> {
                 console.timeEnd(timingMessage);
                 downloadingDoneCallback(err)
-            },listeningCallback);
+            }, listeningCallback);
         };
 
         this.queue.push(job, doneCallback);

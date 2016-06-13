@@ -11,7 +11,7 @@ import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strate
 import {CallbackHelper} from "../transport/callback_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import * as _ from "lodash";
-import {Offer, Pull, EventTypes, PullResponse} from "./events";
+import {Offer, Pull, PullResponse, ListeningToUpload} from "./events";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
@@ -160,24 +160,24 @@ export class Client implements StrategySubject {
 
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event)}`);
 
-        if (event.type === EventTypes.offer) {
+        if (event.type === eventTypes.offer) {
             debug('got offer');
             const offer = <Offer> event;
             this.requestRemoteFile(otherParty, offer.fileName, _.noop, offer.id)
 
-        } else if (event.type === EventTypes.pull) {
+        } else if (event.type === eventTypes.pull) {
             debug('got a pull');
             const pull = <Pull>event;
 
             const pullResponse:PullResponse = {
                 fileName: pull.fileName,
                 id: pull.id,
-                type: EventTypes.pullResponse,
+                type: eventTypes.pullResponse,
                 command: TransferActions.events.listenAndDownload
             };
 
             EventsHelper.sendEventTwo(otherParty, pullResponse);
-        } else if (event.type === EventTypes.pullResponse) {
+        } else if (event.type === eventTypes.pullResponse) {
             debug('got a pull response');
             const pullResponse = <PullResponse> event;
 
@@ -186,12 +186,26 @@ export class Client implements StrategySubject {
                     {host: pullResponse.host, port: pullResponse.port},
                     pullResponse.fileName,
                     this.fileContainer,
-                    `client - downloading: ${pullResponse.fileName}`,
                     this.callbackHelper.retriveCallback(pullResponse.id));
                 return;
             }
             if(pullResponse.command === TransferActions.events.listenAndDownload){
-                
+                this.transferJobsQueue.addListenAndDownloadJobToQueue(pullResponse.fileName,
+                    otherParty.getOwnHost(),
+                    this.fileContainer,
+                    (address)=>{
+                        const readyForTransfer:ListeningToUpload={
+                            id: pullResponse.id,
+                            fileName:pullResponse.fileName,
+                            command: TransferActions.events.connectAndUpload,
+                            host:address.host,
+                            type:eve
+                            port:address.port
+                        };
+
+                        EventsHelper.sendEventTwo(otherParty, readyForTransfer);
+                    }
+                )
             }
 
 

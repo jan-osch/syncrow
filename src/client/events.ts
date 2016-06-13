@@ -1,9 +1,9 @@
-
-const EventTypes = {
+export const eventTypes = {
     pull: 'pull',
     offer: 'offer',
     pullResponse: 'pullResponse',
-    transferStatus: 'transferStatus'
+    transferStatus: 'transferStatus',
+    readyForTransfer: 'readyForTransfer'
 };
 
 export interface Event {
@@ -11,22 +11,16 @@ export interface Event {
 }
 
 export interface Pull extends Event {
-    type:EventTypes.pull
     fileName:string,
     id:string
-    command:string,
-    port?:number
-    host?:string
 }
 
 export interface Offer extends Event {
-    type:EventTypes.offer
     fileName:string,
     id:string
 }
 
 export interface PullResponse extends Event {
-    type:EventTypes.pullResponse,
     fileName:string,
     command:string,
     host?:string
@@ -34,8 +28,14 @@ export interface PullResponse extends Event {
     id:string
 }
 
+export interface ListeningToUpload extends Event {
+    fileName:string,
+    host:string
+    port:number
+    id:string
+}
+
 export interface TransferStatus extends Event {
-    type:EventTypes.transferStatus
     fileName:string,
     id:string
     success:boolean
