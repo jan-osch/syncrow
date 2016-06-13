@@ -113,7 +113,7 @@ export class Client implements StrategySubject {
             fileName: fileName
         };
 
-        this.callbackHelper.addCallbackToMap(id, callback);
+        this.callbackHelper.addCallback(id, callback);
         EventsHelper.sendEventTwo(otherParty, fileOffer);
     }
 
@@ -145,9 +145,8 @@ export class Client implements StrategySubject {
             command: TransferActions.events.listenAndUpload
         };
 
-        this.callbackHelper.addCallbackToMap(id, callback);
+        this.callbackHelper.addCallbackWithId(id, callback);
 
-        this.callbackHelper.addCallbackToMap(id, callback);
         EventsHelper.sendEventTwo(otherParty, filePull);
 
         // EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: fileName});
@@ -165,21 +164,37 @@ export class Client implements StrategySubject {
             debug('got offer');
             const offer = <Offer> event;
             this.requestRemoteFile(otherParty, offer.fileName, _.noop, offer.id)
-        
-        }else if(event.type ===EventTypes.pull){
+
+        } else if (event.type === EventTypes.pull) {
             debug('got a pull');
             const pull = <Pull>event;
-            
-            const pullResponse:PullResponse= {
-                fileName:pull.fileName,
+
+            const pullResponse:PullResponse = {
+                fileName: pull.fileName,
                 id: pull.id,
-                type:EventTypes.pullResponse,
+                type: EventTypes.pullResponse,
                 command: TransferActions.events.listenAndDownload
             };
-            
-            EventsHelper.sendEventTwo(otherParty,pullResponse);
-            
-            
+
+            EventsHelper.sendEventTwo(otherParty, pullResponse);
+        } else if (event.type === EventTypes.pullResponse) {
+            debug('got a pull response');
+            const pullResponse = <PullResponse> event;
+
+            if (pullResponse.command === TransferActions.events.connectAndDownload) {
+                this.transferJobsQueue.addConnectAndDownloadJobToQueue(
+                    {host: pullResponse.host, port: pullResponse.port},
+                    pullResponse.fileName,
+                    this.fileContainer,
+                    `client - downloading: ${pullResponse.fileName}`,
+                    this.callbackHelper.retriveCallback(pullResponse.id));
+                return;
+            }
+            if(pullResponse.command === TransferActions.events.listenAndDownload){
+                
+            }
+
+
         } else if (this.handleTransferEvents(event, otherParty)) {
             return debug('routed transfer event');
 

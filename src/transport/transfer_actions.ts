@@ -39,25 +39,25 @@ export class TransferActions {
 
     /**
      * Listens for other party to connect, then downloads the file from it
-     * @param pushingParty
      * @param fileName
      * @param host
      * @param destinationContainer
-     * @param callback
-     * @param remoteId
+     * @param doneCallback
+     * @param listeningCallback
      */
-    public static listenAndDownloadFile(pushingParty:Messenger,
+    public static listenAndDownloadFile(
                                         fileName:string,
                                         host:string,
                                         destinationContainer:FileContainer,
-                                        callback:Function, remoteId:string='TODO') {
+                                        doneCallback:Function,listeningCallback:(address:{port:number, host:string})=>any) {
 
         debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
         const filePullingServer = createServer(
             (socket)=> TransferActions.consumeFileFromSocket(socket,
                 fileName,
                 destinationContainer,
-                ()=>TransferActions.closeServer(filePullingServer, callback))
+                ()=>TransferActions.closeServer(filePullingServer, doneCallback))
+            
         ).listen(()=> {
 
             const address = {
@@ -65,12 +65,9 @@ export class TransferActions {
                 host: host
             };
 
-            EventsHelper.sendEvent(pushingParty, TransferActions.events.connectAndUpload, {
-                fileName: fileName,
-                address: address
-            });
+            listeningCallback(address);
 
-        }).on('error', callback);
+        }).on('error', doneCallback);
     }
 
     /**

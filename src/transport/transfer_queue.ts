@@ -13,9 +13,11 @@ const logger = loggerFor('TransferQueue');
 export class TransferQueue {
 
     private queue:AsyncQueue;
+    private name:string;
 
-    constructor(concurrency:number) {
+    constructor(concurrency:number, name:string='') {
         this.queue = async.queue((job:Function, callback:Function)=>job(callback), concurrency);
+        this.name = name;
     }
 
     /**
@@ -107,33 +109,32 @@ export class TransferQueue {
 
     /**
      *
-     * @param otherParty
      * @param fileName
      * @param host
      * @param destinationContainer
-     * @param timingMessage
-     * @param callback
+     * @param doneCallback
+     * @param listeningCallback
      */
-    public  addListenAndDownloadJobToQueue(otherParty:Messenger,
-                                           fileName:string,
+    public  addListenAndDownloadJobToQueue(fileName:string,
                                            host:string,
                                            destinationContainer:FileContainer,
-                                           timingMessage?:string,
-                                           callback?:Function) {
+                                           doneCallback:(err:Error)=>any,
+                                           listeningCallback:(address:{host:string,port:number})=>any) {
 
         debug(`adding job: listenAndDownloadFile - fileName: ${fileName} host: ${host}`);
+
+        const timingMessage = `${this.name} - listening and downloading file: ${fileName}`;
+
         const job = (downloadingDoneCallback)=> {
 
-            if (timingMessage) console.time(timingMessage);
+            console.time(timingMessage);
 
-            TransferActions.listenAndDownloadFile(otherParty, fileName, host, destinationContainer, (err)=> {
-                logger.error(err);
-                if (timingMessage)console.timeEnd(timingMessage);
-
-                downloadingDoneCallback()
-            });
-
+            TransferActions.listenAndDownloadFile(fileName, host, destinationContainer, (err)=> {
+                console.timeEnd(timingMessage);
+                downloadingDoneCallback(err)
+            },listeningCallback);
         };
-        this.queue.push(job, callback);
+
+        this.queue.push(job, doneCallback);
     }
 }
