@@ -11,6 +11,7 @@ import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strate
 import {CallbackHelper} from "../transport/callback_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import * as _ from "lodash";
+import {Offer, Pull, EventTypes, PullResponse} from "./events";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
@@ -19,37 +20,6 @@ export interface ClientOptions {
     socketsLimit?:number
     strategy?:SynchronizationStrategy,
     filter?:(s:string)=>boolean;
-}
-
-//TODO
-export interface Pull {
-    type:'pull',
-    fileName:string,
-    id:string
-}
-
-export interface PullResponse {
-    type:'pullResponse',
-    fileName:string,
-    id:string
-    command:string,
-    address?:string
-    host?:string
-}
-
-export interface Push {
-    type:'push',
-    fileName:string,
-    id:string
-}
-
-export interface PushResponse {
-    type:'pushResponse',
-    fileName:string,
-    id:string
-    command:string,
-    address?:string
-    host?:string
 }
 
 export class Client implements StrategySubject {
@@ -132,10 +102,19 @@ export class Client implements StrategySubject {
      * @param otherParty
      * @param fileName
      * @param callback
-     * @returns {undefined}
      */
-    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
-        return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: event.body.fileName});
+    public offerFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
+
+        const id = CallbackHelper.generateEventId();
+
+        const fileOffer:Offer = {
+            id: `${id}`,
+            type: 'offer',
+            fileName: fileName
+        };
+
+        this.callbackHelper.addCallbackToMap(id, callback);
+        EventsHelper.sendEventTwo(otherParty, fileOffer);
     }
 
     /**
@@ -153,10 +132,26 @@ export class Client implements StrategySubject {
      * @param otherParty
      * @param fileName
      * @param callback
+     * @param id
      */
-    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
-        EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: fileName});
-        callback(); //TODO implement strategy to handle callbacks
+    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function, id:string = null):any {
+
+        id = id ? id : CallbackHelper.generateEventId();
+
+        const filePull:Pull = {
+            id: `${id}`,
+            type: 'pull',
+            fileName: fileName,
+            command: TransferActions.events.listenAndUpload
+        };
+
+        this.callbackHelper.addCallbackToMap(id, callback);
+
+        this.callbackHelper.addCallbackToMap(id, callback);
+        EventsHelper.sendEventTwo(otherParty, filePull);
+
+        // EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: fileName});
+        // callback(); //TODO implement strategy to handle callbacks
         //TODO: FILE_REQUEST_CALLBACK_STRATEGY - store callback here in callbackHelper
     }
 
@@ -164,9 +159,28 @@ export class Client implements StrategySubject {
         let event = EventsHelper.parseEvent(otherParty, message);
         if (!event) return;
 
-        debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
+        debug(`Client - received a ${event.type} event: ${JSON.stringify(event)}`);
 
-        if (this.handleTransferEvents(event, otherParty)) {
+        if (event.type === EventTypes.offer) {
+            debug('got offer');
+            const offer = <Offer> event;
+            this.requestRemoteFile(otherParty, offer.fileName, _.noop, offer.id)
+        
+        }else if(event.type ===EventTypes.pull){
+            debug('got a pull');
+            const pull = <Pull>event;
+            
+            const pullResponse:PullResponse= {
+                fileName:pull.fileName,
+                id: pull.id,
+                type:EventTypes.pullResponse,
+                command: TransferActions.events.listenAndDownload
+            };
+            
+            EventsHelper.sendEventTwo(otherParty,pullResponse);
+            
+            
+        } else if (this.handleTransferEvents(event, otherParty)) {
             return debug('routed transfer event');
 
         } else if (this.callbackHelper.checkResponse(event)) {

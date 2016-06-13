@@ -31,23 +31,30 @@ export class CallbackHelper {
     }
 
     /**
-     * @param event
      * @returns {boolean}
      */
-    public checkResponse(event:Event):boolean {
+    public checkResponse():boolean {
 
         if (event.id && this.callbackMap.has(event.id)) {
             debug(`found callback for stored id`);
             const callback = this.callbackMap.get(event.id);
             this.callbackMap.delete(event.id);
-            callback(null, event);
+            callback(arguments);
             return true;
         }
 
         return false;
     }
 
-    private static generateEventId():number {
+    /**
+     * Generates an Id
+     * @returns {number}
+     */
+    public static generateEventId():number {
         return Math.random();
+    }
+
+    public addCallbackToMap(id:number, callback:Function) {
+        this.callbackMap.set(id, callback);
     }
 }

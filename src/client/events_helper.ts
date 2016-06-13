@@ -1,6 +1,7 @@
 /// <reference path="../../typings/main.d.ts" />
 import {Messenger} from "../connection/messenger";
 import {debugFor} from "../utils/logger";
+import {Event} from "./events";
 
 const debug = debugFor('syncrow:events');
 
@@ -21,7 +22,7 @@ export class EventsHelper {
         return JSON.stringify({
             type: type,
             body: body,
-            id:id
+            id: id
         });
     }
 
@@ -50,10 +51,14 @@ export class EventsHelper {
         debug(`writing event: ${event}`);
         otherParty.writeMessage(event);
     }
-}
 
-export interface Event {
-    type:string,
-    body:any,
-    id:number
+    /**
+     * New method for better sending
+     * @param otherParty
+     * @param event
+     */
+    public static sendEventTwo(otherParty:Messenger, event:Object) {
+        debug(`writing event: ${event}`);
+        otherParty.writeMessage(JSON.stringify(event));
+    }
 }

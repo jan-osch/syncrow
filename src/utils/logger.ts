@@ -36,7 +36,7 @@ export class Logger {
      * @param err
      */
     public error(err?:any) {
-        if (err) this.logInColor(`ERROR:`+err, 'red');
+        if (err) this.logInColor(`ERROR:` + err, 'red');
     }
 
     /**
@@ -84,4 +84,20 @@ export function loggerFor(context:string):Logger {
  */
 export function debugFor(routingKey:string) {
     return debug(routingKey);
+}
+
+
+/**
+ * Decorator for passing an exception to last argument - callback
+ * @param fun
+ * @returns {function(): (any|AsyncFunction<any>|any)}
+ */
+export function forwardEception(fun) {
+    return function () {
+        try {
+            return fun.apply(this, arguments);
+        } catch (exception) {
+            return arguments[arguments.length - 1](exception);
+        }
+    }
 }
