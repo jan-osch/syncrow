@@ -17,17 +17,10 @@ export interface TransferHelperOptions {
 
 const callbackHelper = CallbackHelper.getInstance();
 
-interface FirstStep {
+interface TransferMessage {
     fileName:string,
     command:string,
-    id:string
-    port?:number,
-    host?:string
-}
-interface SecondStep {
-    fileName:string,
-    command:string,
-    id:string
+    id?:string
     port?:number,
     host?:string
 }
@@ -36,57 +29,94 @@ export class TransferHelper {
 
     static outerEvent = 'transferEvent';
 
-    private static innerEvents = {
-        firstStep: 'firstStep',
-        secondStep: 'secondStep'
-    };
-
-
     private queue:TransferQueue;
     private preferConnecting:boolean;
+    private container:FileContainer;
 
-    constructor(options:TransferHelperOptions) {
-        const queueSize = options.transferQueueSize ? options.transferQueueSize : 10;
+    constructor(container:FileContainer, options:TransferHelperOptions) {
+        const queueSize = options.transferQueueSize ? options.transferQueueSize : 10; //TODO
         this.queue = new TransferQueue(queueSize, options.name);
         this.preferConnecting = options.preferConnecting;
+        this.container = container;
     }
 
-    public consumeEvent(transferEvent) {
+    public consumeMessage(transferMessage:TransferMessage) {
+        if (transferMessage.command === TransferActions.events.connectAndUpload) {
+            this.queue.addConnectAndUploadJobToQueue(transferMessage.fileName, {
+                    host: transferMessage.host,
+                    port: transferMessage.port
+                },
+                fileContainer, `client - uploading: ${transferMessage.fileName}`);
+            return true;
 
+        } else if (transferMessage.command === TransferActions.events.connectAndDownload) {
+            this.transferJobsQueue.addConnectAndDownloadJobToQueue(transferMessage.address, transferMessage.fileName,
+                this.fileContainer, `client - downloading: ${transferMessage.fileName}`);
+            return true;
+            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbaks in callback helper
+
+        } else if (transferMessage.command === TransferActions.events.listenAndDownload) {
+            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, transferMessage.fileName,
+                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${transferMessage.fileName}`);
+            return true;
+            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbacks
+
+        } else if (transferMessage.command === TransferActions.events.listenAndUpload) {
+            this.transferJobsQueue.addListenAndUploadJobToQueue(transferMessage.fileName, otherParty,
+                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${transferMessage.fileName}`);
+            return true;
+
+        }
+        return false;
     }
 
-    public sendFileToRemote(otherParty:Messenger, sourceContainer:FileContainer, fileName:string, callback:Function, sendReport:boolean) {
-        const id = callbackHelper.addCallback(callback);
+    public sendFileToRemote(otherParty:Messenger, fileName:string, callback:(err:Error)=>any) {
 
         if (this.preferConnecting) {
-            const firstStep:FirstStep = {
-                fileName: fileName,
+            const id = callbackHelper.addCallback(callback);
+            const message:TransferMessage = {
+                command: TransferActions.events.listenAndDownload,
                 id: id,
-                command: TransferActions.events.listenAndDownload
+                fileName: fileName
             };
-
-            return EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, firstStep);
+            return EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
         }
 
-        this.queue.addListenAndUploadJobToQueue(fileName, otherParty.getOwnHost(), sourceContainer, (address)=> {
-            const firstStep:FirstStep = {
+        this.queue.addListenAndUploadJobToQueue(fileName, otherParty.getOwnHost(), this.container, (address)=> {
+            const message:TransferMessage = {
                 fileName: fileName,
-                id: id,
                 command: TransferActions.events.connectAndDownload,
                 host: address.host,
                 port: address.port
             };
 
-            EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, firstStep);
-        }, (err)=> {
-            callbackHelper.deleteMapping(id);
-            callback(err);
-        });
+            EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
+        }, callback);
     }
 
-    public getFileFromRemote(otherParty:Messenger, destinationContainer:FileContainer, fileName:string, callback:Function) {
+    public getFileFromRemote(otherParty:Messenger, fileName:string, callback:(err:Error)=>any) {
 
+        if (this.preferConnecting) {
+            const id = callbackHelper.addCallback(callback);
+
+            const message:TransferMessage = {
+                fileName: fileName,
+                id: id,
+                command: TransferActions.events.listenAndUpload
+            };
+
+            return EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
+        }
+
+        this.queue.addListenAndDownloadJobToQueue(fileName, otherParty.getOwnHost(), this.container, (address)=> {
+            const message:TransferMessage = {
+                fileName: fileName,
+                command: TransferActions.events.connectAndUpload,
+                host: address.host,
+                port: address.port
+            };
+
+            EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
+        }, callback);
     }
-
-
 }

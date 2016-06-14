@@ -23,27 +23,26 @@ export class TransferQueue {
      * @param fileName
      * @param address
      * @param sourceContainer
-     * @param timingMessage
+     * @param doneCallback
      */
     public addConnectAndUploadJobToQueue(fileName:string,
                                          address:{port:number, host:string},
                                          sourceContainer:FileContainer,
-                                         timingMessage?:string) {
-
+                                         doneCallback) {
+        const timingMessage = `${this.name} - connecting and uploading file: ${fileName}`;
         debug(`adding job: connectAndUploadFile: ${fileName}`);
         const job = (uploadingDoneCallback) => {
 
-            if (timingMessage) console.time(timingMessage);
+            console.time(timingMessage);
 
             TransferActions.connectAndUploadFile(fileName, address, sourceContainer, (err)=> {
-                logger.error(err);
-                if (timingMessage) console.timeEnd(timingMessage);
+                console.timeEnd(timingMessage);
 
-                uploadingDoneCallback()
+                uploadingDoneCallback(err)
             });
         };
 
-        this.queue.push(job);
+        this.queue.push(job, doneCallback);
     }
 
     /**
@@ -57,7 +56,6 @@ export class TransferQueue {
                                            fileName:string,
                                            destinationContainer:FileContainer,
                                            doneCallback?:(err:Error)=>any) {
-
         debug(`adding job: connectAndDownloadFile: ${fileName}`);
 
         const timingMessage = `${this.name} - connecting and downloading file: ${fileName}`;

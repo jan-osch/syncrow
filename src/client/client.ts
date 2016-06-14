@@ -249,7 +249,7 @@ export class Client implements StrategySubject {
 
     private handleTransferEvents(event:{type:string, body?:any}, otherParty:Messenger):boolean {
         if (event.type === TransferActions.events.connectAndUpload) {
-            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
+                       this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
                 this.fileContainer, `client - uploading: ${event.body.fileName}`);
             return true;
 
