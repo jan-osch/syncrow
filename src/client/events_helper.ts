@@ -80,7 +80,7 @@ export class EventsHelper {
         };
     }
 
-    public static getNewPullResponse(fileName:string, id:string, command?:string, host?:string, port?:number) {
+    public static getNewPullResponse(fileName:string, id:string, command?:string, host?:string, port?:number):PullResponse {
         if (command !== TransferActions.events.connectAndDownload || command !== TransferActions.events.listenAndDownload) {
             throw  new Error('Invalid command type');
         }
@@ -92,39 +92,19 @@ export class EventsHelper {
             type: eventTypes.pullResponse,
             command: command,
             host: host,
-            port: port
+            port: port,
+            id: id
         }
     }
 
-    public getNewReadyForTransfer(fileName:string, id:string, host:string, port:number){
-        return{
-            type:eventTypes.readyForTransfer,
-            command: TransferActions.events.connectAndDownload
+    public static getNewReadyForTransfer(fileName:string, id:string, host:string, port:number):ReadyForTransfer {
+        return {
+            type: eventTypes.readyForTransfer,
+            command: TransferActions.events.connectAndDownload,
+            host: host,
+            port: port,
+            fileName: fileName,
+            id: id
         }
     }
-
-}
-
-
-export interface PullResponse extends Event {
-    fileName:string,
-    command:string,
-    host?:string
-    port?:number
-    id:string
-}
-
-export interface ReadyForTransfer extends Event {
-    fileName:string,
-    command:string,
-    host?:string
-    port?:number
-    id:string
-}
-
-export interface TransferStatus extends Event {
-    fileName:string,
-    id:string
-    success:boolean
-    message?:string
 }

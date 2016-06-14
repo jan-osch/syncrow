@@ -1,9 +1,11 @@
 import {Messenger} from "../connection/messenger";
 import {Event, EventsHelper} from "../client/events_helper";
-import {debugFor, loggerFor} from "../utils/logger";
+import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:callback_helper');
 
+
+let instance = null;
 //TODO add timeout ability
 //TODO add clear ability - delete all callbacks that are awaiting from otherParty that disconnected
 export class CallbackHelper {
@@ -75,5 +77,28 @@ export class CallbackHelper {
         const id = CallbackHelper.generateEventId();
         this.addCallbackWithId(id, callback);
         return id;
+    }
+
+    /**
+     * Returns global instance of CallbackHelper
+     * @returns {null}
+     */
+    public static getInstance():CallbackHelper {
+        if (!instance) {
+            instance = new CallbackHelper();
+        }
+
+        return instance;
+    }
+
+    /**
+     * If something fails
+     * @param id
+     */
+    public deleteMapping(id) {
+        if (this.callbackMap.delete(id)) {
+            return;
+        }
+        throw new Error(`callback id: ${id} did not exist`);
     }
 }

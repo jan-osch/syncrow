@@ -11,7 +11,7 @@ import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strate
 import {CallbackHelper} from "../transport/callback_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import * as _ from "lodash";
-import {Offer, Pull, PullResponse, ListeningToUpload} from "./events";
+import {Offer, Pull, PullResponse, eventTypes} from "./events";
 
 const debug = debugFor("syncrow:client");
 const logger = loggerFor('Client');
@@ -189,23 +189,24 @@ export class Client implements StrategySubject {
                     this.callbackHelper.retriveCallback(pullResponse.id));
                 return;
             }
-            if(pullResponse.command === TransferActions.events.listenAndDownload){
+            if (pullResponse.command === TransferActions.events.listenAndDownload) {
                 this.transferJobsQueue.addListenAndDownloadJobToQueue(pullResponse.fileName,
                     otherParty.getOwnHost(),
                     this.fileContainer,
-                    (address)=>{
-                        const readyForTransfer:ListeningToUpload={
-                            id: pullResponse.id,
-                            fileName:pullResponse.fileName,
-                            command: TransferActions.events.connectAndUpload,
-                            host:address.host,
-                            type:eve
-                            port:address.port
-                        };
+                    (address)=> {
+                        const readyForTransfer = EventsHelper.getNewReadyForTransfer(
+                            pullResponse.fileName,
+                            pullResponse.id,
+                            address.host,
+                            address.port);
 
                         EventsHelper.sendEventTwo(otherParty, readyForTransfer);
+                    },
+                    (err)=> {
+                        this.callbackHelper.retriveCallback(pullResponse.id)
+
                     }
-                )
+                );
             }
 
 

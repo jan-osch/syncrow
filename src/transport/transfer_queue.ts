@@ -1,12 +1,10 @@
 /// <reference path="../../typings/main.d.ts" />
 
-import {Messenger} from "../connection/messenger";
 import {FileContainer} from "../fs_helpers/file_container";
 import {TransferActions} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
 import {loggerFor} from "../utils/logger";
-import {Pull, PullResponse} from "../client/events";
 
 const debug = debugFor("syncrow:trasfer_queue");
 const logger = loggerFor('TransferQueue');
@@ -81,31 +79,31 @@ export class TransferQueue {
     /**
      *
      * @param fileName
-     * @param otherParty
      * @param host
      * @param sourceContainer
-     * @param timingMessage
+     * @param listeningCallback
+     * @param doneCallback
      */
     public  addListenAndUploadJobToQueue(fileName:string,
-                                         otherParty:Messenger,
                                          host:string,
                                          sourceContainer:FileContainer,
-                                         timingMessage?:string) {
+                                         listeningCallback:(address:{host:string,port:number})=>any,
+                                         doneCallback:(err:Error)=>any) {
 
+        const timingMessage = `${this.name} - listening and uploading file: ${fileName}`;
         debug(`adding job: listenAndUploadFile ${fileName}`);
         const job = (uploadingDoneCallback)=> {
 
-            if (timingMessage) console.time(timingMessage);
+            console.time(timingMessage);
 
-            TransferActions.listenAndUploadFile(otherParty, fileName, host, sourceContainer, (err)=> {
-                logger.error(err);
-                if (timingMessage)console.timeEnd(timingMessage);
+            TransferActions.listenAndUploadFile(fileName, host, sourceContainer, (err)=> {
+                console.timeEnd(timingMessage);
 
-                uploadingDoneCallback()
-            });
+                uploadingDoneCallback(err)
+            }, listeningCallback);
 
         };
-        this.queue.push(job);
+        this.queue.push(job, doneCallback);
     }
 
     /**
