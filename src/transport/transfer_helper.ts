@@ -4,6 +4,7 @@ import {FileContainer} from "../fs_helpers/file_container";
 import {CallbackHelper} from "./callback_helper";
 import {TransferActions} from "./transfer_actions";
 import {EventsHelper} from "../client/events_helper";
+import {loggerFor} from "../utils/logger";
 /**
  * Created by Janusz on 14.06.2016.
  */
@@ -16,6 +17,7 @@ export interface TransferHelperOptions {
 }
 
 const callbackHelper = CallbackHelper.getInstance();
+const logger = loggerFor('TransferHelper');
 
 interface TransferMessage {
     fileName:string,
@@ -46,8 +48,7 @@ export class TransferHelper {
                     host: transferMessage.host,
                     port: transferMessage.port
                 },
-                fileContainer, `client - uploading: ${transferMessage.fileName}`);
-            return true;
+                this.getCallbackForIdOrErrorLogger(transferMessage.id));
 
         } else if (transferMessage.command === TransferActions.events.connectAndDownload) {
             this.transferJobsQueue.addConnectAndDownloadJobToQueue(transferMessage.address, transferMessage.fileName,
@@ -118,5 +119,13 @@ export class TransferHelper {
 
             EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
         }, callback);
+    }
+
+    private getCallbackForIdOrErrorLogger(id:string) {
+        if (id) return callbackHelper.retriveCallback(id);
+
+        return (err)=> {
+            logger.error(err)
+        }
     }
 }

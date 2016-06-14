@@ -62,49 +62,4 @@ export class EventsHelper {
         debug(`writing event: ${event}`);
         otherParty.writeMessage(JSON.stringify(event));
     }
-
-
-    public static getNewPull(fileName:string, id:string):Pull {
-        return {
-            type: eventTypes.pull,
-            fileName: fileName,
-            id: id
-        };
-    }
-
-    public static getNewOffer(fileName:string, id:string):Offer {
-        return {
-            type: eventTypes.offer,
-            fileName: fileName,
-            id: id
-        };
-    }
-
-    public static getNewPullResponse(fileName:string, id:string, command?:string, host?:string, port?:number):PullResponse {
-        if (command !== TransferActions.events.connectAndDownload || command !== TransferActions.events.listenAndDownload) {
-            throw  new Error('Invalid command type');
-        }
-        if (command === TransferActions.events.connectAndDownload && !host || !port) {
-            throw new Error('Missing port or host for connection');
-        }
-
-        return {
-            type: eventTypes.pullResponse,
-            command: command,
-            host: host,
-            port: port,
-            id: id
-        }
-    }
-
-    public static getNewReadyForTransfer(fileName:string, id:string, host:string, port:number):ReadyForTransfer {
-        return {
-            type: eventTypes.readyForTransfer,
-            command: TransferActions.events.connectAndDownload,
-            host: host,
-            port: port,
-            fileName: fileName,
-            id: id
-        }
-    }
 }
