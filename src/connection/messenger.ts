@@ -4,7 +4,7 @@ import {EventEmitter} from "events";
 import {Connection} from "./connection";
 import {loggerFor, debugFor} from "../utils/logger";
 
-const debug = debugFor("syncrow:messenger");
+const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
 
 export class Messenger extends EventEmitter {

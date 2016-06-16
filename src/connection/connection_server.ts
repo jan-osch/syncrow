@@ -4,7 +4,7 @@ import {Socket, Server, createServer} from "net";
 import {Connection, ConnectionStrategy} from "./connection";
 import {loggerFor, debugFor} from "../utils/logger";
 
-const debug = debugFor("syncrow:connection_server");
+const debug = debugFor("syncrow:connection:server");
 const logger = loggerFor('ConnectionServer');
 
 //TODO add configuration connection retries

@@ -2,8 +2,6 @@
 
 import {FileContainer} from "../fs_helpers/file_container";
 import {Socket, Server, createServer, connect} from "net";
-import {EventsHelper} from "../client/events_helper";
-import {Messenger} from "../connection/messenger";
 import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:trasfer_actions");
@@ -39,25 +37,23 @@ export class TransferActions {
 
     /**
      * Listens for other party to connect, then downloads the file from it
-     * @param pushingParty
      * @param fileName
      * @param host
      * @param destinationContainer
-     * @param callback
-     * @param remoteId
+     * @param doneCallback
+     * @param listeningCallback
      */
-    public static listenAndDownloadFile(pushingParty:Messenger,
-                                        fileName:string,
+    public static listenAndDownloadFile(fileName:string,
                                         host:string,
                                         destinationContainer:FileContainer,
-                                        callback:Function, remoteId:string='TODO') {
+                                        doneCallback:Function, listeningCallback:(address:{port:number, host:string})=>any) {
 
         debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
         const filePullingServer = createServer(
             (socket)=> TransferActions.consumeFileFromSocket(socket,
                 fileName,
                 destinationContainer,
-                ()=>TransferActions.closeServer(filePullingServer, callback))
+                ()=>TransferActions.closeServer(filePullingServer, doneCallback))
         ).listen(()=> {
 
             const address = {
@@ -65,27 +61,24 @@ export class TransferActions {
                 host: host
             };
 
-            EventsHelper.sendEvent(pushingParty, TransferActions.events.connectAndUpload, {
-                fileName: fileName,
-                address: address
-            });
+            listeningCallback(address);
 
-        }).on('error', callback);
+        }).on('error', doneCallback);
     }
 
     /**
      * Listen for other party to connect, and then send the file to it
-     * @param otherParty
      * @param fileName
      * @param host
      * @param sourceContainer
      * @param callback
+     * @param listenCallback
      */
-    public static listenAndUploadFile(otherParty:Messenger,
-                                      fileName:string,
+    public static listenAndUploadFile(fileName:string,
                                       host:string,
                                       sourceContainer:FileContainer,
-                                      callback:Function) {
+                                      callback:Function,
+                                      listenCallback:Function) {
 
 
         debug(`executing: listenAndUploadFile - fileName: ${fileName}, host: ${host}`);
@@ -101,10 +94,8 @@ export class TransferActions {
                 host: host
             };
 
-            EventsHelper.sendEvent(otherParty, TransferActions.events.connectAndDownload, {
-                fileName: fileName,
-                address: address
-            });
+            listenCallback(address);
+            
         }).on('error', callback);
     }
 

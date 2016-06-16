@@ -4,6 +4,11 @@ import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:events');
 
+export interface Event{
+    type:string,
+    body?:any
+}
+
 //TODO change this class to Event - allow static creation
 export class EventsHelper {
 
@@ -14,14 +19,12 @@ export class EventsHelper {
     /**
      * @param type
      * @param body
-     * @param id
      * @returns {string}
      */
-    public static createEvent(type:string, body = {}, id?:number):string {
+    public static createEvent(type:string, body = {}):string {
         return JSON.stringify({
             type: type,
             body: body,
-            id:id
         });
     }
 
@@ -43,17 +46,10 @@ export class EventsHelper {
      * @param otherParty
      * @param type
      * @param message
-     * @param id
      */
-    public static sendEvent(otherParty:Messenger, type:string, message?:any, id?:number) {
-        const event = EventsHelper.createEvent(type, message, id);
+    public static sendEvent(otherParty:Messenger, type:string, message?:any) {
+        const event = EventsHelper.createEvent(type, message);
         debug(`writing event: ${event}`);
         otherParty.writeMessage(event);
     }
-}
-
-export interface Event {
-    type:string,
-    body:any,
-    id:number
 }

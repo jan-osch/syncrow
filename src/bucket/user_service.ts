@@ -3,7 +3,7 @@
 
 import {loggerFor, debugFor} from "../utils/logger";
 
-const debug = debugFor("syncrow:user_service");
+const debug = debugFor("syncrow:bucket:user_service");
 const logger = loggerFor('UserService');
 
 

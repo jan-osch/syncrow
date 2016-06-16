@@ -6,7 +6,7 @@ import * as async from "async";
 import config from "../configuration";
 import {loggerFor, debugFor} from "../utils/logger";
 
-const debug = debugFor("syncrow:connection");
+const debug = debugFor("syncrow:connection:connection");
 const logger = loggerFor('Connection');
 
 export enum ConnectionStrategy{

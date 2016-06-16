@@ -3,53 +3,21 @@
 import {loggerFor, debugFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 import {FileContainer, FileContainerOptions} from "../fs_helpers/file_container";
-import {TransferQueue} from "../transport/transfer_queue";
 import {EventsHelper} from "./events_helper";
-import {TransferActions} from "../transport/transfer_actions";
 import config from "../configuration";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import * as _ from "lodash";
+import {TransferHelper} from "../transport/transfer_helper";
 
-const debug = debugFor("syncrow:client");
+const debug = debugFor("syncrow:client:client");
 const logger = loggerFor('Client');
 
 export interface ClientOptions {
     socketsLimit?:number
     strategy?:SynchronizationStrategy,
     filter?:(s:string)=>boolean;
-}
-
-//TODO
-export interface Pull {
-    type:'pull',
-    fileName:string,
-    id:string
-}
-
-export interface PullResponse {
-    type:'pullResponse',
-    fileName:string,
-    id:string
-    command:string,
-    address?:string
-    host?:string
-}
-
-export interface Push {
-    type:'push',
-    fileName:string,
-    id:string
-}
-
-export interface PushResponse {
-    type:'pushResponse',
-    fileName:string,
-    id:string
-    command:string,
-    address?:string
-    host?:string
 }
 
 export class Client implements StrategySubject {
@@ -67,7 +35,7 @@ export class Client implements StrategySubject {
     private otherParty:Messenger;
     private callbackHelper:CallbackHelper;
     private fileContainer:FileContainer;
-    private transferJobsQueue:TransferQueue;
+    private transferHelper:TransferHelper;
     private syncStrategy:SynchronizationStrategy;
     private filterFunction:(s:string)=>boolean;
 
@@ -85,7 +53,13 @@ export class Client implements StrategySubject {
 
         this.fileContainer = this.createDirectoryWatcher(pathToWatch, {filter: this.filterFunction});
         this.otherParty = this.addOtherPartyMessenger(otherParty);
-        this.transferJobsQueue = new TransferQueue(socketsLimit);
+
+        this.transferHelper = new TransferHelper(this.fileContainer, {
+            preferConnecting: true,
+            transferQueueSize: socketsLimit,
+            name: 'Client'
+        });
+
         this.callbackHelper = new CallbackHelper();
         this.fileContainer.beginWatching();
         this.syncStrategy = syncStrategy;
@@ -122,20 +96,18 @@ export class Client implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public getRemoteFileMeta(otherParty:Messenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
-        this.callbackHelper.sendWrapped(otherParty, Client.events.getMetaForFile, {fileName: fileName}, (err, event)=> {
-            return callback(err, event.body);
-        });
+    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
+        this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 
     /**
      * @param otherParty
      * @param fileName
      * @param callback
-     * @returns {undefined}
      */
-    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
-        return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: event.body.fileName});
+    public getRemoteFileMeta(otherParty:Messenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+        const id = this.callbackHelper.addCallback(callback);
+        EventsHelper.sendEvent(otherParty, Client.events.getMetaForFile, {fileName: fileName, id: id});
     }
 
     /**
@@ -143,50 +115,57 @@ export class Client implements StrategySubject {
      * @param callback
      */
     public getRemoteFileList(otherParty:Messenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
-        this.callbackHelper.sendWrapped(otherParty, Client.events.getFileList, {}, (err, event)=> {
-            return callback(err, event.body);
-        });
+        const id = this.callbackHelper.addCallback(callback);
+        EventsHelper.sendEvent(otherParty, Client.events.getFileList, {id: id});
     }
-
 
     /**
      * @param otherParty
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
-        EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: fileName});
-        callback(); //TODO implement strategy to handle callbacks
-        //TODO: FILE_REQUEST_CALLBACK_STRATEGY - store callback here in callbackHelper
+    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
+        this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
         let event = EventsHelper.parseEvent(otherParty, message);
         if (!event) return;
 
-        debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
+        debug(`Client - received a ${event.type} event: ${JSON.stringify(event)}`);
 
-        if (this.handleTransferEvents(event, otherParty)) {
-            return debug('routed transfer event');
+        if (event.type === TransferHelper.outerEvent) {
+            return this.transferHelper.consumeMessage(event.body, otherParty);
 
-        } else if (this.callbackHelper.checkResponse(event)) {
-            return debug('routed event with callback');
+        } else if (event.type === Client.events.metaDataForFile) {
+            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
+
+        } else if (event.type === Client.events.fileList) {
+            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
+
+        } else if (event.type === Client.events.fileCreated) {
+            return this.transferHelper.getFileFromRemote(otherParty, event.body.fileName);
 
         } else if (event.type === Client.events.fileChanged) {
-            return EventsHelper.sendEvent(otherParty, TransferActions.events.listenAndUpload, {fileName: event.body.fileName});
-            //TODO  FILE_REQUEST_CALLBACK_STRATEGY use here requestRemoteFile
+            return this.transferHelper.getFileFromRemote(otherParty, event.body.fileName);
 
         } else if (event.type === Client.events.getFileList) {
             return this.fileContainer.getFileTree((err, fileList)=> {
                 if (err) return logger.error(err);
-                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList, event.id);
+
+                EventsHelper.sendEvent(otherParty, Client.events.fileList,
+                    {fileList: fileList, id: event.body.id}
+                );
             });
 
         } else if (event.type === Client.events.getMetaForFile) {
             return this.fileContainer.getFileMeta(event.body.fileName, (err, syncData)=> {
                 if (err)return logger.error(err);
 
-                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData, event.id)
+                EventsHelper.sendEvent(otherParty,
+                    Client.events.metaDataForFile,
+                    {syncData: syncData, id: event.body.id}
+                )
             });
 
         } else if (event.type === Client.events.directoryCreated) {
@@ -201,33 +180,6 @@ export class Client implements StrategySubject {
 
         logger.warn(`unknown event type: ${event}`);
         EventsHelper.sendEvent(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
-    }
-
-    private handleTransferEvents(event:{type:string, body?:any}, otherParty:Messenger):boolean {
-        if (event.type === TransferActions.events.connectAndUpload) {
-            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fileName, event.body.address,
-                this.fileContainer, `client - uploading: ${event.body.fileName}`);
-            return true;
-
-        } else if (event.type === TransferActions.events.connectAndDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
-                this.fileContainer, `client - downloading: ${event.body.fileName}`);
-            return true;
-            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbaks in callback helper
-
-        } else if (event.type === TransferActions.events.listenAndDownload) {
-            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName,
-                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${event.body.fileName}`);
-            return true;
-            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbacks
-
-        } else if (event.type === TransferActions.events.listenAndUpload) {
-            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty,
-                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${event.body.fileName}`);
-            return true;
-
-        }
-        return false;
     }
 
     private createDirectoryWatcher(directoryToWatch:string, options:FileContainerOptions):FileContainer {

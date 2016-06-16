@@ -4,10 +4,12 @@ import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:callback_helper');
 
+
+let instance = null;
 //TODO add timeout ability
 //TODO add clear ability - delete all callbacks that are awaiting from otherParty that disconnected
 export class CallbackHelper {
-    private callbackMap:Map<string,(err:Error, event:Event)=>any>;
+    private callbackMap:Map<string,Function>;
 
     /**
      * Used to exchange events with callbacks
@@ -31,23 +33,72 @@ export class CallbackHelper {
     }
 
     /**
-     * @param event
-     * @returns {boolean}
+     * Returns callback if it exists
+     * @param id
+     * @returns {function(Error, Event): any}
      */
-    public checkResponse(event:Event):boolean {
-
-        if (event.id && this.callbackMap.has(event.id)) {
+    public retriveCallback(id:string):Function {
+        if (id && this.callbackMap.has(id)) {
             debug(`found callback for stored id`);
-            const callback = this.callbackMap.get(event.id);
-            this.callbackMap.delete(event.id);
-            callback(null, event);
-            return true;
+            const callback = this.callbackMap.get(id);
+            this.callbackMap.delete(id);
+            return callback;
         }
-
-        return false;
     }
 
-    private static generateEventId():number {
-        return Math.random();
+    /**
+     * Generates an Id
+     * @returns {string}
+     */
+    public static generateEventId():string {
+        return Math.random().toString();
+    }
+
+    /**
+     * Adds a function to map of remembered callbacks
+     * @throws Error if id already exists
+     * @param id
+     * @param callback
+     */
+    public addCallbackWithId(id:string, callback:Function) {
+        if (this.callbackMap.has(id)) {
+            throw new Error(`callback id: ${id} already exists`);
+        }
+
+        this.callbackMap.set(id, callback);
+    }
+
+    /**
+     * Handy function that generates id stores the callback and returns id
+     * @param callback
+     * @returns {string} id
+     */
+    public addCallback(callback:Function):string {
+        const id = CallbackHelper.generateEventId();
+        this.addCallbackWithId(id, callback);
+        return id;
+    }
+
+    /**
+     * Returns global instance of CallbackHelper
+     * @returns {null}
+     */
+    public static getInstance():CallbackHelper {
+        if (!instance) {
+            instance = new CallbackHelper();
+        }
+
+        return instance;
+    }
+
+    /**
+     * If something fails
+     * @param id
+     */
+    public deleteMapping(id) {
+        if (this.callbackMap.delete(id)) {
+            return;
+        }
+        throw new Error(`callback id: ${id} did not exist`);
     }
 }

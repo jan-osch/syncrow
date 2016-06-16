@@ -27,7 +27,9 @@ export class PullStrategy extends NoActionStrategy {
             if (err) return callback(err);
 
             async.each(fileList,
+
                 (fileName, eachCallback) => this.subject.requestRemoteFile(otherParty, fileName, eachCallback),
+
                 (err) => {
                     if (err) return callback(err);
 
