@@ -76,8 +76,8 @@ export class Client implements StrategySubject {
         otherParty.on(Messenger.events.message, (message:string)=>this.handleEvent(this.otherParty, message));
 
         otherParty.on(Messenger.events.alive, ()=> {
-            this.syncStrategy.synchronize(otherParty, _.noop); //TODO add better places for this
             logger.info('connected with other party beginning to sync');
+            this.syncStrategy.synchronize(otherParty, _.noop); //TODO add better places for this
         });
 
         otherParty.on(Messenger.events.recovering, ()=> {

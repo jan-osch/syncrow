@@ -92,7 +92,8 @@ function getDefaultConfig(): ProgramOptions {
         host: "0.0.0.0",
         port: 2510,
         strategy: "no",
-        directory: "."
+        directory: ".",
+        filter: ''
     }
 }
 

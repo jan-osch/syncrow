@@ -118,7 +118,7 @@ export class BucketOperator implements StrategySubject {
     private handleEvent(otherParty:Messenger, message:string) {
         const event = EventsHelper.parseEvent(otherParty, message);
 
-        debug(`got event from other party: ${JSON.stringify(event)}`);
+        debug(`got event from other party: ${JSON.stringify(event, null , 2)}`);
 
         if (event.type === TransferHelper.outerEvent) {
             return this.transferHelper.consumeMessage(event.body, otherParty);
