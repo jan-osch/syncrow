@@ -135,19 +135,19 @@ export class Client implements StrategySubject {
         debug(`Client - received a ${event.type} event: ${JSON.stringify(event)}`);
 
         if (event.type === TransferHelper.outerEvent) {
-            this.transferHelper.consumeMessage(event.body, otherParty);
+            return this.transferHelper.consumeMessage(event.body, otherParty);
 
         } else if (event.type === Client.events.metaDataForFile) {
-            this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
+            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
 
         } else if (event.type === Client.events.fileList) {
-            this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
+            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
 
         } else if (event.type === Client.events.fileCreated) {
-            this.transferHelper.getFileFromRemote(otherParty, event.body.fileName);
+            return this.transferHelper.getFileFromRemote(otherParty, event.body.fileName);
 
         } else if (event.type === Client.events.fileChanged) {
-            this.transferHelper.getFileFromRemote(otherParty, event.body.fileName);
+            return this.transferHelper.getFileFromRemote(otherParty, event.body.fileName);
 
         } else if (event.type === Client.events.getFileList) {
             return this.fileContainer.getFileTree((err, fileList)=> {
@@ -164,7 +164,7 @@ export class Client implements StrategySubject {
 
                 EventsHelper.sendEvent(otherParty,
                     Client.events.metaDataForFile,
-                    {syncData: syncData,id: event.body.id}
+                    {syncData: syncData, id: event.body.id}
                 )
             });
 

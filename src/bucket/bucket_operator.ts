@@ -118,16 +118,16 @@ export class BucketOperator implements StrategySubject {
     private handleEvent(otherParty:Messenger, message:string) {
         const event = EventsHelper.parseEvent(otherParty, message);
 
-        debug(`got event from other party: ${event}`);
+        debug(`got event from other party: ${JSON.stringify(event)}`);
 
         if (event.type === TransferHelper.outerEvent) {
-            this.transferHelper.consumeMessage(event.body, otherParty);
+            return this.transferHelper.consumeMessage(event.body, otherParty);
 
         } else if (event.type === Client.events.metaDataForFile) {
-            this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
+            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
 
         } else if (event.type === Client.events.fileList) {
-            this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
+            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
 
         } else if (event.type === Client.events.directoryCreated) {
             this.container.createDirectory(event.body.fileName);
