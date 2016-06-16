@@ -11,7 +11,7 @@ import config from "../configuration";
 import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 import {TransferHelper} from "../transport/transfer_helper";
 
-const debug = debugFor("syncrow:bucket_operator");
+const debug = debugFor("syncrow:bucket:operator");
 const logger = loggerFor('BucketOperator');
 
 //TODO add optional param

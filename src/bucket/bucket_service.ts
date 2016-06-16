@@ -9,7 +9,7 @@ import * as async from "async";
 import {Connection} from "../connection/connection";
 import {loggerFor, debugFor} from "../utils/logger";
 
-const debug = debugFor("syncrow:bucket_service");
+const debug = debugFor("syncrow:bucket:service");
 const logger = loggerFor('BucketService');
 
 const UserService = getUserService();

@@ -11,7 +11,7 @@ import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import * as _ from "lodash";
 import {TransferHelper} from "../transport/transfer_helper";
 
-const debug = debugFor("syncrow:client");
+const debug = debugFor("syncrow:client:client");
 const logger = loggerFor('Client');
 
 export interface ClientOptions {
@@ -96,7 +96,7 @@ export class Client implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
+    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 

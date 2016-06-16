@@ -14,8 +14,8 @@ export interface SyncData {
 export interface StrategySubject {
     getRemoteFileMeta(otherParty:Messenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any;
     getRemoteFileList(otherParty:Messenger, callback:(err:Error, fileList?:Array<string>)=>any):any;
-    requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any;
-    pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any;
+    requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrorCallback):any;
+    pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback):any;
 }
 
 export class SynchronizationStrategy extends EventEmitter {

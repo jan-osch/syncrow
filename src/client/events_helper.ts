@@ -2,7 +2,6 @@
 import {Messenger} from "../connection/messenger";
 import {debugFor} from "../utils/logger";
 import {Event, eventTypes, Pull, Offer} from "./events";
-import {TransferActions} from "../transport/transfer_actions";
 
 const debug = debugFor('syncrow:events');
 
@@ -16,14 +15,12 @@ export class EventsHelper {
     /**
      * @param type
      * @param body
-     * @param id
      * @returns {string}
      */
-    public static createEvent(type:string, body = {}, id?:number):string {
+    public static createEvent(type:string, body = {}):string {
         return JSON.stringify({
             type: type,
             body: body,
-            id: id
         });
     }
 
@@ -45,21 +42,10 @@ export class EventsHelper {
      * @param otherParty
      * @param type
      * @param message
-     * @param id
      */
-    public static sendEvent(otherParty:Messenger, type:string, message?:any, id?:number) {
-        const event = EventsHelper.createEvent(type, message, id);
+    public static sendEvent(otherParty:Messenger, type:string, message?:any) {
+        const event = EventsHelper.createEvent(type, message);
         debug(`writing event: ${event}`);
         otherParty.writeMessage(event);
-    }
-
-    /**
-     * New method for better sending
-     * @param otherParty
-     * @param event
-     */
-    public static sendEventTwo(otherParty:Messenger, event:Object) {
-        debug(`writing event: ${event}`);
-        otherParty.writeMessage(JSON.stringify(event));
     }
 }
