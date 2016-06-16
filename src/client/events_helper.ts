@@ -1,9 +1,13 @@
 /// <reference path="../../typings/main.d.ts" />
 import {Messenger} from "../connection/messenger";
 import {debugFor} from "../utils/logger";
-import {Event, eventTypes, Pull, Offer} from "./events";
 
 const debug = debugFor('syncrow:events');
+
+export interface Event{
+    type:string,
+    body?:any
+}
 
 //TODO change this class to Event - allow static creation
 export class EventsHelper {

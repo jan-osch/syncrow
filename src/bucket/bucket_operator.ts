@@ -92,7 +92,7 @@ export class BucketOperator implements StrategySubject {
      * @param callback
      * @returns {undefined}
      */
-    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
+    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 
@@ -111,7 +111,7 @@ export class BucketOperator implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
+    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
