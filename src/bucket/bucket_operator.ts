@@ -2,18 +2,19 @@
 
 import {FileContainer} from "../fs_helpers/file_container";
 import {EventsHelper} from "../client/events_helper";
-import {TransferQueue} from "../transport/transfer_queue";
 import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
-import {TransferActions} from "../transport/transfer_actions";
 import {loggerFor, debugFor} from "../utils/logger";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
 import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
+import {TransferHelper} from "../transport/transfer_helper";
 
 const debug = debugFor("syncrow:bucket_operator");
 const logger = loggerFor('BucketOperator');
+
+//TODO add optional param
 
 export class BucketOperator implements StrategySubject {
     private path:string;
@@ -21,7 +22,7 @@ export class BucketOperator implements StrategySubject {
     private otherParties:Array<Messenger>;
     private container:FileContainer;
     private otherPartiesMessageListeners:Array<Function>;
-    private transferJobsQueue:TransferQueue;
+    private transferHelper:TransferHelper;
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
 
@@ -31,7 +32,13 @@ export class BucketOperator implements StrategySubject {
         this.container = new FileContainer(path);
         this.otherParties = [];
         this.otherPartiesMessageListeners = [];
-        this.transferJobsQueue = new TransferQueue(transferConcurrency);
+
+        this.transferHelper = new TransferHelper(this.container, {
+            transferQueueSize: transferConcurrency,
+            name: 'Server',
+            preferConnecting: false
+        });
+
         this.callbackHelper = new CallbackHelper();
         this.syncStrategy = strategy;
         this.syncStrategy.setData(this, this.container);
@@ -81,6 +88,16 @@ export class BucketOperator implements StrategySubject {
 
     /**
      * @param otherParty
+     * @param fileName
+     * @param callback
+     * @returns {undefined}
+     */
+    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:Function):any {
+        this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
+    }
+
+    /**
+     * @param otherParty
      * @param callback
      */
     public getRemoteFileList(otherParty:Messenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
@@ -95,7 +112,7 @@ export class BucketOperator implements StrategySubject {
      * @param callback
      */
     public requestRemoteFile(otherParty:Messenger, fileName:string, callback:Function):any {
-        this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, fileName, this.host, this.container, `BucketOperator: downloading ${fileName}`, callback);
+        this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
     private handleEvent(otherParty:Messenger, message:string) {
@@ -103,18 +120,23 @@ export class BucketOperator implements StrategySubject {
 
         debug(`got event from other party: ${event}`);
 
-        if (this.handleTransferEvent(otherParty, event)) {
-            return debug('Server handled transfer event');
+        if (event.type === TransferHelper.outerEvent) {
+            this.transferHelper.consumeMessage(event.body, otherParty);
 
-        } else if (this.callbackHelper.checkResponse(event)) {
-            return debug(`Handled event via callbackHelper`)
+        } else if (event.type === Client.events.metaDataForFile) {
+            this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
+
+        } else if (event.type === Client.events.fileList) {
+            this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
 
         } else if (event.type === Client.events.directoryCreated) {
             this.container.createDirectory(event.body.fileName);
+
             return this.broadcastEvent(event.type, {fileName: event.body.fileName}, otherParty);
 
         } else if (event.type === Client.events.fileDeleted) {
             this.container.deleteFile(event.body.fileName);
+
             return this.broadcastEvent(event.type, event.body, otherParty);
 
         } else if (event.type === Client.events.fileChanged) {
@@ -125,49 +147,27 @@ export class BucketOperator implements StrategySubject {
         } else if (event.type === Client.events.getFileList) {
             return this.container.getFileTree((err, fileList)=> {
                 if (err) return logger.error(err);
-                EventsHelper.sendEvent(otherParty, Client.events.fileList, fileList, event.id);
+
+                EventsHelper.sendEvent(otherParty, Client.events.fileList,
+                    {fileList: fileList, id: event.body.id}
+                );
             });
 
         } else if (event.type === Client.events.getMetaForFile) {
             return this.container.getFileMeta(event.body.fileName, (err, syncData)=> {
                 if (err)return logger.error(err);
-                EventsHelper.sendEvent(otherParty, Client.events.metaDataForFile, syncData, event.id);
-            })
+
+                EventsHelper.sendEvent(otherParty,
+                    Client.events.metaDataForFile,
+                    {syncData: syncData, id: event.body.id}
+                )
+            });
 
         } else if (event.type === EventsHelper.events.error) {
             return logger.warn(`received error message ${JSON.stringify(event.body)}`);
         }
 
         EventsHelper.sendEvent(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
-    }
-
-    private handleTransferEvent(otherParty:Messenger, event:{type:string, body?:any}):boolean {
-        if (event.type === TransferActions.events.connectAndDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(event.body.address, event.body.fileName,
-                this.container, `Server - downloading: ${event.body.fileName}`, ()=> {
-                    this.broadcastEvent(Client.events.fileChanged, event.body.fileName, otherParty);
-                });
-            return true;
-
-        } else if (event.type === TransferActions.events.connectAndUpload) {
-            this.transferJobsQueue.addConnectAndUploadJobToQueue(event.body.fieldName, event.body.address,
-                this.container, `Server - uploading: ${event.body.fieldName}`);
-            return true;
-
-        } else if (event.type === TransferActions.events.listenAndDownload) {
-            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, event.body.fileName, this.host,
-                this.container, `Server - downloading: ${event.body.fileName}`, ()=> {
-                    this.broadcastEvent(Client.events.fileChanged, event.body.fileName, otherParty);
-                });
-            return true;
-
-        } else if (event.type === TransferActions.events.listenAndUpload) {
-            this.transferJobsQueue.addListenAndUploadJobToQueue(event.body.fileName, otherParty, this.host,
-                this.container, `Server - uploading: ${event.body.fileName}`);
-            return true;
-
-        }
-        return false;
     }
 
     private broadcastEvent(eventType:string, body:any, excludeParty?:Messenger) {

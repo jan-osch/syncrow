@@ -37,6 +37,7 @@ export class TransferHelper {
 
     constructor(container:FileContainer, options:TransferHelperOptions) {
         const queueSize = options.transferQueueSize ? options.transferQueueSize : config.transferHelper.transferQueueSize; 
+        
         this.queue = new TransferQueue(queueSize, options.name);
         this.preferConnecting = options.preferConnecting;
         this.container = container;
