@@ -5,7 +5,7 @@ import {CallbackHelper} from "./callback_helper";
 import {TransferActions} from "./transfer_actions";
 import {EventsHelper} from "../client/events_helper";
 import {loggerFor} from "../utils/logger";
-
+import config from "../configuration";
 
 export interface TransferHelperOptions {
     transferQueueSize?:number,
@@ -16,6 +16,9 @@ export interface TransferHelperOptions {
 const callbackHelper = CallbackHelper.getInstance();
 const logger = loggerFor('TransferHelper');
 
+/**
+ * Private events
+ */
 interface TransferMessage {
     fileName:string,
     command:string,
@@ -33,7 +36,7 @@ export class TransferHelper {
     private container:FileContainer;
 
     constructor(container:FileContainer, options:TransferHelperOptions) {
-        const queueSize = options.transferQueueSize ? options.transferQueueSize : 10; //TODO
+        const queueSize = options.transferQueueSize ? options.transferQueueSize : config.transferHelper.transferQueueSize; 
         this.queue = new TransferQueue(queueSize, options.name);
         this.preferConnecting = options.preferConnecting;
         this.container = container;
@@ -53,6 +56,7 @@ export class TransferHelper {
                     host: transferMessage.host,
                     port: transferMessage.port
                 },
+                this.container,
                 this.getCallbackForIdOrErrorLogger(transferMessage.id)
             );
 

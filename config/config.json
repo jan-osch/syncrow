@@ -11,5 +11,8 @@
   },
   "server": {
     "transferQueueSize": 1000
+  },
+  "transferHelper":{
+    "transferQueueSize": 30
   }
 }
