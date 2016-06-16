@@ -52,8 +52,8 @@ export class TransferQueue {
      * @param destinationContainer
      * @param doneCallback
      */
-    public addConnectAndDownloadJobToQueue(address:{port:number, host:string},
-                                           fileName:string,
+    public addConnectAndDownloadJobToQueue(fileName:string,
+                                           address:{port:number, host:string},
                                            destinationContainer:FileContainer,
                                            doneCallback?:(err:Error)=>any) {
         debug(`adding job: connectAndDownloadFile: ${fileName}`);

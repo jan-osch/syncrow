@@ -5,9 +5,6 @@ import {CallbackHelper} from "./callback_helper";
 import {TransferActions} from "./transfer_actions";
 import {EventsHelper} from "../client/events_helper";
 import {loggerFor} from "../utils/logger";
-/**
- * Created by Janusz on 14.06.2016.
- */
 
 
 export interface TransferHelperOptions {
@@ -42,60 +39,49 @@ export class TransferHelper {
         this.container = container;
     }
 
-    public consumeMessage(transferMessage:TransferMessage) {
+    /**
+     * Used to handle events passed by caller
+     * @param transferMessage
+     * @param otherParty
+     * @returns {undefined}
+     */
+    public consumeMessage(transferMessage:TransferMessage, otherParty:Messenger) {
         if (transferMessage.command === TransferActions.events.connectAndUpload) {
-            this.queue.addConnectAndUploadJobToQueue(transferMessage.fileName, {
+            this.queue.addConnectAndUploadJobToQueue(
+                transferMessage.fileName,
+                {
                     host: transferMessage.host,
                     port: transferMessage.port
                 },
-                this.getCallbackForIdOrErrorLogger(transferMessage.id));
+                this.getCallbackForIdOrErrorLogger(transferMessage.id)
+            );
 
         } else if (transferMessage.command === TransferActions.events.connectAndDownload) {
-            this.transferJobsQueue.addConnectAndDownloadJobToQueue(transferMessage.address, transferMessage.fileName,
-                this.fileContainer, `client - downloading: ${transferMessage.fileName}`);
-            return true;
-            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbaks in callback helper
+            this.queue.addConnectAndDownloadJobToQueue(
+                transferMessage.fileName,
+                {
+                    host: transferMessage.host,
+                    port: transferMessage.port
+                },
+                this.container,
+                this.getCallbackForIdOrErrorLogger(transferMessage.id)
+            );
 
         } else if (transferMessage.command === TransferActions.events.listenAndDownload) {
-            this.transferJobsQueue.addListenAndDownloadJobToQueue(otherParty, transferMessage.fileName,
-                otherParty.getOwnHost(), this.fileContainer, `client - downloading: ${transferMessage.fileName}`);
-            return true;
-            //TODO FILE_REQUEST_CALLBACK_STRATEGY - here after download is complete check callbacks
+            return this.sendFileViaListening(transferMessage.fileName, otherParty, {id: transferMessage.id});
 
         } else if (transferMessage.command === TransferActions.events.listenAndUpload) {
-            this.transferJobsQueue.addListenAndUploadJobToQueue(transferMessage.fileName, otherParty,
-                this.otherParty.getOwnHost(), this.fileContainer, `client - uploading: ${transferMessage.fileName}`);
-            return true;
-
+            return this.sendFileViaListening(transferMessage.fileName, otherParty, {id: transferMessage.id});
         }
-        return false;
     }
 
-    public sendFileToRemote(otherParty:Messenger, fileName:string, callback:(err:Error)=>any) {
-
-        if (this.preferConnecting) {
-            const id = callbackHelper.addCallback(callback);
-            const message:TransferMessage = {
-                command: TransferActions.events.listenAndDownload,
-                id: id,
-                fileName: fileName
-            };
-            return EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
-        }
-
-        this.queue.addListenAndUploadJobToQueue(fileName, otherParty.getOwnHost(), this.container, (address)=> {
-            const message:TransferMessage = {
-                fileName: fileName,
-                command: TransferActions.events.connectAndDownload,
-                host: address.host,
-                port: address.port
-            };
-
-            EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
-        }, callback);
-    }
-
-    public getFileFromRemote(otherParty:Messenger, fileName:string, callback:(err:Error)=>any) {
+    /**
+     * Downloads a file from remote
+     * @param otherParty
+     * @param fileName
+     * @param callback
+     */
+    public getFileFromRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback) {
 
         if (this.preferConnecting) {
             const id = callbackHelper.addCallback(callback);
@@ -109,19 +95,78 @@ export class TransferHelper {
             return EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
         }
 
-        this.queue.addListenAndDownloadJobToQueue(fileName, otherParty.getOwnHost(), this.container, (address)=> {
-            const message:TransferMessage = {
-                fileName: fileName,
-                command: TransferActions.events.connectAndUpload,
-                host: address.host,
-                port: address.port
-            };
-
-            EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
-        }, callback);
+        return this.getFileViaListening(fileName, otherParty, {callback: callback});
     }
 
-    private getCallbackForIdOrErrorLogger(id:string) {
+    /**
+     * Uploads a file to remote
+     * @param otherParty
+     * @param fileName
+     * @param callback
+     */
+    public sendFileToRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback) {
+
+        if (this.preferConnecting) {
+            const id = callbackHelper.addCallback(callback);
+
+            const message:TransferMessage = {
+                command: TransferActions.events.listenAndDownload,
+                id: id,
+                fileName: fileName
+            };
+
+            return EventsHelper.sendEvent(otherParty, TransferHelper.outerEvent, message);
+        }
+
+        return this.sendFileViaListening(fileName, otherParty, {callback: callback});
+    }
+
+    private sendFileViaListening(fileName:string, remote:Messenger, optional:{id ?:string, callback?:ErrorCallback }) {
+        this.queue.addListenAndUploadJobToQueue(
+            fileName,
+            remote.getOwnHost(),
+            this.container,
+
+            (address)=> {
+                const message:TransferMessage = {
+                    fileName: fileName,
+                    command: TransferActions.events.connectAndDownload,
+                    host: address.host,
+                    port: address.port,
+                    id: optional.id
+                };
+
+                EventsHelper.sendEvent(remote, TransferHelper.outerEvent, message);
+            },
+
+            optional.callback
+        );
+    }
+
+
+    private getFileViaListening(fileName:string, remote:Messenger, optional:{id?:string, callback?:ErrorCallback}) {
+        this.queue.addListenAndDownloadJobToQueue(
+            fileName,
+            remote.getOwnHost(),
+            this.container,
+
+            (address)=> {
+                const message:TransferMessage = {
+                    fileName: fileName,
+                    command: TransferActions.events.connectAndUpload,
+                    host: address.host,
+                    port: address.port,
+                    id: optional.id
+                };
+
+                EventsHelper.sendEvent(remote, TransferHelper.outerEvent, message);
+            },
+
+            optional.callback
+        );
+    }
+
+    private getCallbackForIdOrErrorLogger(id?:string):ErrorCallback {
         if (id) return callbackHelper.retriveCallback(id);
 
         return (err)=> {
