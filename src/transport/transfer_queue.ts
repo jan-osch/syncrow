@@ -1,7 +1,7 @@
 /// <reference path="../../typings/main.d.ts" />
 
 import {FileContainer} from "../fs_helpers/file_container";
-import {TransferActions} from "./transfer_actions";
+import {TransferActions, ListenCallback} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
 import {loggerFor} from "../utils/logger";
@@ -28,7 +28,7 @@ export class TransferQueue {
     public addConnectAndUploadJobToQueue(fileName:string,
                                          address:{port:number, host:string},
                                          sourceContainer:FileContainer,
-                                         doneCallback) {
+                                         doneCallback:ErrorCallback) {
         const timingMessage = `${this.name} - connecting and uploading file: ${fileName}`;
         debug(`adding job: connectAndUploadFile: ${fileName}`);
         const job = (uploadingDoneCallback) => {
@@ -55,7 +55,7 @@ export class TransferQueue {
     public addConnectAndDownloadJobToQueue(fileName:string,
                                            address:{port:number, host:string},
                                            destinationContainer:FileContainer,
-                                           doneCallback?:(err:Error)=>any) {
+                                           doneCallback?:ErrorCallback) {
         debug(`adding job: connectAndDownloadFile: ${fileName}`);
 
         const timingMessage = `${this.name} - connecting and downloading file: ${fileName}`;
@@ -85,8 +85,8 @@ export class TransferQueue {
     public  addListenAndUploadJobToQueue(fileName:string,
                                          host:string,
                                          sourceContainer:FileContainer,
-                                         listeningCallback:(address:{host:string,port:number})=>any,
-                                         doneCallback:(err:Error)=>any) {
+                                         listeningCallback:ListenCallback,
+                                         doneCallback:ErrorCallback) {
 
         const timingMessage = `${this.name} - listening and uploading file: ${fileName}`;
         debug(`adding job: listenAndUploadFile ${fileName}`);
@@ -115,8 +115,8 @@ export class TransferQueue {
     public  addListenAndDownloadJobToQueue(fileName:string,
                                            host:string,
                                            destinationContainer:FileContainer,
-                                           listeningCallback:(address:{host:string,port:number})=>any,
-                                           doneCallback:(err:Error)=>any) {
+                                           listeningCallback:ListenCallback,
+                                           doneCallback:ErrorCallback) {
 
         debug(`adding job: listenAndDownloadFile - fileName: ${fileName} host: ${host}`);
 

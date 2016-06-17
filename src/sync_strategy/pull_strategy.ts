@@ -1,11 +1,9 @@
 import {NoActionStrategy} from "./no_action_strategy";
-import {SynchronizationStrategy, SyncData} from "./sync_strategy";
 import * as async from "async";
-import * as _ from "lodash";
 import {debugFor, loggerFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 
-const debug = debugFor('syncrow:pull_strategy');
+const debug = debugFor('syncrow:strategy:pull');
 const logger = loggerFor('PullStrategy');
 
 /**
@@ -13,32 +11,55 @@ const logger = loggerFor('PullStrategy');
  */
 export class PullStrategy extends NoActionStrategy {
 
-    private pulled: boolean
+    private pulled:boolean;
 
     constructor() {
         super();
         this.pulled = false;
     }
 
-    public synchronize(otherParty: Messenger, callback: Function = _.noop): any {
-        if (this.pulled) return super.synchronize(otherParty, callback);
+    /**
+     * @override
+     * @param otherParty
+     * @param doneCallback
+     * @returns {undefined}
+     */
+    public synchronize(otherParty:Messenger, doneCallback:ErrorCallback):any {
+        if (this.pulled) return super.synchronize(otherParty, doneCallback);
 
-        this.subject.getRemoteFileList((err, fileList: Array<string>) => {
+        debug('did not pull before -starting to requesting remote file list');
+
+        async.waterfall(
+            [
+                (gotListCallback)=> this.subject.getRemoteFileList(otherParty, gotListCallback),
+                (fileList, filesSyncedCallback)=> this.synchronizeFileList(otherParty, fileList, filesSyncedCallback)
+            ],
+            (err)=>{
+                if(err) return doneCallback(err);
+                this.pulled = true;
+                logger.info(`pulled all files - switching to no-action strategy`)
+            }
+        );
+    }
+
+    private synchronizeFileList(otherParty:Messenger, fileList:Array<string>, doneCallback:any) {
+        async.each(fileList,
+
+            (file, fileSyncedCallback)=>this.synchronizeFile(otherParty, file, fileSyncedCallback),
+
+            doneCallback
+        );
+    }
+
+    private synchronizeFile(otherParty:Messenger, file:string, callback:ErrorCallback) {
+        this.subject.getRemoteFileMeta(otherParty, file, (err, syncData)=> {
             if (err) return callback(err);
 
-            async.each(fileList,
+            if (syncData.isDirectory) {
+                return this.container.createDirectory(file, callback);
+            }
 
-                (fileName, eachCallback) => this.subject.requestRemoteFile(otherParty, fileName, eachCallback),
-
-                (err) => {
-                    if (err) return callback(err);
-
-                    logger.info(`Pulled everything from remote - switching to no action strategy`);
-
-                    this.pulled = true;
-                    callback();
-                }
-            );
-        })
+            return this.subject.requestRemoteFile(otherParty, file, callback);
+        });
     }
 }

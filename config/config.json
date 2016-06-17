@@ -1,6 +1,6 @@
 {
   "fileContainer": {
-    "watchTimeout": 250,
+    "watchTimeout": 400,
     "processedFilesLimit": 600
   },
   "client": {
