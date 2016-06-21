@@ -26,6 +26,7 @@ export class BucketOperator implements StrategySubject {
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
 
+    //TODO add constructor params - private etc.
     constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize, strategy = new NewestStrategy()) {
         this.path = path;
         this.host = host;

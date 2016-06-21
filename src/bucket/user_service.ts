@@ -1,6 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
-
 import {loggerFor, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:bucket:user_service");
@@ -21,6 +18,6 @@ export class UserService {
 
 const instance = new UserService();
 
-export function getUserService(){
+export function getUserService() {
     return instance;
 }

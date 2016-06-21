@@ -13,7 +13,7 @@ const logger = loggerFor('PullStrategy');
  */
 export class PullStrategy extends NoActionStrategy {
 
-    private pulled: boolean
+    private pulled: boolean;
 
     constructor() {
         super();

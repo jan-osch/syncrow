@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import {getUserService} from "./user_service";
 import {Server, createServer} from "net";
 import {BucketOperator} from "./bucket_operator";

@@ -1,9 +1,7 @@
-/// <reference path="../../typings/main.d.ts" />
-
-import async = require('async');
-import  fs = require('fs');
-import path = require('path');
+import * as async from "async";
+import * as fs from "fs";
 import {Stats} from "fs";
+import * as path from "path";
 
 export interface ReadTreeOptions {
     filter?:(s:string)=>boolean;
