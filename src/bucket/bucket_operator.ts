@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import {FileContainer} from "../fs_helpers/file_container";
 import {EventsHelper} from "../client/events_helper";
 import {Messenger} from "../connection/messenger";
@@ -8,17 +6,18 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
-import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
 import {TransferHelper} from "../transport/transfer_helper";
+import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 
 const debug = debugFor("syncrow:bucket:operator");
 const logger = loggerFor('BucketOperator');
 
-//TODO add optional param
+export interface BucketOperatorParams {
+    transferConcurrency?:number,
+    strategy?:SynchronizationStrategy,
+}
 
 export class BucketOperator implements StrategySubject {
-    private path:string;
-    private host:string;
     private otherParties:Array<Messenger>;
     private container:FileContainer;
     private otherPartiesMessageListeners:Array<Function>;
@@ -26,10 +25,10 @@ export class BucketOperator implements StrategySubject {
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
 
-    //TODO add constructor params - private etc.
-    constructor(host:string, path:string, transferConcurrency = config.server.transferQueueSize, strategy = new NewestStrategy()) {
-        this.path = path;
-        this.host = host;
+    constructor(private host:string, private path:string, options:BucketOperatorParams) {
+        const transferConcurrency = options.transferConcurrency ? options.transferConcurrency : config.server.transferQueueSize;
+        const strategy = options.strategy ? options.strategy : new NoActionStrategy();
+
         this.container = new FileContainer(path);
         this.otherParties = [];
         this.otherPartiesMessageListeners = [];
@@ -119,7 +118,7 @@ export class BucketOperator implements StrategySubject {
     private handleEvent(otherParty:Messenger, message:string) {
         const event = EventsHelper.parseEvent(otherParty, message);
 
-        debug(`got event from other party: ${JSON.stringify(event, null , 2)}`);
+        debug(`got event from other party: ${JSON.stringify(event, null, 2)}`);
 
         if (event.type === TransferHelper.outerEvent) {
             return this.transferHelper.consumeMessage(event.body, otherParty);
