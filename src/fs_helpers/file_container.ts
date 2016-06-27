@@ -104,8 +104,9 @@ export class FileContainer extends EventEmitter {
      *
      * @param fileName
      * @param readStream
+     * @param callback
      */
-    public consumeFileStream(fileName:string, readStream:ReadableStream) {
+    public consumeFileStream(fileName:string, readStream:ReadableStream, callback:ErrorCallback) {
         try {
             debug(`starting to read from remote - file ${fileName} is blocked now`);
 
@@ -113,13 +114,12 @@ export class FileContainer extends EventEmitter {
             const writeStream = fs.createWriteStream(this.createAbsolutePath(fileName));
 
             writeStream.on('finish', ()=> this.unBlockFileWithTimeout(fileName));
+            writeStream.on('finish', callback);
 
-            readStream.pipe(writeStream).on('error', (error)=> {
-                logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
-            });
+            readStream.pipe(writeStream).on('error', callback);
 
         } catch (error) {
-            logger.warn(`/consumeFileStream - could not consume a fileStream, reason: ${error}`)
+            callback(error);
         }
     }
 

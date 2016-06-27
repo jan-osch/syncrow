@@ -7,17 +7,8 @@ import {loggerFor, debugFor} from "../utils/logger";
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
 
-export interface TransferStatusEvent {
-    file:string,
-    download:boolean,
-    success:boolean,
-    error:string,
-    type:'transferStatus',
-    id:string
-}
+export type ListenCallback = (address:{port:number, host:string})=>any;
 
-//TODO add error handling on sockets
-//TODO implement proper ERROR handling
 export class TransferActions {
 
     public static events = {
@@ -40,7 +31,8 @@ export class TransferActions {
     public static listenAndDownloadFile(fileName:string,
                                         host:string,
                                         destinationContainer:FileContainer,
-                                        doneCallback:Function, listeningCallback:(address:{port:number, host:string})=>any) {
+                                        doneCallback:Function,
+                                        listeningCallback:ListenCallback) {
 
         debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
         const filePullingServer = createServer(
@@ -65,20 +57,20 @@ export class TransferActions {
      * @param fileName
      * @param host
      * @param sourceContainer
-     * @param callback
+     * @param doneCallback
      * @param listenCallback
      */
     public static listenAndUploadFile(fileName:string,
                                       host:string,
                                       sourceContainer:FileContainer,
-                                      callback:Function,
-                                      listenCallback:Function) {
+                                      doneCallback:ErrorCallback,
+                                      listenCallback:ListenCallback) {
 
 
         debug(`executing: listenAndUploadFile - fileName: ${fileName}, host: ${host}`);
         const fileOfferingServer = createServer(
             (fileTransferSocket)=> {
-                fileTransferSocket.on('end', ()=>TransferActions.closeServer(fileOfferingServer, callback));
+                fileTransferSocket.on('end', ()=>TransferActions.closeServer(fileOfferingServer, doneCallback));
                 sourceContainer.getReadStreamForFile(fileName).pipe(fileTransferSocket);
             }
         ).listen(()=> {
@@ -89,8 +81,8 @@ export class TransferActions {
             };
 
             listenCallback(address);
-            
-        }).on('error', callback);
+
+        }).on('error', doneCallback);
     }
 
     /**
@@ -98,18 +90,18 @@ export class TransferActions {
      * @param fileName
      * @param address
      * @param sourceContainer
-     * @param callback
+     * @param doneCallback
      */
     public static connectAndUploadFile(fileName:string,
                                        address:{host:string, port:number},
                                        sourceContainer:FileContainer,
-                                       callback:Function) {
+                                       doneCallback:ErrorCallback) {
         debug(`connectAndUploadFile: connecting to ${address.host}:${address.port}`);
         const fileSendingSocket = connect(address, ()=> {
-            fileSendingSocket.on('end', callback);
+            fileSendingSocket.on('end', doneCallback);
 
             sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
-        }).on('error', callback)
+        }).on('error', doneCallback)
 
     }
 
@@ -118,17 +110,17 @@ export class TransferActions {
      * @param fileName
      * @param address
      * @param destinationContainer
-     * @param callback
+     * @param doneCallback
      */
     public static connectAndDownloadFile(fileName:string,
                                          address:{host:string, port:number},
                                          destinationContainer:FileContainer,
-                                         callback:Function) {
+                                         doneCallback:ErrorCallback) {
 
         debug(`connectAndDownloadFile: connecting to ${address.host}:${address.port}`);
         const fileTransferSocket = connect(address, ()=> {
-            TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, callback);
-        }).on('error', callback);
+            TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, doneCallback);
+        }).on('error', doneCallback);
     }
 
     private static closeServer(server:Server, callback:Function) {
@@ -136,9 +128,7 @@ export class TransferActions {
         callback();
     }
 
-    private static consumeFileFromSocket(fileTransferSocket:Socket, fileName:string, destinationContainer:FileContainer, callback:Function) {
-        fileTransferSocket.on('end', callback);
-
-        destinationContainer.consumeFileStream(fileName, fileTransferSocket);
+    private static consumeFileFromSocket(fileTransferSocket:Socket, fileName:string, destinationContainer:FileContainer, callback:ErrorCallback) {
+        destinationContainer.consumeFileStream(fileName, fileTransferSocket, callback);
     }
 }

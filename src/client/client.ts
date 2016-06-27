@@ -18,6 +18,7 @@ export interface ClientOptions {
     socketsLimit?:number
     strategy?:SynchronizationStrategy,
     filter?:(s:string)=>boolean;
+    listen?:boolean
 }
 
 export class Client implements StrategySubject {
@@ -132,7 +133,7 @@ export class Client implements StrategySubject {
         let event = EventsHelper.parseEvent(otherParty, message);
         if (!event) return;
 
-        debug(`Client - received a ${event.type} event: ${JSON.stringify(event)}`);
+        debug(`Client - received a ${event.type} event: ${JSON.stringify(event.body)}`);
 
         if (event.type === TransferHelper.outerEvent) {
             return this.transferHelper.consumeMessage(event.body, otherParty);
