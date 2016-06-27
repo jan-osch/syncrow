@@ -1,11 +1,11 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import * as program from "commander";
 import {debugFor, loggerFor} from "../utils/logger";
 import {applicationServer} from "../server/application_server";
 
 const logger = loggerFor("CLI");
 const debug = debugFor("syncrow:cli");
+
+//TODO reimplement using flow from command_line_tool
 
 program.version('0.0.1')
     .option('-h, --host <host>', 'own host for connection', '127.0.0.1')

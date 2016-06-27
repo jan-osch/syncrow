@@ -6,6 +6,8 @@ const logger = loggerFor('UserService');
 
 export class UserService {
     //TODO all
+    
+    //TODO add security
     constructor() {
 
     }

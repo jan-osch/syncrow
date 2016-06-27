@@ -25,9 +25,6 @@ const debug = debugFor("syncrow:cli");
  */
 main();
 
-//TODO add command - pull - download everything from bucket
-//TODO add command - push - upload everything to bucket
-
 function main() {
     const configPath = '.syncrow.json';
 
@@ -73,7 +70,7 @@ interface ProgramOptions {
 function getConfigFromCommandLine(): ProgramOptions {
     program.version('0.0.2')
 
-        .option('-h, --host <host>', 'remote host for connection')
+        .option('-h, --host <host>', 'remote host for connection') //TODO add support for getting the local public IP
         .option('-p, --port <port>', 'remote port for connection')
         .option('-c, --local <local>', 'local port for listening')
         .option('-b, --bucket <bucket>', 'bucket name')

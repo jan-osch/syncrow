@@ -49,7 +49,6 @@ export class FileContainer extends EventEmitter {
         const fileLimit = options.fileLimit ? options.fileLimit : config.fileContainer.processedFilesLimit;
         this.filterFunction = options.filter ? options.filter : s => false;
         this.watchTimeout = options.timeout ? options.timeout : config.fileContainer.watchTimeout;
-        this.filterFunction('kupka kupka');
         this.directoryToWatch = directoryToWatch;
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();

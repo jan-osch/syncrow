@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import * as express from "express";
 import * as bodyParser from "body-parser";
 import {BucketService} from "../bucket/bucket_service";

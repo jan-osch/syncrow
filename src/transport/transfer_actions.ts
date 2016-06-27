@@ -29,12 +29,6 @@ export class TransferActions {
     };
 
 
-    //TODO
-    /** 1: DODAJ TO JAKO subtyp PUSH PULL
-     *
-     */
-    //TODO
-
     /**
      * Listens for other party to connect, then downloads the file from it
      * @param fileName
