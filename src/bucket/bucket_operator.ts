@@ -124,10 +124,10 @@ export class BucketOperator implements StrategySubject {
             return this.transferHelper.consumeMessage(event.body, otherParty);
 
         } else if (event.type === Client.events.metaDataForFile) {
-            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.syncData);
+            return this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData);
 
         } else if (event.type === Client.events.fileList) {
-            return this.callbackHelper.retriveCallback(event.body.id)(null, event.body.fileList);
+            return this.callbackHelper.getCallback(event.body.id)(null, event.body.fileList);
 
         } else if (event.type === Client.events.directoryCreated) {
             this.container.createDirectory(event.body.fileName);

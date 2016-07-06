@@ -3,5 +3,10 @@
     "chalk": "registry:npm/chalk#1.0.0+20160211003958",
     "moment": "registry:npm/moment#2.10.5+20160211003958",
     "request": "registry:npm/request#2.69.0+20160428223725"
+  },
+  "globalDependencies": {
+    "chai": "registry:dt/chai#3.4.0+20160601211834",
+    "mocha": "registry:dt/mocha#2.2.5+20160619032855",
+    "sinon": "registry:dt/sinon#1.16.0+20160517064723"
   }
 }

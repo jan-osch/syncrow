@@ -38,7 +38,7 @@ export class Connection extends EventEmitter {
      * @param strategy
      * @param remotePort
      * @param remoteHost
-     */
+     *///TODO ADD options object
     constructor(socket:Socket, strategy = ConnectionStrategy.onProblemAbort, remotePort?:number, remoteHost?:string) {
         super();
         this.remoteHost = remoteHost;

@@ -172,7 +172,7 @@ export class TransferHelper {
     }
 
     private getCallbackForIdOrErrorLogger(id?:string):ErrorCallback {
-        if (id) return callbackHelper.retriveCallback(id);
+        if (id) return callbackHelper.getCallback(id);
 
         return (err)=> {
             logger.error(err)

@@ -37,7 +37,7 @@ export class CallbackHelper {
      * @param id
      * @returns {function(Error, Event): any}
      */
-    public retriveCallback(id:string):Function {
+    public getCallback(id:string):Function {
         if (id && this.callbackMap.has(id)) {
             debug(`found callback for stored id`);
             const callback = this.callbackMap.get(id);

@@ -44,6 +44,7 @@
     "gulp": "latest",
     "gulp-shell": "^0.5.2",
     "gulp-watch": "^4.3.6",
+    "mocha": "^2.5.3",
     "rewire": "^2.5.1",
     "run-sequence": "^1.2.1",
     "sinon": "^1.17.4"
