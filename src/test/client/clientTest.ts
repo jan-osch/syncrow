@@ -3,11 +3,16 @@ import * as async from "async";
 import {createTestDir, createMultipleFiles, obtainTwoSockets} from "../test_utils";
 import {Messenger} from "../../connection/messenger";
 import {Connection} from "../../connection/connection";
+import * as sinon from "sinon";
+import {EventEmitter} from "events";
+import {expect} from "chai";
+import * as rimraf from "rimraf";
+import * as _ from "lodash";
 
 
 describe('Client', ()=> {
 
-    describe('it will synchronize simple file on command', ()=> {
+    xdescribe('it will synchronize simple file on command', ()=> {
 
         const contentA = 'mockFileContent  sample sample\n sample';
         const contentB = 'sample \t \n sample';
@@ -51,4 +56,61 @@ describe('Client', ()=> {
             })
         })
     });
+
+    describe('Return a correct file list', ()=> {
+        const testDir = 'testDir';
+        const testFiles = [
+            {filePath: `${testDir}/dirA/file1.txt`, content: `ibberish`},
+            {filePath: `${testDir}/dirA/dirAA/file2.txt`, content: `jk123jj9casc`},
+            {filePath: `${testDir}/.driB/.file.txt`, content: ``},
+            {filePath: `${testDir}/new_directory/file.txt.xyz`, content: `random content`},
+            {filePath: `${testDir}/.hidden_file`, content: 'hidden_content'},
+            {filePath: `${testDir}/deep_dir/even_deeper/very_deep/.hidden_deep/.hidden_file`, content: '\wdjkasd'}
+        ];
+
+        const expectedFiles = testFiles.map(file => file.filePath.replace(`${testDir}/`, ''));
+
+        let expectedDirs = [];
+
+        expectedFiles.forEach(file=> {
+            for (let i = 0; i < file.length; i++) {
+                if (file.charAt(i) === '/') {
+                    expectedDirs.push(file.substr(0, i));
+                }
+            }
+        });
+
+        expectedDirs = _.uniq(expectedDirs);
+
+        before(function (done) {
+            async.series([
+                callback => createTestDir(testDir, callback),
+                callback => createMultipleFiles(testFiles, callback),
+            ], done)
+        });
+
+        after(function (done) {
+            rimraf(testDir, done);
+        });
+
+
+        it('will obtain correct file list', function (done) {
+            const mockMessenger = new EventEmitter();
+            mockMessenger.isMessengerAlive = sinon.stub().returns(false);
+
+            mockMessenger.writeMessage = (message)=> {
+                const parsed = JSON.parse(message);
+                expect(parsed.type).to.equal('fileList');
+                expectedFiles.forEach(file => expect(parsed.body.fileList).contains(file));
+                expectedDirs.forEach(dir => expect(parsed.body.fileList).contains(dir));
+
+                done();
+            };
+
+            new Client(testDir, mockMessenger);
+            const mockGetFileListMessage = JSON.stringify({type: 'getFileList', body: 'mockBody'});
+            mockMessenger.emit('message', mockGetFileListMessage);
+        })
+    });
+
 });

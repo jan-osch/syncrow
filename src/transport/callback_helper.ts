@@ -19,31 +19,18 @@ export class CallbackHelper {
     }
 
     /**
-     * Generates eventId
-     * @param otherParty
-     * @param type
-     * @param body
-     * @param callback
-     */
-    public sendWrapped(otherParty:Messenger, type:string, body:any, callback:(err:Error, event:Event)=>any) {
-        const eventId = CallbackHelper.generateEventId();
-        this.callbackMap.set(eventId, callback);
-
-        EventsHelper.sendEvent(otherParty, type, body, eventId);
-    }
-
-    /**
      * Returns callback if it exists
      * @param id
      * @returns {function(Error, Event): any}
      */
     public getCallback(id:string):Function {
         if (id && this.callbackMap.has(id)) {
-            debug(`found callback for stored id`);
+            debug(`found callback for stored id: ${id}`);
             const callback = this.callbackMap.get(id);
             this.callbackMap.delete(id);
             return callback;
         }
+        debug(`callback not found for id: ${id}`);
     }
 
     /**
@@ -65,7 +52,9 @@ export class CallbackHelper {
             throw new Error(`callback id: ${id} already exists`);
         }
 
+        debug(`setting a callback for id: ${id}`);
         this.callbackMap.set(id, callback);
+        console.warn(Array.from(this.callbackMap.entries()))
     }
 
     /**
@@ -85,6 +74,7 @@ export class CallbackHelper {
      */
     public static getInstance():CallbackHelper {
         if (!instance) {
+            debug(`New instance of callbackHelper is created`);
             instance = new CallbackHelper();
         }
 
