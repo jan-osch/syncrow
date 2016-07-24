@@ -71,7 +71,7 @@ export class FileContainer extends EventEmitter {
     /**
      * @param callback
      */
-    public  getFileTree(callback:(err, files?:Array<string>)=>void) {
+    public  getFileTree(callback:(err:Error, files?:Array<string>)=>void) {
         debug(`obtaining file tree`);
 
         readTree(this.directoryToWatch, {filter: this.filterFunction}, (err, results:Array<string>)=> {

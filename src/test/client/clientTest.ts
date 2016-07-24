@@ -1,6 +1,6 @@
 import {Client} from "../../client/client";
 import * as async from "async";
-import {createTestDir, createMultipleFiles, obtainTwoSockets} from "../test_utils";
+import {createDir, createPathSeries, obtainTwoSockets} from "../test_utils";
 import {Messenger} from "../../connection/messenger";
 import {Connection} from "../../connection/connection";
 import * as sinon from "sinon";
@@ -10,7 +10,7 @@ import * as rimraf from "rimraf";
 import * as _ from "lodash";
 
 
-describe('Client', ()=> {
+xdescribe('Client', ()=> {
 
     xdescribe('it will synchronize simple file on command', ()=> {
 
@@ -26,11 +26,11 @@ describe('Client', ()=> {
         before(function (done) {
 
             async.series([
-                callback => createTestDir(directoryA, callback),
+                callback => createDir(directoryA, callback),
 
-                callback => createTestDir(directoryB, callback),
+                callback => createDir(directoryB, callback),
 
-                callback => createMultipleFiles([
+                callback => createPathSeries([
                     {filePath: fileA, content: contentA},
                     {filePath: fileB, content: contentB},
                 ], callback),
@@ -84,8 +84,8 @@ describe('Client', ()=> {
 
         before(function (done) {
             async.series([
-                callback => createTestDir(testDir, callback),
-                callback => createMultipleFiles(testFiles, callback),
+                callback => createDir(testDir, callback),
+                callback => createPathSeries(testFiles, callback),
             ], done)
         });
 

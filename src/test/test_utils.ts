@@ -1,7 +1,6 @@
 import * as net from "net";
 import * as mkdirp from "mkdirp";
 import * as async from "async";
-import * as path from "path";
 import * as fs from "fs";
 import * as rimraf from "rimraf";
 
@@ -22,31 +21,33 @@ export function obtainTwoSockets(doneCallback:(err, result?:{client:net.Socket, 
         (callback)=> {
             clientSocket = net.connect({port: port}, callback)
         }
-    ], (err)=>{
-        if(err) return doneCallback(err);
+    ], (err)=> {
+        if (err) return doneCallback(err);
     });
 }
 
 /**
- * @param filePath
+ * @param path
  * @param content
+ * @param directory
  * @param doneCallback
  */
-export function createFile(filePath:string, content:string, doneCallback:ErrorCallback) {
-    async.series([
-        callback =>mkdirp(path.dirname(filePath), callback),
-        callback => fs.writeFile(filePath, content, callback),
-    ], doneCallback)
+export function createPath(path:string, content?:string, directory:boolean, doneCallback:ErrorCallback) {
+    if (directory) {
+        return createDir(path, doneCallback);
+    }
+
+    return fs.writeFile(path, content, doneCallback);
 }
 
 /**
  * @param files
  * @param doneCallback
  */
-export function createMultipleFiles(files:Array<{filePath:string, content:string}>, doneCallback:ErrorCallback) {
-    async.each(files,
+export function createPathSeries(files:Array<{path:string, content?:string, directory?:boolean}>, doneCallback:ErrorCallback) {
+    async.eachSeries(files,
 
-        (file, callback)=> createFile(file.filePath, file.content, callback),
+        (file, callback)=> createPath(file.path, file.content, file.directory, callback),
 
         doneCallback);
 }
@@ -56,25 +57,30 @@ export function createMultipleFiles(files:Array<{filePath:string, content:string
  * @param secondFilePath
  * @param doneCallback
  */
-export function compareTwoFiles(firstFilePath:string, secondFilePath:string, doneCallback:(err:Error, result:{matching:boolean, reason?:string})=>any) {
-    async.parallel({
-        first: callback=>fs.readFile(firstFilePath, callback),
-        second: callback=>fs.readFile(secondFilePath, callback)
-    }, (err, fetchedContents:{first:string, second:string})=> {
-        if (err) return doneCallback(null, {matching: false, reason: err});
-
-        if (fetchedContents.first === fetchedContents.second) return doneCallback(null, {matching: true});
-        return doneCallback(null, {matching: false, reason: 'Content not matching'});
-    });
+export function compareTwoFiles(firstFilePath:string, secondFilePath:string, doneCallback:(err:Error, result:{first:string, second:string})=>any) {
+    async.parallel(
+        {
+            first: callback=>fs.readFile(firstFilePath, callback),
+            second: callback=>fs.readFile(secondFilePath, callback)
+        },
+        
+        doneCallback
+    );
 }
 
 /**
  * @param dirPath
  * @param doneCallback
  */
-export function createTestDir(dirPath:string, doneCallback:ErrorCallback) {
-    async.series([
-        (callback)=>rimraf(dirPath, callback),
-        (callback)=>mkdirp(dirPath, callback),
-    ], doneCallback);
+export function createDir(dirPath:string, doneCallback:ErrorCallback) {
+    mkdirp(dirPath, doneCallback);
 }
+
+/**
+ * @param path
+ * @param callback
+ */
+export function removePath(path:string, callback:ErrorCallback) {
+    rimraf(path, callback);
+}
+
