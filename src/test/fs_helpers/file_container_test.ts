@@ -1,22 +1,28 @@
-import {createPathSeries, removePath} from "../test_utils";
+import {createPathSeries, removePath, pathExists, createPath} from "../test_utils";
+import * as chai from "chai";
 import {expect} from "chai";
 import * as sinon from "sinon";
 import {FileContainer} from "../../fs_helpers/file_container";
 import * as async from "async";
+import * as sinonChai from "sinon-chai";
+import * as fs from "fs";
+
+chai.use(sinonChai);
 
 
 describe('FileContainer', ()=> {
     let sandbox;
-    let reverRewire;
+    let container:FileContainer;
 
-    beforeEach(function (done) {
+    beforeEach(function () {
         sandbox = sinon.sandbox.create();
-        done();
+        sandbox.stub(console, 'info');
     });
 
-    afterEach(function (done) {
+    afterEach(function () {
         sandbox.restore();
-        done();
+        container.shutdown();
+        container = null;
     });
 
 
@@ -38,11 +44,11 @@ describe('FileContainer', ()=> {
                     (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        const container = new FileContainer(testDir);
-                        container.beginWatching();
-
+                        container = new FileContainer(testDir);
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
                         container.getFileTree((err, files)=> {
-
                             expect(err).not.to.be.defined;
                             expect(files).to.have.lengthOf(expected.length);
                             expect(files).to.have.members(expected);
@@ -80,11 +86,12 @@ describe('FileContainer', ()=> {
                     (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        const container = new FileContainer(testDir);
-                        container.beginWatching();
+                        container = new FileContainer(testDir);
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
 
                         container.getFileTree((err, files)=> {
-
                             expect(err).not.to.be.defined;
                             expect(files).to.have.lengthOf(expected.length);
                             expect(files).to.have.members(expected);
@@ -123,9 +130,10 @@ describe('FileContainer', ()=> {
                     (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        const container = new FileContainer(testDir, {filter: ignore});
-                        container.beginWatching();
-
+                        container = new FileContainer(testDir, {filter: ignore});
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
                         container.getFileTree((err, files)=> {
                             expect(err).not.to.be.defined;
                             expect(files).to.have.lengthOf(expected.length);
@@ -138,6 +146,147 @@ describe('FileContainer', ()=> {
                 done
             );
         });
+    });
+
+    describe('deleteFile', function () {
+        it('will delete a file or directory', function (done) {
+            const testDir = 'testDir';
+            const testFiles = [
+                {path: testDir, directory: true},
+                {path: `${testDir}/file1.txt`, content: `xxx`},
+                {path: `${testDir}/dirA`, directory: true},
+                {path: `${testDir}/dirA/file.txt`, content: 'xxx'},
+                {path: `${testDir}/dirA/file2.txt`, content: 'xxx'},
+                {path: `${testDir}/dirB`, directory: true},
+                {path: `${testDir}/dirB/file2.txt`, content: 'xxx'},
+                {path: `${testDir}/dirB/file3.txt`, content: 'xxx'},
+            ];
+
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPathSeries(testFiles, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        container.beginWatching(cb);
+                    },
+                    (cb)=>container.deleteFile('file1.txt', cb),
+                    (cb)=>container.deleteFile('dirA', cb),
+                    (cb)=>container.deleteFile('dirB/file2.txt', cb),
+                    (cb)=> {
+                        expect(pathExists(testDir)).to.be.true;
+                        expect(pathExists(`${testDir}/file1.txt`)).to.be.false;
+                        expect(pathExists(`${testDir}/dirA`)).to.be.false;
+                        expect(pathExists(`${testDir}/dirA/file.txt`)).to.be.false;
+                        expect(pathExists(`${testDir}/dirA/file2.txt`)).to.be.false;
+                        expect(pathExists(`${testDir}/dirB`)).to.be.true;
+                        expect(pathExists(`${testDir}/dirB/file2.txt`)).to.be.false;
+                        expect(pathExists(`${testDir}/dirB/file3.txt`)).to.be.true;
+                        cb();
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        })
+    });
+
+    describe('emitting events', function () {
+        it('will emit fileCreated event with correct path', function (done) {
+            const testDir = 'emittingEvents';
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        sandbox.spy(container, 'emit');
+                        container.beginWatching(cb);
+                    },
+                    (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
+                    (cb)=>setTimeout(cb, 500),
+                    (cb)=> {
+                        expect(container.emit).to.have.been.calledOnce;
+                        expect(container.emit).have.been.calledWith('fileCreated', 'file.txt');
+                        return cb();
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        });
+        it('will emit fileDeleted event with correct path', function (done) {
+            const testDir = 'emittingEvents';
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        sandbox.spy(container, 'emit');
+                        container.beginWatching(cb);
+                    },
+                    (cb)=>removePath(`${testDir}/file.txt`, cb),
+                    (cb)=>setTimeout(cb, 500),
+                    (cb)=> {
+                        expect(container.emit).to.have.been.calledOnce;
+                        expect(container.emit).have.been.calledWith('deleted', 'file.txt');
+                        return cb();
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        });
+        it('will emit createdDirectory event with correct path', function (done) {
+            const testDir = 'emittingEvents';
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        sandbox.spy(container, 'emit');
+                        container.beginWatching(cb);
+                    },
+                    (cb)=>createPath(`${testDir}/dirA`, null, true, cb),
+                    (cb)=>setTimeout(cb, 500),
+                    (cb)=> {
+                        expect(container.emit).to.have.been.calledOnce;
+                        expect(container.emit).have.been.calledWith('createdDirectory', 'dirA');
+                        return cb();
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        });
+        it('will emit changed event with correct path', function (done) {
+            const testDir = 'emittingEvents';
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=>createPath(`${testDir}/file.txt`, 'content\n', false, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        sandbox.spy(container, 'emit');
+                        container.beginWatching(cb);
+                    },
+                    (cb)=>fs.appendFile(`${testDir}/file.txt`, 'second line', cb),
+                    (cb)=>setTimeout(cb, 500),
+                    (cb)=> {
+                        expect(container.emit).to.have.been.calledOnce;
+                        expect(container.emit).have.been.calledWith('changed', 'file.txt');
+                        return cb();
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        });
+
     });
 
 });

@@ -32,11 +32,10 @@ export function obtainTwoSockets(doneCallback:(err, result?:{client:net.Socket, 
  * @param directory
  * @param doneCallback
  */
-export function createPath(path:string, content?:string, directory:boolean, doneCallback:ErrorCallback) {
+export function createPath(path:string, content:string, directory:boolean, doneCallback:ErrorCallback) {
     if (directory) {
         return createDir(path, doneCallback);
     }
-
     return fs.writeFile(path, content, doneCallback);
 }
 
@@ -53,6 +52,19 @@ export function createPathSeries(files:Array<{path:string, content?:string, dire
 }
 
 /**
+ * @param path
+ * @returns {boolean}
+ */
+export function pathExists(path):boolean {
+    try {
+        fs.accessSync(path);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
  * @param firstFilePath
  * @param secondFilePath
  * @param doneCallback
@@ -63,7 +75,7 @@ export function compareTwoFiles(firstFilePath:string, secondFilePath:string, don
             first: callback=>fs.readFile(firstFilePath, callback),
             second: callback=>fs.readFile(secondFilePath, callback)
         },
-        
+
         doneCallback
     );
 }

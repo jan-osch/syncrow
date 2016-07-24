@@ -35,6 +35,7 @@ export class FileContainer extends EventEmitter {
     private fileMetaQueue:FileMetaComputingQueue;
     private filterFunction:(s:string)=>boolean;
     private watchTimeout:number;
+    private watcher:chokidar.watcher;
 
     /**
      * Wrapper over filesystem
@@ -51,6 +52,14 @@ export class FileContainer extends EventEmitter {
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();
         this.fileMetaQueue = new FileMetaComputingQueue(fileLimit, this.directoryToWatch);
+    }
+
+    /**
+     * Stops watching the directory
+     */
+    public shutdown() {
+        debug('closing file container watcher');
+        this.watcher.close();
     }
 
     /**
@@ -139,9 +148,10 @@ export class FileContainer extends EventEmitter {
 
     /**
      * Starts watching and emitting events
+     * @param callback
      */
-    public beginWatching() {
-        const watcher = chokidar.watch(path.resolve(this.directoryToWatch), {
+    public beginWatching(callback?:ErrorCallback) {
+        this.watcher = chokidar.watch(path.resolve(this.directoryToWatch), {
             persistent: true,
             ignoreInitial: true,
             usePolling: true,
@@ -151,17 +161,19 @@ export class FileContainer extends EventEmitter {
 
         debug(`beginning to watch a directory: ${this.directoryToWatch}`);
 
-        watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path));
-        watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
-        watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
-        watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
-        watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
+        this.watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path));
+        this.watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
+        this.watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
+        this.watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
+        this.watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
 
-        watcher.on('ready', ()=> {
-            debug(`initial scan ready - watching ${Object.keys(watcher.getWatched()).length} directories`)
+        this.watcher.on('ready', ()=> {
+            debug(`initial scan ready - watching ${Object.keys(this.watcher.getWatched()).length} directories`)
+            callback();
         });
-        watcher.on('error', (err)=>{
+        this.watcher.on('error', (err)=> {
             logger.error(`watcher emitted: ${err}`);
+            callback(err);
         });
     }
 
