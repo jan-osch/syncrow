@@ -96,3 +96,23 @@ export function removePath(path:string, callback:ErrorCallback) {
     rimraf(path, callback);
 }
 
+/**
+ * @param length
+ * @returns {string}
+ */
+export function getRandomString(length:number):string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+
+    function getRandomChar() {
+        const position = Math.floor(Math.random() * chars.length);
+        return chars.charAt(position);
+    }
+
+    while (length > 0) {
+        length--;
+        result += getRandomChar();
+    }
+
+    return result;
+}

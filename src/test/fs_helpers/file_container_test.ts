@@ -1,4 +1,4 @@
-import {createPathSeries, removePath, pathExists, createPath} from "../test_utils";
+import {createPathSeries, removePath, pathExists, createPath, getRandomString} from "../test_utils";
 import * as chai from "chai";
 import {expect} from "chai";
 import * as sinon from "sinon";
@@ -6,9 +6,10 @@ import {FileContainer} from "../../fs_helpers/file_container";
 import * as async from "async";
 import * as sinonChai from "sinon-chai";
 import * as fs from "fs";
+import * as crypto from "crypto";
 
 chai.use(sinonChai);
-
+const fileContainerTimeout = 400;
 
 describe('FileContainer', ()=> {
     let sandbox;
@@ -204,7 +205,7 @@ describe('FileContainer', ()=> {
                         container.beginWatching(cb);
                     },
                     (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
-                    (cb)=>setTimeout(cb, 500),
+                    (cb)=>setTimeout(cb, fileContainerTimeout),
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('fileCreated', 'file.txt');
@@ -228,7 +229,7 @@ describe('FileContainer', ()=> {
                         container.beginWatching(cb);
                     },
                     (cb)=>removePath(`${testDir}/file.txt`, cb),
-                    (cb)=>setTimeout(cb, 500),
+                    (cb)=>setTimeout(cb, fileContainerTimeout),
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('deleted', 'file.txt');
@@ -251,7 +252,7 @@ describe('FileContainer', ()=> {
                         container.beginWatching(cb);
                     },
                     (cb)=>createPath(`${testDir}/dirA`, null, true, cb),
-                    (cb)=>setTimeout(cb, 500),
+                    (cb)=>setTimeout(cb, fileContainerTimeout),
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('createdDirectory', 'dirA');
@@ -275,7 +276,7 @@ describe('FileContainer', ()=> {
                         container.beginWatching(cb);
                     },
                     (cb)=>fs.appendFile(`${testDir}/file.txt`, 'second line', cb),
-                    (cb)=>setTimeout(cb, 500),
+                    (cb)=>setTimeout(cb, fileContainerTimeout),
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('changed', 'file.txt');
@@ -286,7 +287,174 @@ describe('FileContainer', ()=> {
                 done
             );
         });
-
     });
 
+    describe('consumeFileStream', function () {
+        it('will write the file to destination without emitting changed events', function (done) {
+            const testDir = 'consumeFileStream';
+            const fileContent = getRandomString(1024);
+            const fromPath = 'from.txt';
+            const toPath = 'to.txt';
+            const toPathAbsolute = `${testDir}/${toPath}`;
+
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=>createPath(fromPath, fileContent, false, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        sandbox.spy(container, 'emit');
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
+                        const stream = fs.createReadStream(fromPath);
+                        container.consumeFileStream(toPath, stream, cb);
+                    },
+                    (cb)=>setTimeout(cb, fileContainerTimeout),
+                    (cb)=> {
+                        expect(container.emit).not.to.have.been.called;
+                        expect(pathExists(toPathAbsolute)).to.equal(true);
+                        expect(fs.readFileSync(toPathAbsolute, 'utf8')).to.equal(fileContent);
+                        return cb();
+                    },
+                    (cb)=>removePath(fromPath, cb),
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        });
+    });
+
+    describe('getReadStreamForFile', function () {
+        it('will return a readStream, and during streaming will not emit "changed" event', function (done) {
+            const testDir = 'consumeFileStream';
+            const fileContent = getRandomString(1024);
+            const fromPath = 'from.txt';
+            const toPath = 'to.txt';
+            const fromPathAbsolute = `${testDir}/${fromPath}`;
+
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=>createPath(fromPathAbsolute, fileContent, false, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        sandbox.spy(container, 'emit');
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
+                        const stream = container.getReadStreamForFile(fromPath);
+                        stream.on('end', cb);
+                        stream.on('error', cb);
+                        stream.pipe(fs.createWriteStream(toPath));
+                    },
+                    (cb)=>setTimeout(cb, fileContainerTimeout),
+                    (cb)=> {
+                        expect(container.emit).not.to.have.been.called;
+                        expect(pathExists(toPath)).to.equal(true);
+                        expect(fs.readFileSync(toPath, 'utf8')).to.equal(fileContent);
+                        return cb();
+                    },
+                    (cb)=>removePath(toPath, cb),
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        });
+    });
+
+    describe('getFileMeta', function () {
+        it('if a file exists, will return an object with name, and exists set to true', function (done) {
+            const testDir = 'getFileMeta';
+            const content = getRandomString(1000);
+            const expectedHash = crypto.createHash('sha256').update(content).digest('hex');
+
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=>createPath(`${testDir}/file.txt`, content, false, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
+                        container.getFileMeta('file.txt', (err, data)=> {
+                            if (err)return cb(err);
+
+                            expect(data.exists).to.equal(true);
+                            expect(data.isDirectory).to.equal(false);
+                            expect(data.name).to.equal('file.txt');
+                            expect(data.hashCode).to.equal(expectedHash);
+                            expect(data.modified).to.deep.equal(fs.statSync(`${testDir}/file.txt`).mtime);
+                            cb();
+                        })
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        })
+
+        it('if a file does not exist, will return an object with name, and exists set to false, and hash of empty string', function (done) {
+            const testDir = 'getFileMeta';
+
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
+                        container.getFileMeta('file.txt', (err, data)=> {
+                            if (err)return cb(err);
+
+                            expect(data.exists).to.equal(false);
+                            expect(data.isDirectory).to.equal(false);
+                            expect(data.name).to.equal('file.txt');
+                            expect(data.hashCode).to.equal('');
+                            expect(data.modified).to.be.null;
+                            cb();
+                        })
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        })
+
+        it('if a file exists, and is a directory, will return correct data', function (done) {
+            const testDir = 'getFileMeta';
+
+            async.series(
+                [
+                    (cb)=>removePath(testDir, cb),
+                    (cb)=>createPath(testDir, null, true, cb),
+                    (cb)=>createPath(`${testDir}/dirA`, null, true, cb),
+                    (cb)=> {
+                        container = new FileContainer(testDir);
+                        container.beginWatching(cb);
+                    },
+                    (cb)=> {
+                        container.getFileMeta('dirA', (err, data)=> {
+                            if (err)return cb(err);
+
+                            expect(data.exists).to.equal(true);
+                            expect(data.isDirectory).to.equal(true);
+                            expect(data.name).to.equal('dirA');
+                            expect(data.hashCode).to.equal('');
+                            expect(data.modified).to.deep.equal(fs.statSync(`${testDir}/dirA`).mtime);
+                            cb();
+                        })
+                    },
+                    (cb)=>removePath(testDir, cb)
+                ],
+                done
+            );
+        })
+    })
 });

@@ -1,4 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
 import * as async from "async";
 import * as fs from "fs";
 import * as crypto from "crypto";
