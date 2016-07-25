@@ -1,8 +1,7 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import {EventEmitter} from "events";
 import {Connection} from "./connection";
 import {loggerFor, debugFor} from "../utils/logger";
+import {ParseHelper} from "./parse_helper";
 
 const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
@@ -12,12 +11,7 @@ export class Messenger extends EventEmitter {
     private connection:Connection;
 
     private isAlive:boolean;
-    private messageBuffer:string;
-    private expectedLength:number;
-    private id:number;
-
-    private static separator = ':';
-    private static id;
+    private parseHelper:ParseHelper;
 
     static events = {
         message: 'message',
@@ -32,9 +26,15 @@ export class Messenger extends EventEmitter {
      */
     constructor(connection:Connection) {
         super();
-        this.resetBuffers();
+        this.parseHelper = this.createParser();
         this.addListenersToConnection(connection);
-        this.id = Messenger.id++;
+    }
+
+    private createParser():ParseHelper {
+        const parser = new ParseHelper();
+        parser.on(ParseHelper.events.message, (message)=>this.emit(message));
+
+        return parser;
     }
 
     /**
@@ -46,8 +46,8 @@ export class Messenger extends EventEmitter {
         if (!this.isAlive) {
             return logger.warn('/writeMessage - socket connection is closed will not write data')
         }
-        var message = `${data.length}${Messenger.separator}${data}`;
-        this.connection.write(message);
+
+        this.connection.write(ParseHelper.prepareMessage(data));
     }
 
     /**
@@ -64,16 +64,11 @@ export class Messenger extends EventEmitter {
         return this.connection.address();
     }
 
-    private resetBuffers() {
-        this.messageBuffer = '';
-        this.expectedLength = null;
-    }
-
     private addListenersToConnection(connection:Connection) {
         debug('/addListenersToConnection - adding listeners to new socket');
 
         this.connection = connection;
-        this.connection.on(Connection.events.data, (data)=>this.parseData(data));
+        this.connection.on(Connection.events.data, (data)=>this.parseHelper.parseData(data));
         this.connection.on(Connection.events.disconnected, ()=> this.handleConnectionDied());
         this.connection.on(Connection.events.reconnecting, ()=> this.handleConnectionRecovering());
         this.connection.on(Connection.events.connected, ()=>this.handleConnectionAlive());
@@ -101,33 +96,4 @@ export class Messenger extends EventEmitter {
         this.emit(Messenger.events.alive);
     }
 
-    private parseData(data:Buffer) {
-        this.messageBuffer += data.toString();
-        if (this.expectedLength === null) {
-            this.checkIfExpectedLengthArrived();
-        }
-        this.checkIfMessageIsComplete();
-    }
-
-    private checkIfExpectedLengthArrived() {
-        var indexOfContentLengthHeaderSeparator = this.messageBuffer.indexOf(Messenger.separator);
-        if (indexOfContentLengthHeaderSeparator !== -1) {
-            this.expectedLength = parseInt(this.messageBuffer.slice(0, indexOfContentLengthHeaderSeparator));
-            this.messageBuffer = this.messageBuffer.slice(indexOfContentLengthHeaderSeparator + 1);
-        }
-    }
-
-    private checkIfMessageIsComplete() {
-        if (this.expectedLength && this.messageBuffer.length >= this.expectedLength) {
-            this.emit(Messenger.events.message, this.messageBuffer.slice(0, this.expectedLength));
-            this.restartParsingMessage(this.messageBuffer.slice(this.expectedLength));
-        }
-    }
-
-    private restartParsingMessage(remainder:string) {
-        this.resetBuffers();
-        this.messageBuffer = remainder;
-        this.checkIfExpectedLengthArrived();
-        this.checkIfMessageIsComplete();
-    }
 }

@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import {EventEmitter} from "events";
 import {Socket, connect} from "net";
 import * as async from "async";
