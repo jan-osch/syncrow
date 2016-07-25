@@ -17,6 +17,10 @@ export class ConnectionHelper {
     private listen:boolean;
     private callbackAwaitingSocket:(err:Error, socket?:Socket)=>any;
 
+    /**
+     * @param params
+     * @param callback
+     */
     constructor(params:ConnectionHelperParams, callback:ErrorCallback) {
         this.host = params.host;
         this.port = params.port;
@@ -44,6 +48,7 @@ export class ConnectionHelper {
      * Disables the helper, calls any remaining callback with error
      */
     public shutdown() {
+        logger.info('Connection Helper closing');
         if (this.server) {
             this.server.destroy();
             delete this.server;

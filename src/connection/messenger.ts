@@ -2,16 +2,28 @@ import {EventEmitter} from "events";
 import {Connection} from "./connection";
 import {loggerFor, debugFor} from "../utils/logger";
 import {ParseHelper} from "./parse_helper";
+import {Socket} from "net";
+import {ConnectionHelper} from "./connection_helper";
 
 const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
 
+export interface MessangerParams {
+    port?:number
+    host?:string
+    listen?:boolean
+    reconnect?:boolean
+    interval?:number
+    retries?:number
+}
+
 export class Messenger extends EventEmitter {
 
-    private connection:Connection;
-
+    private socket:Socket;
     private isAlive:boolean;
     private parseHelper:ParseHelper;
+    private connectionHelper:ConnectionHelper;
+
 
     static events = {
         message: 'message',
@@ -24,10 +36,11 @@ export class Messenger extends EventEmitter {
      * Enables sending string messages between parties
      * @param connection
      */
-    constructor(connection:Connection) {
+    constructor(private params:MessangerParams, callback?:ErrorCallback) {
         super();
         this.parseHelper = this.createParser();
-        this.addListenersToConnection(connection);
+
+        this.initializeConnectionHelper(this.params, callback)
     }
 
     private createParser():ParseHelper {
@@ -78,6 +91,15 @@ export class Messenger extends EventEmitter {
         }
     }
 
+    public addSocket(socket:Socket) {
+        this.socket = socket;
+        this.socket.on('error', (error)=>this.handleSocketProblem(error));
+        this.socket.on('close', (error)=>this.handleSocketProblem(error));
+        this.socket.on('data', (data)=>this.emit(Connection.events.data, data));
+        this.connected = true;
+        this.emit(Connection.events.connected);
+    }
+
     private handleConnectionDied() {
         debug('connection disconnected');
         this.isAlive = false;
@@ -96,4 +118,24 @@ export class Messenger extends EventEmitter {
         this.emit(Messenger.events.alive);
     }
 
+    private initializeConnectionHelper(params:MessangerParams, callback:ErrorCallback) {
+        async.series(
+            [
+                (cb)=> {
+                    this.connectionHelper = new ConnectionHelper(params, cb)
+                },
+
+                (cb)=> {
+                    this.connectionHelper.getNewSocket((err, socket)=> {
+                        if (err)return cb(err);
+
+                        this.socket = socket;
+                        return cb();
+                    })
+                }
+            ],
+
+            callback
+        )
+    }
 }
