@@ -1,5 +1,5 @@
 import {Socket, Server, createServer, connect} from "net";
-import {loggerFor, debugFor} from "../utils/logger";
+import {loggerFor, debugFor, Closable} from "../utils/logger";
 
 const debug = debugFor("syncrow:connection:server");
 const logger = loggerFor('ConnectionServer');
@@ -10,7 +10,7 @@ export interface ConnectionHelperParams {
     listen?:boolean
 }
 
-export class ConnectionHelper {
+export class ConnectionHelper implements Closable {
     private server:Server;
     private host:string;
     private port:number;
@@ -60,18 +60,19 @@ export class ConnectionHelper {
     }
 
     /**
+     * @param params
      * @param callback
      */
-    public getNewSocket(callback:(err:Error, socket?:Socket)=>any) {
+    public getNewSocket(params:ConnectionHelperParams, callback:(err:Error, socket?:Socket)=>any) {
         if (this.listen) {
             return this.getSocketFromServer(callback);
         }
 
-        return this.getSocketByConnecting(callback);
+        return this.getSocketByConnecting(params, callback);
     }
 
-    private getSocketByConnecting(callback:(err:Error, socket?:Socket)=>any) {
-        const socket = connect({port: this.port, host: this.host},
+    private getSocketByConnecting(params:ConnectionHelperParams, callback:(err:Error, socket?:Socket)=>any) {
+        const socket = connect({port: params.port, host: params.host},
             (err)=> {
                 if (err)return callback(err);
                 return callback(null, socket);

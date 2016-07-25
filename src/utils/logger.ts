@@ -101,3 +101,7 @@ export function forwardEception(fun) {
         }
     }
 }
+
+export interface Closable {
+    shutdown:()=>any
+}

@@ -1,23 +1,23 @@
 import {EventEmitter} from "events";
-import {Connection} from "./connection";
-import {loggerFor, debugFor} from "../utils/logger";
+import {loggerFor, debugFor, Closable} from "../utils/logger";
 import {ParseHelper} from "./parse_helper";
 import {Socket} from "net";
-import {ConnectionHelper} from "./connection_helper";
+import {ConnectionHelper, ConnectionHelperParams} from "./connection_helper";
 
 const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
 
-export interface MessangerParams {
+export interface MessengerParams {
     port?:number
     host?:string
     listen?:boolean
     reconnect?:boolean
     interval?:number
     retries?:number
+    await?:boolean
 }
 
-export class Messenger extends EventEmitter {
+export class Messenger extends EventEmitter implements Closable {
 
     private socket:Socket;
     private isAlive:boolean;
@@ -34,20 +34,13 @@ export class Messenger extends EventEmitter {
 
     /**
      * Enables sending string messages between parties
-     * @param connection
+     * @param params
+     * @param callback
      */
-    constructor(private params:MessangerParams, callback?:ErrorCallback) {
+    constructor(private params:MessengerParams, callback?:ErrorCallback) {
         super();
         this.parseHelper = this.createParser();
-
         this.initializeConnectionHelper(this.params, callback)
-    }
-
-    private createParser():ParseHelper {
-        const parser = new ParseHelper();
-        parser.on(ParseHelper.events.message, (message)=>this.emit(message));
-
-        return parser;
     }
 
     /**
@@ -60,7 +53,7 @@ export class Messenger extends EventEmitter {
             return logger.warn('/writeMessage - socket connection is closed will not write data')
         }
 
-        this.connection.write(ParseHelper.prepareMessage(data));
+        this.socket.write(ParseHelper.prepareMessage(data));
     }
 
     /**
@@ -74,68 +67,111 @@ export class Messenger extends EventEmitter {
      * @returns {string}
      */
     public getOwnHost():string {
-        return this.connection.address();
+        return this.params.host;
     }
 
-    private addListenersToConnection(connection:Connection) {
-        debug('/addListenersToConnection - adding listeners to new socket');
-
-        this.connection = connection;
-        this.connection.on(Connection.events.data, (data)=>this.parseHelper.parseData(data));
-        this.connection.on(Connection.events.disconnected, ()=> this.handleConnectionDied());
-        this.connection.on(Connection.events.reconnecting, ()=> this.handleConnectionRecovering());
-        this.connection.on(Connection.events.connected, ()=>this.handleConnectionAlive());
-
-        if (this.connection.isConnected()) {
-            this.handleConnectionAlive();
-        }
+    /**
+     * Removes all helpers to prevent memory leaks
+     */
+    public shutdown() {
+        delete this.parseHelper;
+        this.disconnectAndDestroyCurrentSocket();
+        this.connectionHelper.shutdown();
+        delete this.connectionHelper;
     }
 
-    public addSocket(socket:Socket) {
+    /**
+     * @param params
+     * @param callback
+     */
+    public getAndAddNewSocket(params:ConnectionHelperParams, callback:ErrorCallback) {
+        this.connectionHelper.getNewSocket(params, (err, socket)=> {
+            if (err)return callback(err);
+
+            this.addSocket(socket);
+            return callback();
+        })
+    }
+
+    private addSocket(socket:Socket) {
         this.socket = socket;
         this.socket.on('error', (error)=>this.handleSocketProblem(error));
         this.socket.on('close', (error)=>this.handleSocketProblem(error));
-        this.socket.on('data', (data)=>this.emit(Connection.events.data, data));
-        this.connected = true;
-        this.emit(Connection.events.connected);
-    }
-
-    private handleConnectionDied() {
-        debug('connection disconnected');
-        this.isAlive = false;
-        this.emit(Messenger.events.died);
-    }
-
-    private handleConnectionRecovering() {
-        debug('connection is reconnecting');
-        this.isAlive = false;
-        this.emit(Messenger.events.recovering);
-    }
-
-    private handleConnectionAlive() {
-        debug('connection connected');
+        this.socket.on('data', (data)=>this.parseHelper.parseData(data));
         this.isAlive = true;
         this.emit(Messenger.events.alive);
+
+        debug(`Added a new socket`);
     }
 
-    private initializeConnectionHelper(params:MessangerParams, callback:ErrorCallback) {
+    private createParser():ParseHelper {
+        const parser = new ParseHelper();
+        parser.on(ParseHelper.events.message, (message)=>this.emit(message));
+
+        return parser;
+    }
+
+    private initializeConnectionHelper(params:MessengerParams, callback:ErrorCallback) {
         async.series(
             [
                 (cb)=> {
                     this.connectionHelper = new ConnectionHelper(params, cb)
                 },
 
-                (cb)=> {
-                    this.connectionHelper.getNewSocket((err, socket)=> {
-                        if (err)return cb(err);
-
-                        this.socket = socket;
-                        return cb();
-                    })
-                }
+                (cb)=> this.getAndAddNewSocket(params, cb)
             ],
 
             callback
         )
+    }
+
+    private handleSocketProblem(error?:Error) {
+        logger.error(error);
+        this.disconnectAndDestroyCurrentSocket();
+
+        if (!this.params.reconnect) {
+            this.emit(Messenger.events.died);
+            return;
+        }
+
+        this.emit(Messenger.events.recovering);
+
+        if (this.params.await) {
+            debug('awaiting exeternal command to reconnect');
+            return;
+        }
+
+        return this.tryToConnect();
+    }
+
+    private tryToConnect() {
+        async.retry(
+            {
+                times: this.params.retries,
+                interval: this.params.interval
+            },
+
+            (cb)=> {
+                logger.info('Attempting to reconnect');
+                return this.getAndAddNewSocket(this.params, cb);
+            },
+
+            (err)=> {
+                if (err) {
+                    logger.error(`Could not reconnect - reason ${err}`);
+                    this.emit(Messenger.events.died);
+                }
+            }
+        )
+    }
+
+    private disconnectAndDestroyCurrentSocket() {
+        this.isAlive = false;
+
+        if (this.socket) {
+            this.socket.removeAllListeners();
+            this.socket.destroy();
+            delete this.socket;
+        }
     }
 }

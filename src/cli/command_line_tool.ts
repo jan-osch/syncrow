@@ -1,11 +1,7 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import * as program from "commander";
 import * as request from "request";
 import {debugFor, loggerFor} from "../utils/logger";
-import {ConnectionServer} from "../connection/connection_server";
 import {Messenger} from "../connection/messenger";
-import {getActiveConnection, Connection, getAbortConnection} from "../connection/connection";
 import {Client} from "../client/client";
 import * as fs from "fs";
 import * as _ from "lodash";
