@@ -4,7 +4,7 @@
   "description": "Easy directory synchronization over the network",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --recursive test",
+    "test": "mocha --recursive build/test",
     "build": "tsc --target es5 || true",
     "postinstall": "npm run build"
   },
