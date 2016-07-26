@@ -53,17 +53,17 @@ function main() {
 }
 
 interface ProgramOptions {
-    host?: string,
-    port?: number,
-    bucket?: string,
-    strategy?: string,
-    directory?: string,
-    init?: boolean,
-    filter?: string,
-    listen?: boolean,
+    host?:string,
+    port?:number,
+    bucket?:string,
+    strategy?:string,
+    directory?:string,
+    init?:boolean,
+    filter?:string,
+    listen?:boolean,
 }
 
-function getConfigFromCommandLine(): ProgramOptions {
+function getConfigFromCommandLine():ProgramOptions {
     program.version('0.0.2')
 
         .option('-h, --host <host>', 'remote host for connection') //TODO add support for getting the local public IP
@@ -80,7 +80,7 @@ function getConfigFromCommandLine(): ProgramOptions {
     return _.pick(program, getGoodProgramKeys(program));
 }
 
-function getDefaultConfig(): ProgramOptions {
+function getDefaultConfig():ProgramOptions {
     return {
         host: "0.0.0.0",
         port: 2510,
@@ -90,11 +90,11 @@ function getDefaultConfig(): ProgramOptions {
     }
 }
 
-function createFilterFunction(filterString: string, baseDir: string) {
+function createFilterFunction(filterString:string, baseDir:string) {
     const patterns = filterString.split(',');
     const baseLength = baseDir.length + 1;
     if (filterString && filterString !== '') {
-        return (s: string) => {
+        return (s:string) => {
             const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
             return anymatch(patterns, actual);
         }
@@ -103,7 +103,7 @@ function createFilterFunction(filterString: string, baseDir: string) {
     return s => false;
 }
 
-function getGoodProgramKeys(program): Array<string> {
+function getGoodProgramKeys(program):Array<string> {
     const keys = Object.keys(program);
 
     return keys.filter(e => {
@@ -111,9 +111,9 @@ function getGoodProgramKeys(program): Array<string> {
     });
 }
 
-function loadConfigFromFile(path: string): ProgramOptions {
+function loadConfigFromFile(path:string):ProgramOptions {
     try {
-        const result = JSON.parse(fs.readFileSync(path));
+        const result = JSON.parse(fs.readFileSync(path, 'utf8'));
 
         debug(`found configuration in file`);
 
@@ -124,13 +124,13 @@ function loadConfigFromFile(path: string): ProgramOptions {
 }
 
 
-function chooseConfig(defaultConfig: ProgramOptions, savedConfig: ProgramOptions, commandLineConfig: ProgramOptions): ProgramOptions {
+function chooseConfig(defaultConfig:ProgramOptions, savedConfig:ProgramOptions, commandLineConfig:ProgramOptions):ProgramOptions {
     let config = _.extend(defaultConfig, savedConfig);
     return _.extend(config, commandLineConfig);
 }
 
 
-function saveConfigIfNeeded(config: ProgramOptions, pathToSave) {
+function saveConfigIfNeeded(config:ProgramOptions, pathToSave) {
     if (config.init) {
         debug('Saving configuration to file');
 
@@ -140,7 +140,7 @@ function saveConfigIfNeeded(config: ProgramOptions, pathToSave) {
     }
 }
 
-function printDebugAboutConfig(finalConfig: ProgramOptions) {
+function printDebugAboutConfig(finalConfig:ProgramOptions) {
     debug(`host: ${finalConfig.host}`);
     debug(`port: ${finalConfig.port}`);
     debug(`listen: ${finalConfig.listen}`);
@@ -164,7 +164,7 @@ function validateConfig(config) {
 }
 
 
-function getStrategy(codeName): SynchronizationStrategy {
+function getStrategy(codeName):SynchronizationStrategy {
     let strategy;
     switch (codeName) {
         case 'no':
@@ -199,67 +199,101 @@ function getPortForBucket(host, port, bucket, callback) {
 }
 
 
-function listenAndStart(localPort: number, directory: string, strategy: SynchronizationStrategy, filterFunction: (s: string) => boolean) {
-    new ConnectionServer(localPort, (err, connection) => {
+function listenAndStart(localPort:number, directory:string, strategy:SynchronizationStrategy, filterFunction:(s:string) => boolean) {
+    const messenger = new Messenger({
+        port: localPort,
+        listen: true,
+        reconnect: true
+    }, (err)=> {
+
         ifErrorThrow(err);
 
         logger.info('Connected');
 
-        const messenger = new Messenger(connection);
-        const client = new Client(directory, messenger, { strategy: strategy, filter: filterFunction });
+        const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
     });
 }
 
 
-function connectWithRetryAndStart(remoteHost: string,
-    remotePort: number,
-    directory: string,
-    strategy: SynchronizationStrategy,
-    filterFunction: (s: string) => boolean) {
+function connectWithRetryAndStart(remoteHost:string,
+                                  remotePort:number,
+                                  directory:string,
+                                  strategy:SynchronizationStrategy,
+                                  filterFunction:(s:string) => boolean) {
 
-    getActiveConnection(remoteHost, remotePort, (err, connection) => {
+    const messenger = new Messenger({
+        host: remoteHost,
+        port: remotePort,
+        reconnect: true,
+        listen: false,
+        retries: 10,
+        interval: 4000
+    }, (err) => {
         ifErrorThrow(err);
 
         logger.info('Connected');
 
-        const messenger = new Messenger(connection);
-        const client = new Client(directory, messenger, { strategy: strategy, filter: filterFunction });
+        const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
     })
 }
 
-function connectWithBucketAndStart(remoteHost: string,
-    servicePort: number,
-    bucketName: string,
-    directory: string,
-    strategy: SynchronizationStrategy,
-    filterFunction: (s: string) => boolean) {
+function connectWithBucketAndStart(remoteHost:string,
+                                   servicePort:number,
+                                   bucketName:string,
+                                   directory:string,
+                                   strategy:SynchronizationStrategy,
+                                   filterFunction:(s:string) => boolean) {
 
-    getPortForBucket(remoteHost, servicePort, bucketName, (err, bucketPort) => {
-        ifErrorThrow(err);
-        getAbortConnection(remoteHost, bucketPort, (err, connection) => {
+    getPortForBucket(remoteHost, servicePort, bucketName,
+
+        (err, bucketPort) => {
             ifErrorThrow(err);
 
-            connection.on(Connection.events.disconnected, () => {
-                getPortForBucket(remoteHost, servicePort, bucketName, (err, newBucketPort) => {
-                    const newSocket = net.connect(newBucketPort, remoteHost, () => {
-                        connection.addSocket(newSocket);
-                    }).on('error', (err) => {
-                        logger.info(`Could not connect - reatempting in ${10000} ms`); //TODO load from config
-                        setTimeout(() => {
-                            connection.emit(Connection.events.disconnected);
-                        }, 10000)
-                    })
-                });
-            });
+            const messenger = new Messenger({
+                    host: remoteHost,
+                    port: bucketPort,
+                    reconnect: true,
+                    await: true,
+                    listen: false
+                },
 
-            logger.info('Connected');
+                (err) => {
+                    ifErrorThrow(err);
 
-            const messenger = new Messenger(connection);
-            const client = new Client(directory, messenger, { strategy: strategy, filter: filterFunction });
-        });
-    })
+
+                    logger.info('Connected');
+                    const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+
+                    messenger.on(Messenger.events.recovering,
+
+                        ()=> {
+                            async.retry({times: 10, interval: 4000},
+
+                                (cb)=> getPortForBucketAndObtainNewSocket(remoteHost, servicePort, bucketName, messenger, cb),
+
+                                (err)=> {
+                                    ifErrorThrow(err);
+                                }
+                            )
+                        }
+                    );
+                }
+            );
+        }
+    )
 }
 
-function ifErrorThrow(err?: Error) {
+function getPortForBucketAndObtainNewSocket(remoteHost, servicePort, bucketName, messenger, callback) {
+    getPortForBucket(remoteHost, servicePort, bucketName,
+
+        (err, newPort)=> {
+            if (err) return callback(err);
+
+            return messenger.getAndAddNewSocket({host: remoteHost, port: newPort}, callback);
+        }
+    );
+}
+
+function ifErrorThrow(err?:Error) {
     if (err) throw err;
 }

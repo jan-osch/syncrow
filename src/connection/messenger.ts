@@ -8,10 +8,10 @@ const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
 
 export interface MessengerParams {
-    port?:number
+    port:number
     host?:string
-    listen?:boolean
-    reconnect?:boolean
+    listen:boolean
+    reconnect:boolean
     interval?:number
     retries?:number
     await?:boolean
@@ -39,7 +39,14 @@ export class Messenger extends EventEmitter implements Closable {
      */
     constructor(private params:MessengerParams, callback?:ErrorCallback) {
         super();
-        this.parseHelper = this.createParser();
+
+        try {
+            Messenger.validateParams(params);
+        } catch (e) {
+            return callback(e);
+        }
+
+        this.parseHelper = null;
         this.initializeConnectionHelper(this.params, callback)
     }
 
@@ -53,7 +60,7 @@ export class Messenger extends EventEmitter implements Closable {
             return logger.warn('/writeMessage - socket connection is closed will not write data')
         }
 
-        this.socket.write(ParseHelper.prepareMessage(data));
+        this.parseHelper.writeMessage(data);
     }
 
     /**
@@ -97,15 +104,15 @@ export class Messenger extends EventEmitter implements Closable {
         this.socket = socket;
         this.socket.on('error', (error)=>this.handleSocketProblem(error));
         this.socket.on('close', (error)=>this.handleSocketProblem(error));
-        this.socket.on('data', (data)=>this.parseHelper.parseData(data));
         this.isAlive = true;
+        this.parseHelper = this.createParser(socket);
         this.emit(Messenger.events.alive);
 
         debug(`Added a new socket`);
     }
 
-    private createParser():ParseHelper {
-        const parser = new ParseHelper();
+    private createParser(socket:Socket):ParseHelper {
+        const parser = new ParseHelper(socket);
         parser.on(ParseHelper.events.message, (message)=>this.emit(message));
 
         return parser;
@@ -137,23 +144,23 @@ export class Messenger extends EventEmitter implements Closable {
         this.emit(Messenger.events.recovering);
 
         if (this.params.await) {
-            debug('awaiting exeternal command to reconnect');
+            debug('awaiting external command to reconnect');
             return;
         }
 
-        return this.tryToConnect();
+        return this.tryToConnect(this.params);
     }
 
-    private tryToConnect() {
+    private tryToConnect(params:MessengerParams) {
         async.retry(
             {
-                times: this.params.retries,
-                interval: this.params.interval
+                times: params.retries,
+                interval: params.interval
             },
 
-            (cb)=> {
+            (cb:ErrorCallback)=> {
                 logger.info('Attempting to reconnect');
-                return this.getAndAddNewSocket(this.params, cb);
+                return this.getAndAddNewSocket(params, cb);
             },
 
             (err)=> {
@@ -174,4 +181,13 @@ export class Messenger extends EventEmitter implements Closable {
             delete this.socket;
         }
     }
+
+    private static validateParams(params:MessengerParams) {
+        if (params.listen && !params.host) throw new Error('If not Messenger is not listening, host is needed');
+
+        if (params.reconnect && !params.await && !params.retries) throw new Error('If Messenger has to reconnect automatically, it needs retries');
+
+        if (params.reconnect && !params.await && !params.interval) throw new Error('If Messenger has to reconnect automatically, it needs interval');
+    }
+
 }
