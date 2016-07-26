@@ -105,3 +105,7 @@ export function forwardEception(fun) {
 export interface Closable {
     shutdown:()=>any
 }
+
+export interface ErrorCallback {
+    (err:Error):any
+}

@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import {loggerFor, debugFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 import {FileContainer, FileContainerOptions} from "../fs_helpers/file_container";

@@ -3,11 +3,12 @@ import {loggerFor, debugFor, Closable} from "../utils/logger";
 import {ParseHelper} from "./parse_helper";
 import {Socket} from "net";
 import {ConnectionHelper, ConnectionHelperParams} from "./connection_helper";
+import {AuthorisationHelper} from "../security/authorisation_helper";
 
 const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
 
-export interface MessengerParams {
+export interface MessengerParams extends ConnectionHelperParams {
     port:number
     host?:string
     listen:boolean
@@ -15,6 +16,9 @@ export interface MessengerParams {
     interval?:number
     retries?:number
     await?:boolean
+    authorize?:boolean
+    token?:string
+    authorisationTimeout?:number
 }
 
 export class Messenger extends EventEmitter implements Closable {
@@ -91,13 +95,25 @@ export class Messenger extends EventEmitter implements Closable {
      * @param params
      * @param callback
      */
-    public getAndAddNewSocket(params:ConnectionHelperParams, callback:ErrorCallback) {
-        this.connectionHelper.getNewSocket(params, (err, socket)=> {
-            if (err)return callback(err);
+    public getAndAddNewSocket(params:MessengerParams, callback:ErrorCallback) {
+        async.autoInject({
+                socket: (cb)=>this.connectionHelper.getNewSocket(params, cb),
 
-            this.addSocket(socket);
-            return callback();
-        })
+                authorised: (socket, cb) => {
+                    if (!params.authorize)return cb();
+
+                    if (params.listen) return AuthorisationHelper.authorizeSocket(socket, params.token, {timeout: params.authorisationTimeout}, cb);
+
+                    return AuthorisationHelper.authorizeToSocket(socket, params.token, {timeout: params.authorisationTimeout}, cb)
+                },
+
+                add: (socket, authorised, cb)=> {
+                    this.addSocket(socket);
+                    return cb();
+                }
+            },
+            callback
+        );
     }
 
     private addSocket(socket:Socket) {
@@ -188,6 +204,8 @@ export class Messenger extends EventEmitter implements Closable {
         if (params.reconnect && !params.await && !params.retries) throw new Error('If Messenger has to reconnect automatically, it needs retries');
 
         if (params.reconnect && !params.await && !params.interval) throw new Error('If Messenger has to reconnect automatically, it needs interval');
+
+        if (params.authorize && !params.token) throw new Error('If Messenger has to authorise it needs a token');
     }
 
 }

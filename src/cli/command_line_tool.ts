@@ -5,7 +5,6 @@ import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
 import * as fs from "fs";
 import * as _ from "lodash";
-import * as net from "net";
 import * as path from "path";
 import {SynchronizationStrategy} from "../sync_strategy/sync_strategy";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
@@ -61,7 +60,10 @@ interface ProgramOptions {
     init?:boolean,
     filter?:string,
     listen?:boolean,
+    token?:string
 }
+
+//TODO add initialize token
 
 function getConfigFromCommandLine():ProgramOptions {
     program.version('0.0.2')
@@ -75,6 +77,7 @@ function getConfigFromCommandLine():ProgramOptions {
         .option('-d, --directory <directory>', 'directory to watch')
         .option('-i, --init', 'save configuration to file')
         .option('-f, --filter <filter>', 'comma separated filter patterns')
+        .option('-t, --token <token>', 'token for authorisation')
         .parse(process.argv);
 
     return _.pick(program, getGoodProgramKeys(program));
@@ -148,6 +151,7 @@ function printDebugAboutConfig(finalConfig:ProgramOptions) {
     debug(`bucket: ${finalConfig.bucket}`);
     debug(`strategy: ${finalConfig.strategy}`);
     debug(`filter: ${finalConfig.filter}`);
+    debug(`token: ${finalConfig.token}`);
 }
 
 
@@ -197,7 +201,7 @@ function getPortForBucket(host, port, bucket, callback) {
         callback(null, body.port);
     });
 }
-
+//TODO implement token
 
 function listenAndStart(localPort:number, directory:string, strategy:SynchronizationStrategy, filterFunction:(s:string) => boolean) {
     const messenger = new Messenger({
@@ -243,6 +247,7 @@ function connectWithBucketAndStart(remoteHost:string,
                                    directory:string,
                                    strategy:SynchronizationStrategy,
                                    filterFunction:(s:string) => boolean) {
+    
 
     getPortForBucket(remoteHost, servicePort, bucketName,
 

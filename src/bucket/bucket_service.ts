@@ -59,7 +59,7 @@ export class BucketService {
         if (this.bucketsList.indexOf(bucketName) === -1) {
             return callback(new Error('Invalid bucket name'));
         }
-
+        //TODO add token here
         return callback(null, this.bucketServerPorts.get(bucketName));
     }
 

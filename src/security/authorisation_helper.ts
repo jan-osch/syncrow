@@ -1,16 +1,6 @@
 import {Socket} from "net";
 import {ParseHelper} from "../connection/parse_helper";
-import {loggerFor} from "../utils/logger";
-
-const logger = loggerFor('AuthorisationHelper');
-
-interface AuthorisationCallback {
-    (result:boolean):any
-}
-
-interface WrappedCallback {
-    (err?:Error):any
-}
+import * as crypto from "crypto";
 
 export class AuthorisationHelper {
 
@@ -26,17 +16,13 @@ export class AuthorisationHelper {
      * @param options
      * @param callback
      */
-    public static authorizeToSocket(socket:Socket, token:any, options:{timeout:number}, callback:AuthorisationCallback) {
+    public static authorizeToSocket(socket:Socket, token:any, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
         const wrapped = async.timeout(
             (err:Error)=> {
-                let result = true;
-                if (err) {
-                    logger.error(`Authorisation failed - reason: ${err}`);
-                }
                 parser.shutdown();
-                return callback(result);
+                return callback(err);
             },
             options.timeout, new Error('Authorisation timeout')
         );
@@ -59,12 +45,11 @@ export class AuthorisationHelper {
      * @param options
      * @param callback
      */
-    public static authorizeSocket(socket:Socket, token:any, options:{timeout:number}, callback:AuthorisationCallback) {
+    public static authorizeSocket(socket:Socket, token:any, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
         const wrapped = async.timeout(
             (err:Error)=> {
-                let result = true;
                 if (err) {
                     AuthorisationHelper.writeToParser(parser,
                         {
@@ -73,10 +58,9 @@ export class AuthorisationHelper {
                             reason: err
                         }
                     );
-                    result = false;
                 }
                 parser.shutdown();
-                return callback(result);
+                return callback(err);
             },
             options.timeout, new Error('Authorisation timeout')
         );
@@ -86,7 +70,18 @@ export class AuthorisationHelper {
         );
     }
 
-    private static handleExpectedHandshakeResponse(rawMessage:string, callback:WrappedCallback) {
+    /**
+     * @param secret
+     */
+    public static generateToken(secret?:string):string {
+        const hash = crypto.createHmac('sha256', secret)
+            .update(Math.random().toString())
+            .digest('hex');
+
+        return hash;
+    }
+
+    private static handleExpectedHandshakeResponse(rawMessage:string, callback:ErrorCallback) {
         try {
             const parsed = JSON.parse(rawMessage);
             if (parsed.type === AuthorisationHelper.messages.handshakeResponse) {
@@ -102,7 +97,7 @@ export class AuthorisationHelper {
         }
     }
 
-    private static handleExpectedHandshake(rawMessage:string, token:string, callback:WrappedCallback) {
+    private static handleExpectedHandshake(rawMessage:string, token:string, callback:ErrorCallback) {
         try {
             const parsed = JSON.parse(rawMessage);
             if (parsed.type === AuthorisationHelper.messages.handshake) {
@@ -120,4 +115,5 @@ export class AuthorisationHelper {
     private static writeToParser(parser:ParseHelper, data:any) {
         parser.writeMessage(JSON.stringify(data));
     }
+
 }
