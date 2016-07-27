@@ -62,10 +62,10 @@ var chalk: ChalkExports;
 export = chalk;
 }
 declare module 'chalk/index' {
-import alias = require('~chalk/index');
-export = alias;
+import main = require('~chalk/index');
+export = main;
 }
 declare module 'chalk' {
-import alias = require('~chalk/index');
-export = alias;
+import main = require('~chalk/index');
+export = main;
 }
