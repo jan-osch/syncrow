@@ -1,4 +1,4 @@
-import {SynchronizationStrategy, SyncData} from "./sync_strategy";
+import {SynchronizationAction, SyncData} from "./sync_strategy";
 import * as async from "async";
 import * as _ from "lodash";
 import {debugFor, loggerFor} from "../utils/logger";
@@ -10,7 +10,7 @@ const logger = loggerFor('NewestStrategy');
 /**
  * On every reconnection will accept all newest files
  */
-export class NewestStrategy extends SynchronizationStrategy {
+export class NewestStrategy extends SynchronizationAction {
 
 
     /**

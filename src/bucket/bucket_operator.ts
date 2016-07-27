@@ -2,7 +2,7 @@ import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
 import {loggerFor, debugFor} from "../utils/logger";
-import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
+import {SynchronizationSubject, SyncData, SynchronizationAction} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";
@@ -15,15 +15,15 @@ const logger = loggerFor('BucketOperator');
 
 export interface BucketOperatorParams {
     transferConcurrency?:number,
-    strategy?:SynchronizationStrategy,
+    strategy?:SynchronizationAction,
 }
 
-export class BucketOperator implements StrategySubject {
+export class BucketOperator implements SynchronizationSubject {
     private otherParties:Array<EventedMessenger>;
     private container:FileContainer;
     private transferHelper:TransferHelper;
     private callbackHelper:CallbackHelper;
-    private syncStrategy:SynchronizationStrategy;
+    private syncStrategy:SynchronizationAction;
 
     constructor(private host:string, private path:string, options:BucketOperatorParams) {
         const transferConcurrency = options.transferConcurrency ? options.transferConcurrency : config.server.transferQueueSize;

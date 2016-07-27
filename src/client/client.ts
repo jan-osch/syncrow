@@ -2,7 +2,7 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 import {FileContainer, FileContainerOptions} from "../fs_helpers/file_container";
 import config from "../configuration";
-import {StrategySubject, SyncData, SynchronizationStrategy} from "../sync_strategy/sync_strategy";
+import {SynchronizationSubject, SyncData, SynchronizationAction} from "../sync_strategy/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import * as _ from "lodash";
@@ -15,12 +15,12 @@ const logger = loggerFor('Client');
 
 export interface ClientOptions {
     socketsLimit?:number;
-    strategy?:SynchronizationStrategy;
+    strategy?:SynchronizationAction;
     filter?:(s:string)=>boolean;
     listen?:boolean;
 }
 
-export class Client implements StrategySubject {
+export class Client implements SynchronizationSubject {
     static events = {
         fileChanged: 'fileChanged',
         fileCreated: 'fileCreated',
@@ -36,7 +36,7 @@ export class Client implements StrategySubject {
     private callbackHelper:CallbackHelper;
     private fileContainer:FileContainer;
     private transferHelper:TransferHelper;
-    private syncStrategy:SynchronizationStrategy;
+    private syncStrategy:SynchronizationAction;
     private filterFunction:(s:string)=>boolean;
 
     /**

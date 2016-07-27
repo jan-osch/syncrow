@@ -1,10 +1,10 @@
-import {SynchronizationStrategy} from "./sync_strategy";
+import {SynchronizationAction, SynchronizationFunction} from "./sync_strategy";
 import {loggerFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 
 const logger = loggerFor('NoActionStrategy');
 
-export class NoActionStrategy extends SynchronizationStrategy {
+export class NoActionStrategy extends SynchronizationAction {
 
     /**
      * Takes no action when connected
@@ -16,3 +16,8 @@ export class NoActionStrategy extends SynchronizationStrategy {
         if (callback) callback();
     }
 }
+
+const noActionSync: SynchronizationFunction = ()=> {
+
+};
+
