@@ -1,5 +1,4 @@
 import {FileContainer} from "../fs_helpers/file_container";
-import {EventsHelper} from "../client/events_helper";
 import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
 import {loggerFor, debugFor} from "../utils/logger";
@@ -9,6 +8,7 @@ import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
 import {ErrBack} from "../utils/interfaces";
+import {EventedMessenger} from "../connection/evented_messenger";
 
 const debug = debugFor("syncrow:bucket:operator");
 const logger = loggerFor('BucketOperator');
@@ -19,9 +19,8 @@ export interface BucketOperatorParams {
 }
 
 export class BucketOperator implements StrategySubject {
-    private otherParties:Array<Messenger>;
+    private otherParties:Array<EventedMessenger>;
     private container:FileContainer;
-    private otherPartiesMessageListeners:Array<Function>;
     private transferHelper:TransferHelper;
     private callbackHelper:CallbackHelper;
     private syncStrategy:SynchronizationStrategy;
@@ -32,7 +31,6 @@ export class BucketOperator implements StrategySubject {
 
         this.container = new FileContainer(path);
         this.otherParties = [];
-        this.otherPartiesMessageListeners = [];
 
         this.transferHelper = new TransferHelper(this.container, {
             transferQueueSize: transferConcurrency,
@@ -48,32 +46,26 @@ export class BucketOperator implements StrategySubject {
     /**
      * @param otherParty
      */
-    public addOtherParty(otherParty:Messenger) {
+    public addOtherParty(otherParty:EventedMessenger) {
         debug(`adding other party`);
-        const messageListener = (message)=>this.handleEvent(otherParty, message);
 
         otherParty.once(Messenger.events.died, ()=>this.removeOtherParty(otherParty));
         otherParty.once(Messenger.events.recovering, ()=>this.removeOtherParty(otherParty));
-        otherParty.on(Messenger.events.message, (message)=> messageListener(message));
 
         if (otherParty.isMessengerAlive()) this.syncStrategy.synchronize(otherParty);
 
         this.otherParties.push(otherParty);
-        this.otherPartiesMessageListeners.push(messageListener);
+        this.addEventMessengerListeners(otherParty);
     }
 
     /**
      * Completely removes otherParty from operator
      * @param otherParty
      */
-    public removeOtherParty(otherParty:Messenger) {
+    public removeOtherParty(otherParty:EventedMessenger) {
+        otherParty.shutdown();
         const index = this.otherParties.indexOf(otherParty);
-        const messageListener = this.otherPartiesMessageListeners[index];
-
-        otherParty.removeListener(Messenger.events.message, messageListener);
-
         this.otherParties.splice(index, 1);
-        this.otherPartiesMessageListeners.splice(index, 1);
     }
 
     /**
@@ -81,10 +73,9 @@ export class BucketOperator implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public getRemoteFileMeta(otherParty:Messenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
-        this.callbackHelper.sendWrapped(otherParty, Client.events.getMetaForFile, {fileName: fileName}, (err, event)=> {
-            callback(err, event.body);
-        });
+    public getRemoteFileMeta(otherParty:EventedMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+        const id = this.callbackHelper.addCallback(callback);
+        otherParty.send(Client.events.getMetaForFile, {fileName: fileName, id: id});
     }
 
     /**
@@ -93,7 +84,7 @@ export class BucketOperator implements StrategySubject {
      * @param callback
      * @returns {undefined}
      */
-    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrBack):any {
+    public pushFileToRemote(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 
@@ -101,10 +92,9 @@ export class BucketOperator implements StrategySubject {
      * @param otherParty
      * @param callback
      */
-    public getRemoteFileList(otherParty:Messenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
-        this.callbackHelper.sendWrapped(otherParty, Client.events.getFileList, {}, (err, event)=> {
-            callback(err, event.body);
-        });
+    public getRemoteFileList(otherParty:EventedMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
+        const id = this.callbackHelper.addCallback(callback);
+        otherParty.send(Client.events.getFileList, {id: id});
     }
 
     /**
@@ -112,63 +102,54 @@ export class BucketOperator implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrBack):any {
+    public requestRemoteFile(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
-    private handleEvent(otherParty:Messenger, message:string) {
-        const event = EventsHelper.parseEvent(otherParty, message);
+    private addEventMessengerListeners(otherParty:EventedMessenger) {
+        otherParty.on(TransferHelper.outerEvent, (event)=> this.transferHelper.consumeMessage(event.body, otherParty));
 
-        debug(`got event from other party: ${JSON.stringify(event, null, 2)}`);
+        otherParty.on(Client.events.metaDataForFile, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData));
 
-        if (event.type === TransferHelper.outerEvent) {
-            return this.transferHelper.consumeMessage(event.body, otherParty);
+        otherParty.on(Client.events.fileList, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.fileList));
 
-        } else if (event.type === Client.events.metaDataForFile) {
-            return this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData);
-
-        } else if (event.type === Client.events.fileList) {
-            return this.callbackHelper.getCallback(event.body.id)(null, event.body.fileList);
-
-        } else if (event.type === Client.events.directoryCreated) {
+        otherParty.on(Client.events.directoryCreated, (event)=> {
             this.container.createDirectory(event.body.fileName);
 
             return this.broadcastEvent(event.type, {fileName: event.body.fileName}, otherParty);
+        });
 
-        } else if (event.type === Client.events.fileDeleted) {
+        otherParty.on(Client.events.fileDeleted, (event)=> {
             this.container.deleteFile(event.body.fileName);
 
             return this.broadcastEvent(event.type, event.body, otherParty);
+        });
 
-        } else if (event.type === Client.events.fileChanged) {
+        otherParty.on(Client.events.fileChanged, (event)=> {
             return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
                 this.broadcastEvent(event.type, event.body, otherParty);
-            })
+            });
+        });
 
-        } else if (event.type === Client.events.getFileList) {
+        otherParty.on(Client.events.getFileList, (event)=> {
             return this.container.getFileTree((err, fileList)=> {
-                if (err) return logger.error(err);
+                if (err) {
+                    return logger.error(err);
+                }
 
-                EventsHelper.sendEvent(otherParty, Client.events.fileList,
-                    {fileList: fileList, id: event.body.id}
-                );
+                otherParty.send(Client.events.fileList, {fileList: fileList, id: event.body.id});
             });
+        });
 
-        } else if (event.type === Client.events.getMetaForFile) {
+        otherParty.on(Client.events.getMetaForFile, (event)=> {
             return this.container.getFileMeta(event.body.fileName, (err, syncData)=> {
-                if (err)return logger.error(err);
+                if (err) {
+                    return logger.error(err);
+                }
 
-                EventsHelper.sendEvent(otherParty,
-                    Client.events.metaDataForFile,
-                    {syncData: syncData, id: event.body.id}
-                )
-            });
-
-        } else if (event.type === EventsHelper.events.error) {
-            return logger.warn(`received error message ${JSON.stringify(event.body)}`);
-        }
-
-        EventsHelper.sendEvent(otherParty, EventsHelper.events.error, `unknown event type: ${event.type}`);
+                otherParty.send(Client.events.metaDataForFile, {syncData: syncData, id: event.body.id})
+            })
+        });
     }
 
     private broadcastEvent(eventType:string, body:any, excludeParty?:Messenger) {
@@ -177,7 +158,7 @@ export class BucketOperator implements StrategySubject {
                 return;
             }
 
-            EventsHelper.sendEvent(otherParty, eventType, body);
+            otherParty.send(eventType, body);
         })
     }
 }

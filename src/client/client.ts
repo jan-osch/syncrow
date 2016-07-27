@@ -125,7 +125,7 @@ export class Client implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrBack):any {
+    public requestRemoteFile(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
