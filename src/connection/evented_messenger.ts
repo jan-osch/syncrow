@@ -1,0 +1,58 @@
+import {ErrBack} from "../utils/interfaces";
+import {Messenger, MessengerParams} from "./messenger";
+import {debugFor} from "../utils/logger";
+
+const debug = debugFor('syncrow:evented_messenger');
+
+export interface Event {
+    type:string,
+    body?:any
+}
+
+export class EventedMessenger extends Messenger {
+
+    static error = 'error';
+
+    constructor(params:MessengerParams, callback?:ErrBack) {
+        super(params, callback);
+        this.on(Messenger.events.message, (rawMessage)=>this.parseAndEmit(rawMessage));
+    }
+
+    /**
+     * Parses event and if error occurs, notifies the other party
+     * @param message
+     * @returns {Event}
+     */
+    private parseEvent(message:string):Event {
+        try {
+            return JSON.parse(message.toString());
+        } catch (e) {
+            debug(`Sending error: exception during parsing message: ${message}`);
+            this.send(EventedMessenger.error, {title: 'Bad event', details: message});
+        }
+    }
+
+    /**
+     * Convenience method
+     * @param type
+     * @param body
+     */
+    public send(type:string, body?:any) {
+        const message = JSON.stringify({
+            type: type,
+            body: body,
+        });
+
+        super.writeMessage(message);
+    }
+
+    private parseAndEmit(rawMessage:string) {
+        const event = this.parseEvent(rawMessage);
+
+        if (this.listenerCount(event.type) == 0) {
+            return this.emit(EventedMessenger.error, {title: `Unknown event type: ${event.type}`, details: event})
+        }
+
+        return this.emit(event.type, event);
+    }
+}

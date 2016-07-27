@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 import {FileContainer} from "../fs_helpers/file_container";
 import {Socket, Server, createServer, connect} from "net";
 import {loggerFor, debugFor} from "../utils/logger";

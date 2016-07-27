@@ -1,5 +1,4 @@
-import {Messenger} from "../connection/messenger";
-import {Event, EventsHelper} from "../client/events_helper";
+import {Event} from "../client/events_helper";
 import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:callback_helper');

@@ -4,6 +4,7 @@ import {ParseHelper} from "./parse_helper";
 import {Socket} from "net";
 import {ConnectionHelper, ConnectionHelperParams} from "./connection_helper";
 import {AuthorisationHelper} from "../security/authorisation_helper";
+import {ErrBack} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
@@ -41,7 +42,7 @@ export class Messenger extends EventEmitter implements Closable {
      * @param params
      * @param callback
      */
-    constructor(private params:MessengerParams, callback?:ErrorCallback) {
+    constructor(private params:MessengerParams, callback?:ErrBack) {
         super();
 
         try {
@@ -95,7 +96,7 @@ export class Messenger extends EventEmitter implements Closable {
      * @param params
      * @param callback
      */
-    public getAndAddNewSocket(params:MessengerParams, callback:ErrorCallback) {
+    public getAndAddNewSocket(params:MessengerParams, callback:ErrBack) {
         async.autoInject({
                 socket: (cb)=>this.connectionHelper.getNewSocket(params, cb),
 
@@ -134,7 +135,7 @@ export class Messenger extends EventEmitter implements Closable {
         return parser;
     }
 
-    private initializeConnectionHelper(params:MessengerParams, callback:ErrorCallback) {
+    private initializeConnectionHelper(params:MessengerParams, callback:ErrBack) {
         async.series(
             [
                 (cb)=> {
@@ -174,7 +175,7 @@ export class Messenger extends EventEmitter implements Closable {
                 interval: params.interval
             },
 
-            (cb:ErrorCallback)=> {
+            (cb:ErrBack)=> {
                 logger.info('Attempting to reconnect');
                 return this.getAndAddNewSocket(params, cb);
             },
@@ -207,5 +208,4 @@ export class Messenger extends EventEmitter implements Closable {
 
         if (params.authorize && !params.token) throw new Error('If Messenger has to authorise it needs a token');
     }
-
 }

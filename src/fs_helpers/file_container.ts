@@ -10,7 +10,6 @@ import {readTree} from "./read_tree";
 import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
 import * as chokidar from "chokidar";
-import ReadableStream = NodeJS.ReadableStream;
 
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');

@@ -8,6 +8,7 @@ import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";
 import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
+import {ErrBack} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:bucket:operator");
 const logger = loggerFor('BucketOperator');
@@ -92,7 +93,7 @@ export class BucketOperator implements StrategySubject {
      * @param callback
      * @returns {undefined}
      */
-    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
+    public pushFileToRemote(otherParty:Messenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 
@@ -111,7 +112,7 @@ export class BucketOperator implements StrategySubject {
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrorCallback):any {
+    public requestRemoteFile(otherParty:Messenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
