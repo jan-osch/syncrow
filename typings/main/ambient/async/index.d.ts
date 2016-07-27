@@ -147,6 +147,7 @@ interface Async {
     times<T> (n: number, iterator: AsyncResultIterator<number, T>, callback: AsyncResultArrayCallback<T>): void;
     timesSeries<T>(n: number, iterator: AsyncResultIterator<number, T>, callback: AsyncResultArrayCallback<T>): void;
     timesLimit<T>(n: number, limit: number, iterator: AsyncResultIterator<number, T>, callback: AsyncResultArrayCallback<T>): void;
+    timeout(fn: Function, miliseconds:number, info?:any):Function
 
     // Utils
     memoize(fn: Function, hasher?: Function): Function;
