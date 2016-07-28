@@ -4,7 +4,7 @@ import {EventEmitter} from "events";
 import config from "../configuration";
 import {loggerFor, debugFor} from "../utils/logger";
 import {PathHelper} from "./path_helper";
-import {SyncData} from "../sync/sync_strategy";
+import {SyncData} from "../sync/sync_actions";
 import {FileMetaComputingQueue} from "./file_meta_queue";
 import {readTree} from "./read_tree";
 import * as rimraf from "rimraf";

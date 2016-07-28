@@ -1,7 +1,7 @@
 import * as async from "async";
 import * as fs from "fs";
 import * as crypto from "crypto";
-import {SyncData} from "../sync/sync_strategy";
+import {SyncData} from "../sync/sync_actions";
 import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:file_meta_queue');

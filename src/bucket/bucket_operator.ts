@@ -2,7 +2,7 @@ import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
 import {loggerFor, debugFor} from "../utils/logger";
-import {SynchronizationSubject, SyncData, SyncAction} from "../sync/sync_strategy";
+import {SynchronizationSubject, SyncData, SyncAction} from "../sync/sync_actions";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";

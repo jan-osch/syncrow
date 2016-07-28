@@ -1,23 +1,12 @@
-import {SyncAction, SynchronizationFunction} from "./sync_strategy";
+import {SyncAction, SynchronizationFunction, SyncActionFactory} from "./sync_actions";
 import {loggerFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 
 const logger = loggerFor('NoActionStrategy');
 
-export class NoActionStrategy extends SyncAction {
-
-    /**
-     * Takes no action when connected
-     * @param otherParty
-     * @param callback
-     */
-    public synchronize(otherParty:Messenger, callback:Function) {
-        logger.info(`no action needed`);
-        if (callback) callback();
+export class NoActionSyncActionFactory implements SyncActionFactory{
+    sync(remoteParty:EventedMessenger, container:FileContainer, subject:SyncActionSubject, callback:ErrorCallback):any {
+        return undefined;
     }
+
 }
-
-const noActionSync: SynchronizationFunction = ()=> {
-
-};
-

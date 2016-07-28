@@ -5,8 +5,8 @@ export interface SyncData {
     hashCode:string;
     modified:Date;
     name:string;
-    isDirectory:boolean,
-    exists:boolean
+    isDirectory:boolean;
+    exists:boolean;
 }
 
 export interface SyncActionSubject {
@@ -20,20 +20,9 @@ export interface SyncActionParams {
     remoteParty:EventedMessenger;
     container:FileContainer;
     subject:SyncActionSubject;
-}
-
-export interface SyncActionFactory {
-    sync(remoteParty:EventedMessenger, container:FileContainer, subject:SyncActionSubject, callback:ErrorCallback):any;
+    deleteIfMissingRemotely?:boolean;
 }
 
 export interface SyncAction {
-    execute(params:SyncActionParams, callback:ErrorCallback):any;
-}
-
-export function buildParams(remoteParty:EventedMessenger, container:FileContainer, subject:SyncActionSubject):SyncActionParams {
-    return {
-        remoteParty: remoteParty,
-        container: container,
-        subject: subject
-    };
+    (params:SyncActionParams, callback:ErrorCallback):any;
 }

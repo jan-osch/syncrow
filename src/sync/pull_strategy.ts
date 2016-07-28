@@ -1,65 +1,93 @@
-import {NoActionStrategy} from "./no_action_strategy";
 import * as async from "async";
 import {debugFor, loggerFor} from "../utils/logger";
-import {Messenger} from "../connection/messenger";
+import {SyncActionParams} from "./sync_actions";
+import * as _ from "lodash";
 
 const debug = debugFor('syncrow:strategy:pull');
 const logger = loggerFor('PullStrategy');
 
+
 /**
- * On every reconnection pull everything from remote
+ * It will download all files from remote.
+ * If any file remotely does not exist, but exists locally it will be deleted
+ *
+ * @param params
+ * @param doneCallback
  */
-export class PullStrategy extends NoActionStrategy {
+export function overrideLocalWithRemote(params:SyncActionParams, doneCallback:ErrorCallback):any {
+    return async.waterfall(
+        [
+            (cb)=>getFileLists(params, cb),
+            (list, cb)=>processFileLists(params, list, cb)
+        ],
 
-    private pulled:boolean;
+        doneCallback
+    )
+}
 
-    constructor() {
-        super();
-        this.pulled = false;
-    }
+interface FileLists {
+    localFileList:Array<string>;
+    remoteFileList:Array<string>;
+}
 
-    /**
-     * @override
-     * @param otherParty
-     * @param doneCallback
-     * @returns {undefined}
-     */
-    public synchronize(otherParty:Messenger, doneCallback:ErrorCallback):any {
-        if (this.pulled) return super.synchronize(otherParty, doneCallback);
+function getFileLists(params:SyncActionParams, callback) {
+    return async.parallel(
+        {
+            localFileList: (cb)=>params.container.getFileTree(cb),
+            remoteFileList: (cb)=>params.subject.getRemoteFileList(params.remoteParty, cb)
+        },
 
-        debug('did not pull before -starting to requesting remote file list');
+        callback
+    );
+}
 
-        async.waterfall(
-            [
-                (gotListCallback)=> this.subject.getRemoteFileList(otherParty, gotListCallback),
-                (fileList, filesSyncedCallback)=> this.synchronizeFileList(otherParty, fileList, filesSyncedCallback)
-            ],
-            (err)=>{
-                if(err) return doneCallback(err);
-                this.pulled = true;
-                logger.info(`pulled all files - switching to no-action strategy`)
+function processFileLists(params:SyncActionParams, lists:FileLists, callback) {
+    return async.parallel(
+        [
+            (cb)=>deleteLocalFilesThatAreMissingRemotely(params, lists, cb),
+            (cb)=>downloadOrCreateRemoteFileList(params, lists, cb),
+        ],
+
+        callback
+    )
+}
+
+function deleteLocalFilesThatAreMissingRemotely(params:SyncActionParams, lists:FileLists, callback:ErrorCallback) {
+    if (!params.deleteIfMissingRemotely) return callback();
+
+    const filesMissingLocally = _.difference(lists.localFileList, lists.remoteFileList);
+
+    return async.each(filesMissingLocally,
+
+        (pathName, cb)=>params.container.deleteFile(pathName, cb),
+
+        callback
+    );
+}
+
+function downloadOrCreateRemoteFileList(params:SyncActionParams, lists:FileLists, callback:ErrorCallback) {
+    return async.each(lists.remoteFileList,
+
+        (file, cb)=>downloadOrCreateRemoteFile(params, file, cb),
+
+        callback
+    );
+}
+
+function downloadOrCreateRemoteFile(params:SyncActionParams, file:string, callback:ErrorCallback) {
+    return async.waterfall(
+        [
+            (cb)=>params.subject.getRemoteFileMeta(params.remoteParty, file, cb),
+
+            (syncData, cb)=> {
+                if (syncData.isDirectory) {
+                    return params.container.createDirectory(file, cb);
+                }
+
+                return params.subject.requestRemoteFile(params.remoteParty, file, cb);
             }
-        );
-    }
+        ],
 
-    private synchronizeFileList(otherParty:Messenger, fileList:Array<string>, doneCallback:any) {
-        async.each(fileList,
-
-            (file, fileSyncedCallback)=>this.synchronizeFile(otherParty, file, fileSyncedCallback),
-
-            doneCallback
-        );
-    }
-
-    private synchronizeFile(otherParty:Messenger, file:string, callback:ErrorCallback) {
-        this.subject.getRemoteFileMeta(otherParty, file, (err, syncData)=> {
-            if (err) return callback(err);
-
-            if (syncData.isDirectory) {
-                return this.container.createDirectory(file, callback);
-            }
-
-            return this.subject.requestRemoteFile(otherParty, file, callback);
-        });
-    }
+        callback
+    );
 }
