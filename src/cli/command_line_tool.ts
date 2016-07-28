@@ -6,10 +6,10 @@ import {Client} from "../client/client";
 import * as fs from "fs";
 import * as _ from "lodash";
 import * as path from "path";
-import {SynchronizationAction} from "../sync_strategy/sync_strategy";
-import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
-import {PullStrategy} from "../sync_strategy/pull_strategy";
-import {NewestStrategy} from "../sync_strategy/accept_newest_strategy";
+import {SyncAction} from "../sync/sync_strategy";
+import {NoActionStrategy} from "../sync/no_action_strategy";
+import {PullStrategy} from "../sync/pull_strategy";
+import {GetNewestSyncAction} from "../sync/get_newest_action";
 import * as anymatch from "anymatch";
 
 const logger = loggerFor("CLI");
@@ -168,7 +168,7 @@ function validateConfig(config) {
 }
 
 
-function getStrategy(codeName):SynchronizationAction {
+function getStrategy(codeName):SyncAction {
     let strategy;
     switch (codeName) {
         case 'no':
@@ -178,7 +178,7 @@ function getStrategy(codeName):SynchronizationAction {
             strategy = new PullStrategy();
             break;
         case 'newest':
-            strategy = new NewestStrategy();
+            strategy = new GetNewestSyncAction();
             break;
     }
     return strategy;
@@ -203,7 +203,7 @@ function getPortForBucket(host, port, bucket, callback) {
 }
 //TODO implement token
 
-function listenAndStart(localPort:number, directory:string, strategy:SynchronizationAction, filterFunction:(s:string) => boolean) {
+function listenAndStart(localPort:number, directory:string, strategy:SyncAction, filterFunction:(s:string) => boolean) {
     const messenger = new Messenger({
         port: localPort,
         listen: true,
@@ -222,7 +222,7 @@ function listenAndStart(localPort:number, directory:string, strategy:Synchroniza
 function connectWithRetryAndStart(remoteHost:string,
                                   remotePort:number,
                                   directory:string,
-                                  strategy:SynchronizationAction,
+                                  strategy:SyncAction,
                                   filterFunction:(s:string) => boolean) {
 
     const messenger = new Messenger({
@@ -245,7 +245,7 @@ function connectWithBucketAndStart(remoteHost:string,
                                    servicePort:number,
                                    bucketName:string,
                                    directory:string,
-                                   strategy:SynchronizationAction,
+                                   strategy:SyncAction,
                                    filterFunction:(s:string) => boolean) {
     
 

@@ -2,11 +2,11 @@ import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
 import {Client} from "../client/client";
 import {loggerFor, debugFor} from "../utils/logger";
-import {SynchronizationSubject, SyncData, SynchronizationAction} from "../sync_strategy/sync_strategy";
+import {SynchronizationSubject, SyncData, SyncAction} from "../sync/sync_strategy";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";
-import {NoActionStrategy} from "../sync_strategy/no_action_strategy";
+import {NoActionStrategy} from "../sync/no_action_strategy";
 import {ErrBack} from "../utils/interfaces";
 import {EventedMessenger} from "../connection/evented_messenger";
 
@@ -15,7 +15,7 @@ const logger = loggerFor('BucketOperator');
 
 export interface BucketOperatorParams {
     transferConcurrency?:number,
-    strategy?:SynchronizationAction,
+    strategy?:SyncAction,
 }
 
 export class BucketOperator implements SynchronizationSubject {
@@ -23,7 +23,7 @@ export class BucketOperator implements SynchronizationSubject {
     private container:FileContainer;
     private transferHelper:TransferHelper;
     private callbackHelper:CallbackHelper;
-    private syncStrategy:SynchronizationAction;
+    private syncStrategy:SyncAction;
 
     constructor(private host:string, private path:string, options:BucketOperatorParams) {
         const transferConcurrency = options.transferConcurrency ? options.transferConcurrency : config.server.transferQueueSize;
