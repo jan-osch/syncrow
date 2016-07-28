@@ -53,7 +53,7 @@ function processFileLists(params:SyncActionParams, lists:FileLists, callback) {
 }
 
 function deleteLocalFilesThatAreMissingRemotely(params:SyncActionParams, lists:FileLists, callback:ErrorCallback) {
-    if (!params.deleteIfMissingRemotely) return callback();
+    if (!params.deleteLocalIfRemoteMissing) return callback();
 
     const filesMissingLocally = _.difference(lists.localFileList, lists.remoteFileList);
 
@@ -91,5 +91,3 @@ function downloadOrCreateRemoteFile(params:SyncActionParams, file:string, callba
         callback
     );
 }
-
-function getFileMeta

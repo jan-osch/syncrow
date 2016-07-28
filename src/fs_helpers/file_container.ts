@@ -34,7 +34,7 @@ export class FileContainer extends EventEmitter implements Closable{
     private fileMetaQueue:FileMetaComputingQueue;
     private filterFunction:(s:string)=>boolean;
     private watchTimeout:number;
-    private watcher:chokidar.watcher;
+    private watcher:fs.FSWatcher;
 
     /**
      * Wrapper over filesystem

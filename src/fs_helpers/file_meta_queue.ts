@@ -86,7 +86,7 @@ export class FileMetaComputingQueue {
         stream.on('error', callback);
 
         hash.on('finish', ()=> {
-            syncData.hashCode = hash.read().toString('hex');
+            syncData.hashCode = hash.digest().toString('hex');
             callback(null, syncData);
         });
     }

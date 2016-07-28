@@ -75,7 +75,7 @@ function issueSubjectCommandsIfNeeded(params:SyncActionParams, ownMeta:SyncData,
             }
         }
     }
-    if(params.deleteIfMissingRemotely){
+    if(params.deleteLocalIfRemoteMissing){
         debug(`file ${ownMeta.name} does not exist remotely - it will be deleted locally`);
         return params.container.deleteFile(otherMeta.name, callback);
     }

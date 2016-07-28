@@ -1,10 +1,8 @@
-import {Event} from "../client/events_helper";
 import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:callback_helper');
 
 
-let instance = null;
 //TODO add timeout ability
 //TODO add clear ability - delete all callbacks that are awaiting from otherParty that disconnected
 export class CallbackHelper {

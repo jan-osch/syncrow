@@ -1,25 +1,26 @@
+import * as async from "async";
 import {EventEmitter} from "events";
 import {loggerFor, debugFor, Closable} from "../utils/logger";
 import {ParseHelper} from "./parse_helper";
 import {Socket} from "net";
 import {ConnectionHelper, ConnectionHelperParams} from "./connection_helper";
 import {AuthorisationHelper} from "../security/authorisation_helper";
-import {ErrBack} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:connection:messenger");
 const logger = loggerFor('Messenger');
 
 export interface MessengerParams extends ConnectionHelperParams {
-    port:number
-    host?:string
-    listen:boolean
-    reconnect:boolean
-    interval?:number
-    retries?:number
-    await?:boolean
-    authorize?:boolean
-    token?:string
-    authorisationTimeout?:number
+    port?:number;
+    host?:string;
+    listen:boolean;
+    reconnect:boolean;
+    interval?:number;
+    retries?:number;
+    await?:boolean;
+    authorize?:boolean;
+    token?:string;
+    authorisationTimeout?:number;
+    socket:Socket;
 }
 
 export class Messenger extends EventEmitter implements Closable {
@@ -42,17 +43,21 @@ export class Messenger extends EventEmitter implements Closable {
      * @param params
      * @param callback
      */
-    constructor(private params:MessengerParams, callback?:ErrBack) {
+    constructor(private params:MessengerParams, callback?:ErrorCallback) {
         super();
 
         try {
-            Messenger.validateParams(params);
+            Messenger.validateParams(this.params);
         } catch (e) {
             return callback(e);
         }
 
         this.parseHelper = null;
-        this.initializeConnectionHelper(this.params, callback)
+        if (params.socket) {
+            this.addSocket(this.params.socket);
+        } else {
+            this.initializeConnectionHelper(this.params, callback);
+        }
     }
 
     /**
@@ -134,7 +139,7 @@ export class Messenger extends EventEmitter implements Closable {
         return parser;
     }
 
-    private initializeConnectionHelper(params:MessengerParams, callback:ErrBack) {
+    private initializeConnectionHelper(params:MessengerParams, callback:ErrorCallback) {
         async.series(
             [
                 (cb)=> {
@@ -174,7 +179,7 @@ export class Messenger extends EventEmitter implements Closable {
                 interval: params.interval
             },
 
-            (cb:ErrBack)=> {
+            (cb:ErrorCallback)=> {
                 logger.info('Attempting to reconnect');
                 return this.getAndAddNewSocket(params, cb);
             },
@@ -202,6 +207,8 @@ export class Messenger extends EventEmitter implements Closable {
 
     private static validateParams(params:MessengerParams) {
         if (params.listen && !params.host) throw new Error('If not Messenger is not listening, host is needed');
+
+        if (params.listen && !params.port) throw new Error('If not Messenger is not listening, port is needed');
 
         if (params.reconnect && !params.await && !params.retries) throw new Error('If Messenger has to reconnect automatically, it needs retries');
 

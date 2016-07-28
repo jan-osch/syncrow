@@ -34,12 +34,10 @@ export class Engine implements SyncActionSubject, Closable {
     };
 
     private otherParties:Array<EventMessenger>;
-
     private callbackHelper:CallbackHelper;
-
-
     private transferHelper:TransferHelper;
     private options:EngineOptions;
+
     constructor(private fileContainer:FileContainer, options:EngineOptions, callback:ErrorCallback) {
         this.options = Engine.prepareOptions(options);
 
@@ -99,7 +97,7 @@ export class Engine implements SyncActionSubject, Closable {
         this.addEngineListenersToOtherParty(otherParty);
     }
 
-    public shutdown(){
+    public shutdown() {
         this.otherParties.forEach(otherParty => this.removeOtherParty(otherParty));
         this.fileContainer.shutdown();
     }

@@ -1,6 +1,7 @@
+/// <reference path="../typings/globals/node/index.d.ts" />
 import *  as fs from "fs";
 
-const configuration:Config = JSON.parse(fs.readFileSync(__dirname + '/../config/config.json'));
+const configuration:Config = JSON.parse(fs.readFileSync(__dirname + '/../config/config.json', 'utf8'));
 
 interface Config {
     fileContainer:{

@@ -21,7 +21,8 @@ export interface SyncActionParams {
     remoteParty:EventMessenger;
     container:FileContainer;
     subject:SyncActionSubject;
-    deleteIfMissingRemotely?:boolean;
+    deleteLocalIfRemoteMissing?:boolean;
+    deleteRemoteIfLocalMissing?:boolean;
 }
 
 export interface SyncAction {

@@ -1,3 +1,3 @@
-export interface ErrBack {
+export interface ErrorCallback {
     (err?:Error):any;
 }

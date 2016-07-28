@@ -6,11 +6,13 @@
   },
   "globalDependencies": {
     "async": "registry:dt/async#1.4.2+20160602152629",
+    "body-parser": "registry:dt/body-parser#0.0.0+20160619023215",
     "chai": "registry:dt/chai#3.4.0+20160601211834",
     "chalk": "registry:dt/chalk#0.4.0+20160317120654",
     "chokidar": "registry:dt/chokidar#1.4.3+20160316155526",
     "commander": "registry:dt/commander#2.3.0+20160317120654",
     "debug": "registry:dt/debug#0.0.0+20160317120654",
+    "lodash": "registry:dt/lodash#3.10.0+20160720001309",
     "mkdirp": "registry:dt/mkdirp#0.3.0+20160317120654",
     "mocha": "registry:dt/mocha#2.2.5+20160619032855",
     "node": "registry:env/node#6.0.0+20160723033700",

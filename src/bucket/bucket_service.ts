@@ -1,11 +1,13 @@
+
+
 import {getUserService} from "./user_service";
 import {Server, createServer} from "net";
-import {BucketOperator} from "./bucket_operator";
-import {Messenger} from "../connection/messenger";
 import * as fs from "fs";
 import * as async from "async";
-import {Connection} from "../connection/connection";
 import {loggerFor, debugFor} from "../utils/logger";
+import {Engine} from "../client/engine";
+import {FileContainer} from "../fs_helpers/file_container";
+import {EventMessenger} from "../connection/evented_messenger";
 
 const debug = debugFor("syncrow:bucket:service");
 const logger = loggerFor('BucketService');
@@ -14,7 +16,7 @@ const UserService = getUserService();
 
 export class BucketService {
     private host:string;
-    private bucketOperators:Map<string,BucketOperator>;
+    private bucketOperators:Map<string,Engine>;
     private bucketServerPorts:Map<string, number>;
     private bucketsList:Array<string>;
     private bucketIncomingListeners:Map<string, Server>;
@@ -26,7 +28,7 @@ export class BucketService {
      */
     constructor(host:string, path:string) {
         this.host = host;
-        this.bucketsList = this.loadBucketDirectories(path);
+        this.bucketsList = BucketService.loadBucketDirectories(path);
         this.bucketOperators = this.initializeBucketOperators(path, this.bucketsList);
 
         this.bucketServerPorts = new Map();
@@ -63,7 +65,7 @@ export class BucketService {
         return callback(null, this.bucketServerPorts.get(bucketName));
     }
 
-    private loadBucketDirectories(path):Array<string> {
+    private static loadBucketDirectories(path):Array<string> {
         const buckets = fs.readdirSync(path);
 
         debug(`loaded ${buckets.length} buckets`);
@@ -75,7 +77,12 @@ export class BucketService {
         const result = new Map();
 
         bucketsList.forEach((bucketName)=> {
-            result.set(bucketName, new BucketOperator(this.host, `${basePath}/${bucketName}`));
+            const container = new FileContainer(`${basePath}/${bucketName}`);
+            const engine = new Engine(container, {
+                allowReconnecting: false,
+                preferConnecting: false,
+            }, (err)=>logger.error(err));
+            result.set(bucketName, engine);
         });
 
         return result;
@@ -93,7 +100,11 @@ export class BucketService {
     private createListenerForBucket(bucketName:string, callback:Function) {
         const server = createServer(
             (incomingSocket)=> {
-                const otherParty = new Messenger(new Connection(incomingSocket));
+                const otherParty = new EventMessenger({
+                    listen: false,
+                    socket: incomingSocket
+                }, (err)=>logger.error(err));
+
                 this.bucketOperators.get(bucketName).addOtherParty(otherParty);
             }
         ).listen(()=> {
