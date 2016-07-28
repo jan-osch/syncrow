@@ -2,12 +2,12 @@ import * as program from "commander";
 import * as request from "request";
 import {debugFor, loggerFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
-import {Client} from "../client/client";
+import {Engine} from "../client/engine";
 import * as fs from "fs";
 import * as _ from "lodash";
 import * as path from "path";
 import {SyncAction} from "../sync/sync_actions";
-import {NoActionStrategy} from "../sync/no_action_strategy";
+import {NoActionStrategy} from "../sync/no_action";
 import {PullStrategy} from "../sync/pull_action";
 import {GetNewestSyncAction} from "../sync/get_newest_action";
 import * as anymatch from "anymatch";
@@ -214,7 +214,7 @@ function listenAndStart(localPort:number, directory:string, strategy:SyncAction,
 
         logger.info('Connected');
 
-        const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+        const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
     });
 }
 
@@ -237,7 +237,7 @@ function connectWithRetryAndStart(remoteHost:string,
 
         logger.info('Connected');
 
-        const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+        const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
     })
 }
 
@@ -267,7 +267,7 @@ function connectWithBucketAndStart(remoteHost:string,
 
 
                     logger.info('Connected');
-                    const client = new Client(directory, messenger, {strategy: strategy, filter: filterFunction});
+                    const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
 
                     messenger.on(Messenger.events.recovering,
 

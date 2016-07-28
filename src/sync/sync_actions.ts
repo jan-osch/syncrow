@@ -14,6 +14,7 @@ export interface SyncActionSubject {
     getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any;
     requestRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
     pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
+    deleteRemoteFile(otherParty:EventMessenger, fileName:string):any;
 }
 
 export interface SyncActionParams {

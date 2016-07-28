@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import {EventEmitter} from "events";
 import config from "../configuration";
-import {loggerFor, debugFor} from "../utils/logger";
+import {loggerFor, debugFor, Closable} from "../utils/logger";
 import {PathHelper} from "./path_helper";
 import {SyncData} from "../sync/sync_actions";
 import {FileMetaComputingQueue} from "./file_meta_queue";
@@ -20,7 +20,7 @@ export interface FileContainerOptions {
     filter?:(s:string)=>boolean;
 }
 
-export class FileContainer extends EventEmitter {
+export class FileContainer extends EventEmitter implements Closable{
     static events = {
         changed: 'changed',
         deleted: 'deleted',

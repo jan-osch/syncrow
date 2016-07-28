@@ -1,12 +1,12 @@
 import {FileContainer} from "../fs_helpers/file_container";
 import {Messenger} from "../connection/messenger";
-import {Client} from "../client/client";
+import {Engine} from "../client/engine";
 import {loggerFor, debugFor} from "../utils/logger";
 import {SynchronizationSubject, SyncData, SyncAction} from "../sync/sync_actions";
 import {CallbackHelper} from "../transport/callback_helper";
 import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";
-import {NoActionStrategy} from "../sync/no_action_strategy";
+import {NoActionStrategy} from "../sync/no_action";
 import {ErrBack} from "../utils/interfaces";
 import {EventMessenger} from "../connection/evented_messenger";
 
@@ -20,8 +20,8 @@ export interface BucketOperatorParams {
 
 //TODO:
 /**
- * 1: Change Client to SyncEngine
- * 2: Implement all BucketOperators Functionalities into SyncEngine
+ * 1: Change Engine to Engine
+ * 2: Implement all BucketOperators Functionalities into Engine
  * 3: Extract
  */
 
@@ -82,7 +82,7 @@ export class BucketOperator implements SynchronizationSubject {
      */
     public getRemoteFileMeta(otherParty:EventMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
         const id = this.callbackHelper.addCallback(callback);
-        otherParty.send(Client.events.getMetaForFile, {fileName: fileName, id: id});
+        otherParty.send(Engine.events.getMetaForFile, {fileName: fileName, id: id});
     }
 
     /**
@@ -101,7 +101,7 @@ export class BucketOperator implements SynchronizationSubject {
      */
     public getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
         const id = this.callbackHelper.addCallback(callback);
-        otherParty.send(Client.events.getFileList, {id: id});
+        otherParty.send(Engine.events.getFileList, {id: id});
     }
 
     /**
@@ -116,45 +116,45 @@ export class BucketOperator implements SynchronizationSubject {
     private addEventMessengerListeners(otherParty:EventMessenger) {
         otherParty.on(TransferHelper.outerEvent, (event)=> this.transferHelper.consumeMessage(event.body, otherParty));
 
-        otherParty.on(Client.events.metaDataForFile, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData));
+        otherParty.on(Engine.events.metaDataForFile, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData));
 
-        otherParty.on(Client.events.fileList, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.fileList));
+        otherParty.on(Engine.events.fileList, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.fileList));
 
-        otherParty.on(Client.events.directoryCreated, (event)=> {
+        otherParty.on(Engine.events.directoryCreated, (event)=> {
             this.container.createDirectory(event.body.fileName);
 
             return this.broadcastEvent(event.type, {fileName: event.body.fileName}, otherParty);
         });
 
-        otherParty.on(Client.events.fileDeleted, (event)=> {
+        otherParty.on(Engine.events.fileDeleted, (event)=> {
             this.container.deleteFile(event.body.fileName);
 
             return this.broadcastEvent(event.type, event.body, otherParty);
         });
 
-        otherParty.on(Client.events.fileChanged, (event)=> {
+        otherParty.on(Engine.events.fileChanged, (event)=> {
             return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
                 this.broadcastEvent(event.type, event.body, otherParty);
             });
         });
 
-        otherParty.on(Client.events.getFileList, (event)=> {
+        otherParty.on(Engine.events.getFileList, (event)=> {
             return this.container.getFileTree((err, fileList)=> {
                 if (err) {
                     return logger.error(err);
                 }
 
-                otherParty.send(Client.events.fileList, {fileList: fileList, id: event.body.id});
+                otherParty.send(Engine.events.fileList, {fileList: fileList, id: event.body.id});
             });
         });
 
-        otherParty.on(Client.events.getMetaForFile, (event)=> {
+        otherParty.on(Engine.events.getMetaForFile, (event)=> {
             return this.container.getFileMeta(event.body.fileName, (err, syncData)=> {
                 if (err) {
                     return logger.error(err);
                 }
 
-                otherParty.send(Client.events.metaDataForFile, {syncData: syncData, id: event.body.id})
+                otherParty.send(Engine.events.metaDataForFile, {syncData: syncData, id: event.body.id})
             })
         });
     }

@@ -32,9 +32,9 @@ export class Messenger extends EventEmitter implements Closable {
 
     static events = {
         message: 'message',
-        alive: 'connected',
         died: 'disconnected',
-        recovering: 'reconnecting'
+        recovering: 'reconnecting',
+        reconnected: 'reconnected'
     };
 
     /**
@@ -123,7 +123,6 @@ export class Messenger extends EventEmitter implements Closable {
         this.socket.on('close', (error)=>this.handleSocketProblem(error));
         this.isAlive = true;
         this.parseHelper = this.createParser(socket);
-        this.emit(Messenger.events.alive);
 
         debug(`Added a new socket`);
     }
@@ -169,7 +168,7 @@ export class Messenger extends EventEmitter implements Closable {
     }
 
     private tryToConnect(params:MessengerParams) {
-        async.retry(
+        return async.retry(
             {
                 times: params.retries,
                 interval: params.interval
@@ -183,8 +182,10 @@ export class Messenger extends EventEmitter implements Closable {
             (err)=> {
                 if (err) {
                     logger.error(`Could not reconnect - reason ${err}`);
-                    this.emit(Messenger.events.died);
+                    return this.emit(Messenger.events.died);
                 }
+
+                return this.emit(Messenger.events.reconnected);
             }
         )
     }
