@@ -5,7 +5,7 @@ import {TransferActions} from "./transfer_actions";
 import {loggerFor} from "../utils/logger";
 import config from "../configuration";
 import {ErrBack} from "../utils/interfaces";
-import {EventedMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/evented_messenger";
 
 export interface TransferHelperOptions {
     transferQueueSize?:number,
@@ -48,7 +48,7 @@ export class TransferHelper {
      * @param transferMessage
      * @param otherParty
      */
-    public consumeMessage(transferMessage:TransferMessage, otherParty:EventedMessenger) {
+    public consumeMessage(transferMessage:TransferMessage, otherParty:EventMessenger) {
         if (transferMessage.command === TransferActions.events.connectAndUpload) {
             this.queue.addConnectAndUploadJobToQueue(
                 transferMessage.fileName,
@@ -85,7 +85,7 @@ export class TransferHelper {
      * @param fileName
      * @param callback
      */
-    public getFileFromRemote(otherParty:EventedMessenger, fileName:string, callback:ErrBack) {
+    public getFileFromRemote(otherParty:EventMessenger, fileName:string, callback:ErrBack) {
 
         if (this.preferConnecting) {
             const id = callbackHelper.addCallback(callback);
@@ -108,7 +108,7 @@ export class TransferHelper {
      * @param fileName
      * @param callback
      */
-    public sendFileToRemote(otherParty:EventedMessenger, fileName:string, callback:ErrBack) {
+    public sendFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrBack) {
 
         if (this.preferConnecting) {
             const id = callbackHelper.addCallback(callback);
@@ -125,7 +125,7 @@ export class TransferHelper {
         return this.sendFileViaListening(fileName, otherParty, {callback: callback});
     }
 
-    private sendFileViaListening(fileName:string, remote:EventedMessenger, optional:{id ?:string, callback?:ErrBack }) {
+    private sendFileViaListening(fileName:string, remote:EventMessenger, optional:{id ?:string, callback?:ErrBack }) {
         this.queue.addListenAndUploadJobToQueue(
             fileName,
             remote.getOwnHost(),
@@ -148,7 +148,7 @@ export class TransferHelper {
     }
 
 
-    private getFileViaListening(fileName:string, remote:EventedMessenger, optional:{id?:string, callback?:ErrBack}) {
+    private getFileViaListening(fileName:string, remote:EventMessenger, optional:{id?:string, callback?:ErrBack}) {
         this.queue.addListenAndDownloadJobToQueue(
             fileName,
             remote.getOwnHost(),

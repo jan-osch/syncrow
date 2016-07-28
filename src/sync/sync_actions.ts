@@ -1,5 +1,5 @@
 import {FileContainer} from "../fs_helpers/file_container";
-import {EventedMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/evented_messenger";
 
 export interface SyncData {
     hashCode:string;
@@ -10,14 +10,14 @@ export interface SyncData {
 }
 
 export interface SyncActionSubject {
-    getRemoteFileMeta(otherParty:EventedMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any;
-    getRemoteFileList(otherParty:EventedMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any;
-    requestRemoteFile(otherParty:EventedMessenger, fileName:string, callback:ErrorCallback):any;
-    pushFileToRemote(otherParty:EventedMessenger, fileName:string, callback:ErrorCallback):any;
+    getRemoteFileMeta(otherParty:EventMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any;
+    getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any;
+    requestRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
+    pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
 }
 
 export interface SyncActionParams {
-    remoteParty:EventedMessenger;
+    remoteParty:EventMessenger;
     container:FileContainer;
     subject:SyncActionSubject;
     deleteIfMissingRemotely?:boolean;

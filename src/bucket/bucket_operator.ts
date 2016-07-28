@@ -8,7 +8,7 @@ import config from "../configuration";
 import {TransferHelper} from "../transport/transfer_helper";
 import {NoActionStrategy} from "../sync/no_action_strategy";
 import {ErrBack} from "../utils/interfaces";
-import {EventedMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/evented_messenger";
 
 const debug = debugFor("syncrow:bucket:operator");
 const logger = loggerFor('BucketOperator');
@@ -18,8 +18,15 @@ export interface BucketOperatorParams {
     strategy?:SyncAction,
 }
 
+//TODO:
+/**
+ * 1: Change Client to SyncEngine
+ * 2: Implement all BucketOperators Functionalities into SyncEngine
+ * 3: Extract
+ */
+
 export class BucketOperator implements SynchronizationSubject {
-    private otherParties:Array<EventedMessenger>;
+    private otherParties:Array<EventMessenger>;
     private container:FileContainer;
     private transferHelper:TransferHelper;
     private callbackHelper:CallbackHelper;
@@ -46,7 +53,7 @@ export class BucketOperator implements SynchronizationSubject {
     /**
      * @param otherParty
      */
-    public addOtherParty(otherParty:EventedMessenger) {
+    public addOtherParty(otherParty:EventMessenger) {
         debug(`adding other party`);
 
         otherParty.once(Messenger.events.died, ()=>this.removeOtherParty(otherParty));
@@ -62,7 +69,7 @@ export class BucketOperator implements SynchronizationSubject {
      * Completely removes otherParty from operator
      * @param otherParty
      */
-    public removeOtherParty(otherParty:EventedMessenger) {
+    public removeOtherParty(otherParty:EventMessenger) {
         otherParty.shutdown();
         const index = this.otherParties.indexOf(otherParty);
         this.otherParties.splice(index, 1);
@@ -73,7 +80,7 @@ export class BucketOperator implements SynchronizationSubject {
      * @param fileName
      * @param callback
      */
-    public getRemoteFileMeta(otherParty:EventedMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+    public getRemoteFileMeta(otherParty:EventMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
         const id = this.callbackHelper.addCallback(callback);
         otherParty.send(Client.events.getMetaForFile, {fileName: fileName, id: id});
     }
@@ -84,7 +91,7 @@ export class BucketOperator implements SynchronizationSubject {
      * @param callback
      * @returns {undefined}
      */
-    public pushFileToRemote(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
+    public pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 
@@ -92,7 +99,7 @@ export class BucketOperator implements SynchronizationSubject {
      * @param otherParty
      * @param callback
      */
-    public getRemoteFileList(otherParty:EventedMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
+    public getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
         const id = this.callbackHelper.addCallback(callback);
         otherParty.send(Client.events.getFileList, {id: id});
     }
@@ -102,11 +109,11 @@ export class BucketOperator implements SynchronizationSubject {
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
+    public requestRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
-    private addEventMessengerListeners(otherParty:EventedMessenger) {
+    private addEventMessengerListeners(otherParty:EventMessenger) {
         otherParty.on(TransferHelper.outerEvent, (event)=> this.transferHelper.consumeMessage(event.body, otherParty));
 
         otherParty.on(Client.events.metaDataForFile, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData));

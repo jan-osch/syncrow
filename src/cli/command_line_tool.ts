@@ -8,7 +8,7 @@ import * as _ from "lodash";
 import * as path from "path";
 import {SyncAction} from "../sync/sync_actions";
 import {NoActionStrategy} from "../sync/no_action_strategy";
-import {PullStrategy} from "../sync/pull_strategy";
+import {PullStrategy} from "../sync/pull_action";
 import {GetNewestSyncAction} from "../sync/get_newest_action";
 import * as anymatch from "anymatch";
 

@@ -12,16 +12,16 @@ const logger = loggerFor('PullStrategy');
  * If any file remotely does not exist, but exists locally it will be deleted
  *
  * @param params
- * @param doneCallback
+ * @param callback
  */
-export function overrideLocalWithRemote(params:SyncActionParams, doneCallback:ErrorCallback):any {
+export function pullAction(params:SyncActionParams, callback:ErrorCallback):any {
     return async.waterfall(
         [
             (cb)=>getFileLists(params, cb),
             (list, cb)=>processFileLists(params, list, cb)
         ],
 
-        doneCallback
+        callback
     )
 }
 
@@ -91,3 +91,5 @@ function downloadOrCreateRemoteFile(params:SyncActionParams, file:string, callba
         callback
     );
 }
+
+function getFileMeta

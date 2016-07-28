@@ -9,7 +9,7 @@ export interface Event {
     body?:any
 }
 
-export class EventedMessenger extends Messenger {
+export class EventMessenger extends Messenger {
 
     static error = 'error';
 
@@ -28,7 +28,7 @@ export class EventedMessenger extends Messenger {
             return JSON.parse(message.toString());
         } catch (e) {
             debug(`Sending error: exception during parsing message: ${message}`);
-            this.send(EventedMessenger.error, {title: 'Bad event', details: message});
+            this.send(EventMessenger.error, {title: 'Bad event', details: message});
         }
     }
 
@@ -50,7 +50,7 @@ export class EventedMessenger extends Messenger {
         const event = this.parseEvent(rawMessage);
 
         if (this.listenerCount(event.type) == 0) {
-            return this.emit(EventedMessenger.error, {title: `Unknown event type: ${event.type}`, details: event})
+            return this.emit(EventMessenger.error, {title: `Unknown event type: ${event.type}`, details: event})
         }
 
         return this.emit(event.type, event);

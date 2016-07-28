@@ -2,13 +2,12 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 import {FileContainer, FileContainerOptions} from "../fs_helpers/file_container";
 import config from "../configuration";
-import {SynchronizationSubject, SyncData, SyncAction} from "../sync/sync_actions";
+import {SyncData, SyncAction, SyncActionSubject} from "../sync/sync_actions";
 import {CallbackHelper} from "../transport/callback_helper";
-import {NoActionStrategy} from "../sync/no_action_strategy";
 import * as _ from "lodash";
 import {TransferHelper} from "../transport/transfer_helper";
 import {ErrBack} from "../utils/interfaces";
-import {EventedMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/evented_messenger";
 
 const debug = debugFor("syncrow:client:client");
 const logger = loggerFor('Client');
@@ -20,7 +19,7 @@ export interface ClientOptions {
     listen?:boolean;
 }
 
-export class Client implements SynchronizationSubject {
+export class Client implements SyncActionSubject {
     static events = {
         fileChanged: 'fileChanged',
         fileCreated: 'fileCreated',
@@ -32,7 +31,7 @@ export class Client implements SynchronizationSubject {
         metaDataForFile: 'metaDataForFile',
         fileList: 'fileList'
     };
-    private otherParty:EventedMessenger;
+    private otherParty:EventMessenger;
     private callbackHelper:CallbackHelper;
     private fileContainer:FileContainer;
     private transferHelper:TransferHelper;
@@ -45,7 +44,7 @@ export class Client implements SynchronizationSubject {
      * @param otherParty
      * @param options
      */
-    constructor(pathToWatch:string, otherParty:EventedMessenger, options:ClientOptions = {}) {
+    constructor(pathToWatch:string, otherParty:EventMessenger, options:ClientOptions = {}) {
 
         const socketsLimit = options.socketsLimit ? options.socketsLimit : config.client.socketsLimit;
         const syncStrategy = options.strategy ? options.strategy : new NoActionStrategy();
@@ -73,7 +72,7 @@ export class Client implements SynchronizationSubject {
      * @param otherParty
      * @returns {Messenger}
      */
-    public addOtherPartyMessenger(otherParty:EventedMessenger) {
+    public addOtherPartyMessenger(otherParty:EventMessenger) {
         this.otherParty = otherParty;
 
         this.otherParty.on(Messenger.events.alive, ()=> {
@@ -97,7 +96,7 @@ export class Client implements SynchronizationSubject {
      * @param fileName
      * @param callback
      */
-    public pushFileToRemote(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
+    public pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
     }
 
@@ -106,7 +105,7 @@ export class Client implements SynchronizationSubject {
      * @param fileName
      * @param callback
      */
-    public getRemoteFileMeta(otherParty:EventedMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
+    public getRemoteFileMeta(otherParty:EventMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
         const id = this.callbackHelper.addCallback(callback);
         otherParty.send(Client.events.getMetaForFile, {fileName: fileName, id: id});
     }
@@ -115,7 +114,7 @@ export class Client implements SynchronizationSubject {
      * @param otherParty
      * @param callback
      */
-    public getRemoteFileList(otherParty:EventedMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
+    public getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
         const id = this.callbackHelper.addCallback(callback);
         otherParty.send(Client.events.getFileList, {id: id});
     }
@@ -125,13 +124,13 @@ export class Client implements SynchronizationSubject {
      * @param fileName
      * @param callback
      */
-    public requestRemoteFile(otherParty:EventedMessenger, fileName:string, callback:ErrBack):any {
+    public requestRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrBack):any {
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
-    private addClientEventsListenersToMessenger(otherParty:EventedMessenger) {
+    private addClientEventsListenersToMessenger(otherParty:EventMessenger) {
 
-        this.otherParty.on(EventedMessenger.error, (event)=> {
+        this.otherParty.on(EventMessenger.error, (event)=> {
             return logger.error(`received error message ${JSON.stringify(event.body)}`);
         });
 
