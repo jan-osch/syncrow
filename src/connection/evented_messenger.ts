@@ -1,6 +1,7 @@
-import {ErrBack} from "../utils/interfaces";
 import {Messenger, MessengerParams} from "./messenger";
 import {debugFor} from "../utils/logger";
+import {ConnectionAddress, ConnectionHelper} from "./connection_helper";
+import {Socket} from "net";
 
 const debug = debugFor('syncrow:evented_messenger');
 
@@ -13,8 +14,8 @@ export class EventMessenger extends Messenger {
 
     static error = 'error';
 
-    constructor(params:MessengerParams, callback?:ErrBack) {
-        super(params, callback);
+    constructor(params:MessengerParams, socket:Socket, connectionHelper:ConnectionHelper) {
+        super(params, socket, connectionHelper);
         this.on(Messenger.events.message, (rawMessage)=>this.parseAndEmit(rawMessage));
     }
 

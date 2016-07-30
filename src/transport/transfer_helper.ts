@@ -6,6 +6,7 @@ import {loggerFor} from "../utils/logger";
 import config from "../configuration";
 import {ErrBack} from "../utils/interfaces";
 import {EventMessenger} from "../connection/evented_messenger";
+import {ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 
 export interface TransferHelperOptions {
     transferQueueSize?:number,
@@ -21,11 +22,10 @@ const logger = loggerFor('TransferHelper');
  * Private events
  */
 interface TransferMessage {
-    fileName:string,
-    command:string,
-    id?:string
-    port?:number,
-    host?:string,
+    fileName:string;
+    command:string;
+    id?:string;
+    address?:ConnectionAddress;
 }
 
 export class TransferHelper {
@@ -36,7 +36,7 @@ export class TransferHelper {
     private preferConnecting:boolean;
     private container:FileContainer;
 
-    constructor(container:FileContainer, options:TransferHelperOptions) {
+    constructor(container:FileContainer, private connectionHelper:ConnectionHelper, options:TransferHelperOptions) {
         const queueSize = options.transferQueueSize ? options.transferQueueSize : config.transferHelper.transferQueueSize;
 
         this.queue = new TransferQueue(queueSize, options.name);
@@ -53,22 +53,18 @@ export class TransferHelper {
         if (transferMessage.command === TransferActions.events.connectAndUpload) {
             this.queue.addConnectAndUploadJobToQueue(
                 transferMessage.fileName,
-                {
-                    host: transferMessage.host,
-                    port: transferMessage.port
-                },
+                transferMessage.address,
                 this.container,
+                this.connectionHelper,
                 this.getCallbackForIdOrErrorLogger(transferMessage.id)
             );
 
         } else if (transferMessage.command === TransferActions.events.connectAndDownload) {
             this.queue.addConnectAndDownloadJobToQueue(
                 transferMessage.fileName,
-                {
-                    host: transferMessage.host,
-                    port: transferMessage.port
-                },
+                transferMessage.address,
                 this.container,
+                this.connectionHelper,
                 this.getCallbackForIdOrErrorLogger(transferMessage.id)
             );
 
@@ -129,15 +125,14 @@ export class TransferHelper {
     private sendFileViaListening(fileName:string, remote:EventMessenger, optional:{id ?:string, callback?:ErrBack }) {
         this.queue.addListenAndUploadJobToQueue(
             fileName,
-            remote.getOwnHost(),
             this.container,
+            this.connectionHelper,
 
             (address)=> {
                 const message:TransferMessage = {
                     fileName: fileName,
                     command: TransferActions.events.connectAndDownload,
-                    host: address.host,
-                    port: address.port,
+                    address: address,
                     id: optional.id
                 };
 
@@ -152,15 +147,14 @@ export class TransferHelper {
     private getFileViaListening(fileName:string, remote:EventMessenger, optional:{id?:string, callback?:ErrBack}) {
         this.queue.addListenAndDownloadJobToQueue(
             fileName,
-            remote.getOwnHost(),
             this.container,
+            this.connectionHelper,
 
             (address)=> {
                 const message:TransferMessage = {
                     fileName: fileName,
                     command: TransferActions.events.connectAndUpload,
-                    host: address.host,
-                    port: address.port,
+                    address: address,
                     id: optional.id
                 };
 

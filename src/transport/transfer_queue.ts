@@ -3,6 +3,7 @@ import {TransferActions, ListenCallback} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
 import {loggerFor} from "../utils/logger";
+import {ConnectionAddress, ConnectionHelper} from "../connection/connection_helper";
 
 const debug = debugFor("syncrow:trasfer_queue");
 const logger = loggerFor('TransferQueue');
@@ -24,8 +25,9 @@ export class TransferQueue {
      * @param doneCallback
      */
     public addConnectAndUploadJobToQueue(fileName:string,
-                                         address:{port:number, host:string},
+                                         address:ConnectionAddress,
                                          sourceContainer:FileContainer,
+                                         connectionHelper:ConnectionHelper,
                                          doneCallback:ErrorCallback) {
         const timingMessage = `${this.name} - connecting and uploading file: ${fileName}`;
         debug(`adding job: connectAndUploadFile: ${fileName}`);

@@ -25,11 +25,14 @@ export interface ConnectionHelperParams {
     remoteHost?:string;
     localHost?:string;
     localPort?:string;
-    listen?:boolean;
+    listen?:boolean
+    override?:boolean;
     token?:string;
     interval?:number;
     times?:number;
     authenticate?:boolean;
+    timeout?:number;
+    listenCallback?:ListenCallback;
 }
 
 export class ConnectionHelper implements Closable {
@@ -40,10 +43,10 @@ export class ConnectionHelper implements Closable {
 
     /**
      * @param params
+     * @param host
      */
-    constructor(params:ConnectionHelperParams) {
+    constructor(params:ConnectionHelperParams, private host?:string) {
         this.params = this.validateAndUpdateParams(params);
-
     }
 
 
@@ -72,9 +75,8 @@ export class ConnectionHelper implements Closable {
     /**
      * @param params
      * @param callback
-     * @param listenCallback
      */
-    public getNewSocket(callback:SocketCallback, params?:ConnectionHelperParams, listenCallback?:ListenCallback):any {
+    public getNewSocket(callback:SocketCallback, params?:ConnectionHelperParams):any {
         try {
             params = this.validateAndUpdateParams(params);
         } catch (e) {
@@ -88,7 +90,7 @@ export class ConnectionHelper implements Closable {
         }
 
         if (params.listen) {
-            return this.createOneTimeServerAndHandleConnection(params, listenCallback, callback);
+            return this.createOneTimeServerAndHandleConnection(params, params.listenCallback, callback);
         }
 
         if (params.times && params.interval) {
@@ -103,10 +105,18 @@ export class ConnectionHelper implements Closable {
     }
 
     private validateAndUpdateParams(params:ConnectionHelperParams) {
-        params = params ? params : this.params;
+        params = params ? params : {};
+
+        if (!params.override) {
+            params = _.extend(this.params, params);
+        }
 
         if (params.authenticate && !params.token) {
             params.token = AuthorisationHelper.generateToken();
+        }
+
+        if (params.token && !params.timeout) {
+            throw new Error('timeout is needed when authorisation is on');
         }
 
         if (!params.listen && !params.remoteHost) {
@@ -115,6 +125,10 @@ export class ConnectionHelper implements Closable {
 
         if (!params.listen && !params.remotePort) {
             throw new Error('remotePort is missing for connection');
+        }
+
+        if (params.listen && !params.listenCallback) {
+            throw new Error('listenCallback is needed for listening');
         }
 
         if (params.times || params.interval) {

@@ -1,11 +1,11 @@
 import {FileContainer} from "../fs_helpers/file_container";
 import {Socket, Server, createServer, connect} from "net";
 import {loggerFor, debugFor} from "../utils/logger";
+import {ListenCallback, ConnectionHelper} from "../connection/connection_helper";
 
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
 
-export type ListenCallback = (address:{port:number, host:string})=>any;
 
 export class TransferActions {
 
@@ -21,60 +21,49 @@ export class TransferActions {
     /**
      * Listens for other party to connect, then downloads the file from it
      * @param fileName
-     * @param host
      * @param destinationContainer
+     * @param connectionHelper
      * @param doneCallback
      * @param listeningCallback
      */
     public static listenAndDownloadFile(fileName:string,
-                                        host:string,
                                         destinationContainer:FileContainer,
+                                        connectionHelper:ConnectionHelper,
                                         doneCallback:ErrorCallback,
-                                        listeningCallback:ListenCallback,token?:string) {
+                                        listeningCallback:ListenCallback) {
 
-        debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
-        const filePullingServer = createServer(
+        debug(`executing: listenAndDownloadFile - fileName: ${fileName}`);
 
-            (socket)=> {
-                aut
-                TransferActions.consumeFileFromSocket(socket,
-                    fileName,
-                    destinationContainer,
-                    ()=>TransferActions.closeServer(filePullingServer, doneCallback))
-            }
+        return connectionHelper.getNewSocket(
+            (err, socket)=> {
+                if (err)return doneCallback(err);
 
-
-        ).listen(()=> {
-
-            const address = {
-                port: filePullingServer.address().port,
-                host: host
-            };
-
-            listeningCallback(address);
-
-        }).on('error', doneCallback);
+                return TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback)
+            },
+            null,
+            listeningCallback
+        );
     }
 
     /**
      * Listen for other party to connect, and then send the file to it
      * @param fileName
-     * @param host
      * @param sourceContainer
      * @param doneCallback
      * @param listenCallback
      */
     public static listenAndUploadFile(fileName:string,
-                                      host:string,
                                       sourceContainer:FileContainer,
+                                      connectionHelper:ConnectionHelper,
                                       doneCallback:ErrorCallback,
                                       listenCallback:ListenCallback) {
 
 
-        debug(`executing: listenAndUploadFile - fileName: ${fileName}, host: ${host}`);
+        debug(`executing: listenAndUploadFile - fileName: ${fileName}`);
         const fileOfferingServer = createServer(
             (fileTransferSocket)=> {
-                fileTransferSocket.on('end', ()=>TransferActions.closeServer(fileOfferingServer, doneCallback));
+                fileTransferSocket.on('end', doneCallback);
+                fileTransferSocket.on('error', doneCallback);
                 sourceContainer.getReadStreamForFile(fileName).pipe(fileTransferSocket);
             }
         ).listen(()=> {
