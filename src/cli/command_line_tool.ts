@@ -68,9 +68,9 @@ interface ProgramOptions {
 function getConfigFromCommandLine():ProgramOptions {
     program.version('0.0.2')
 
-        .option('-h, --host <host>', 'remote host for connection') //TODO add support for getting the local public IP
-        .option('-p, --port <port>', 'remote port for connection')
-        .option('-c, --local <local>', 'local port for listening')
+        .option('-h, --remoteHost <remoteHost>', 'remote remoteHost for connection') //TODO add support for getting the local public IP
+        .option('-p, --remotePort <remotePort>', 'remote remotePort for connection')
+        .option('-c, --local <local>', 'local remotePort for listening')
         .option('-b, --bucket <bucket>', 'bucket name')
         .option('-l, --listen', 'listen for connections')
         .option('-s, --strategy <strategy>', 'synchronization strategy (pull|no|newest) [no]')

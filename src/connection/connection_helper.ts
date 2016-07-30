@@ -1,96 +1,260 @@
 import {Socket, Server, createServer, connect} from "net";
 import {loggerFor, debugFor, Closable} from "../utils/logger";
+import {AuthorisationHelper} from "../security/authorisation_helper";
+import * as async from "async";
 
-const debug = debugFor("syncrow:connection:server");
+const debug = debugFor("syncrow:connection:helper");
 const logger = loggerFor('ConnectionServer');
 
+export interface ConnectionAddress {
+    remotePort:number;
+    remoteHost:string;
+    token?:string;
+}
+
+export interface ListenCallback {
+    (address:ConnectionAddress):any;
+}
+
+export interface SocketCallback {
+    (err:Error, socket?:Socket):any;
+}
+
 export interface ConnectionHelperParams {
-    port?:number
-    host?:string
-    listen?:boolean
+    remotePort?:number;
+    remoteHost?:string;
+    localHost?:string;
+    localPort?:string;
+    listen?:boolean;
+    token?:string;
+    interval?:number;
+    times?:number;
+    authenticate?:boolean;
 }
 
 export class ConnectionHelper implements Closable {
+
+    private params:ConnectionHelperParams;
     private server:Server;
-    private host:string;
-    private port:number;
-    private listen:boolean;
-    private callbackAwaitingSocket:(err:Error, socket?:Socket)=>any;
+    private serverCallback:SocketCallback;
 
     /**
      * @param params
-     * @param callback
      */
-    constructor(params:ConnectionHelperParams, callback:ErrorCallback) {
-        this.host = params.host;
-        this.port = params.port;
-        this.listen = params.listen;
-        this.callbackAwaitingSocket = null;
+    constructor(params:ConnectionHelperParams) {
+        this.params = this.validateAndUpdateParams(params);
 
-        if (this.listen) {
-            this.initializeServer(callback);
-        } else {
-            callback();
-        }
     }
 
-    /**
-     * Needed for strategy onProblemListenForConnection
-     * @param callback
-     */
-    initializeServer(callback:ErrorCallback) {
-        this.server = createServer(
-            (socket:Socket)=> this.handleNewSocket(socket)
-        ).listen(this.port, callback);
-    }
 
     /**
      * Disables the helper, calls any remaining callback with error
      */
     public shutdown() {
         logger.info('Connection Helper closing');
-        if (this.server) {
-            this.server.destroy();
-            delete this.server;
+        this.killServer();
+    }
+
+    /**
+     * @param callback
+     * @param params
+     */
+    public setupServer(callback:(server?:Server)=>any, params?:ConnectionHelperParams) {
+        try {
+            params = this.validateAndUpdateParams(params);
+        } catch (e) {
+            return callback(e);
         }
-        if (this.callbackAwaitingSocket) {
-            this.callbackAwaitingSocket(new Error('Helper is closed'));
-            delete this.callbackAwaitingSocket;
-        }
+
+        return this.createLastingServer(params, callback);
     }
 
     /**
      * @param params
      * @param callback
+     * @param listenCallback
      */
-    public getNewSocket(params:ConnectionHelperParams, callback:(err:Error, socket?:Socket)=>any) {
-        if (this.listen) {
-            return this.getSocketFromServer(callback);
+    public getNewSocket(callback:SocketCallback, params?:ConnectionHelperParams, listenCallback?:ListenCallback):any {
+        try {
+            params = this.validateAndUpdateParams(params);
+        } catch (e) {
+            return callback(e);
         }
 
+        if (this.server) {
+            if (this.serverCallback) logger.error('Overwriting an existing callback');
+
+            return this.serverCallback = this.createServerCallback(callback, params);
+        }
+
+        if (params.listen) {
+            return this.createOneTimeServerAndHandleConnection(params, listenCallback, callback);
+        }
+
+        if (params.times && params.interval) {
+            return async.retry({times: params.times, interval: params.interval},
+
+                (cb)=>this.getSocketByConnecting(params, cb),
+
+                callback
+            )
+        }
         return this.getSocketByConnecting(params, callback);
     }
 
+    private validateAndUpdateParams(params:ConnectionHelperParams) {
+        params = params ? params : this.params;
+
+        if (params.authenticate && !params.token) {
+            params.token = AuthorisationHelper.generateToken();
+        }
+
+        if (!params.listen && !params.remoteHost) {
+            throw new Error('remoteHost is missing for connection');
+        }
+
+        if (!params.listen && !params.remotePort) {
+            throw new Error('remotePort is missing for connection');
+        }
+
+        if (params.times || params.interval) {
+            if (!params.times) throw new Error('times needed when interval is set');
+            if (!params.interval) throw  new Error('interval needed when times is set');
+        }
+
+        return params;
+    }
+
+    private createServerCallback(callback:SocketCallback, params:ConnectionHelperParams) {
+        return (err, socket)=> {
+
+            if (err) {
+                delete this.serverCallback;
+                return callback(err);
+            }
+            return this.handleIncomingSocket(socket, params,
+                (err, socket)=> {
+                    delete this.serverCallback;
+                    return callback(err, socket);
+                }
+            );
+        }
+    }
+
     private getSocketByConnecting(params:ConnectionHelperParams, callback:(err:Error, socket?:Socket)=>any) {
-        const socket = connect({port: params.port, host: params.host},
+        const socket = connect({port: params.remotePort, host: params.remoteHost},
             (err)=> {
                 if (err)return callback(err);
+
+                if (params.token) {
+                    return AuthorisationHelper.authorizeToSocket(socket, params.token, {timeout: params.timeout},
+                        (err)=> {
+                            if (err) return callback(err);
+
+                            return callback(null, socket);
+                        }
+                    );
+                }
+
                 return callback(null, socket);
             }
         );
     }
 
-    private handleNewSocket(socket:Socket) {
-        if (this.callbackAwaitingSocket) {
-            this.callbackAwaitingSocket(null, socket);
-            delete this.callbackAwaitingSocket;
-        }
+    private createOneTimeServerAndHandleConnection(params:ConnectionHelperParams, listenCallback:ListenCallback, connectedCallback:SocketCallback) {
+        return this.createNewServer(params,
 
-        debug('New socket connected - it will be rejected');
-        socket.end('Connection refused');
+            (server)=> {
+
+                listenCallback({
+                    remotePort: server.address().port,
+                    remoteHost: params.localHost,
+                    token: params.token
+                });
+
+                server.on('connection',
+                    (socket)=> this.handleIncomingSocket(socket, params,
+                        (err, socket)=> {
+                            if (err)return connectedCallback(err);
+
+                            debug('Got a new socket - closing the one time server');
+                            server.close();
+                            return connectedCallback(null, socket)
+                        }
+                    )
+                );
+
+                server.on('error', connectedCallback);
+            }
+        )
     }
 
-    private getSocketFromServer(callback:(err:Error, socket?:Socket)=>any) {
-        this.callbackAwaitingSocket = callback;
+    private createLastingServer(params:ConnectionHelperParams, callback:(server:Server)=>any) {
+        return this.createNewServer(params,
+
+            (server)=> {
+                this.server = server;
+
+                this.server.on('connection',
+                    (socket:Socket)=> {
+                        const serverCallback = this.serverCallback;
+                        if (serverCallback) {
+                            delete this.serverCallback;
+                            return serverCallback(null, socket);
+                        }
+
+                        logger.error('Got a socket that was not ordered - it will be rejected');
+                        return socket.destroy();
+                    }
+                );
+
+                this.server.on('error', (err)=> {
+                    const serverCallback = this.serverCallback;
+                    if (serverCallback) {
+                        serverCallback(err);
+                        delete this.serverCallback
+                    }
+                    else logger.error(`Server emitted error: ${err}`);
+
+                    this.killServer();
+                });
+
+                return callback(server);
+            }
+        )
+    }
+
+
+    private createNewServer(params:ConnectionHelperParams, callback:(server:Server)=>any) {
+        const listenOptions:any = {};
+
+        if (params.localHost) listenOptions.host = params.localHost;
+        if (params.localPort) listenOptions.port = params.localPort;
+
+        const server = createServer().listen(listenOptions,
+            ()=> {
+                return callback(server)
+            }
+        );
+    }
+
+    private handleIncomingSocket(socket:Socket, params:ConnectionHelperParams, connectedCallback:SocketCallback) {
+        if (params.token) {
+            return AuthorisationHelper.authorizeSocket(socket, params.token, {timeout: params.timeout},
+                (err)=> {
+                    if (err) return connectedCallback(err);
+
+                    return connectedCallback(null, socket);
+                }
+            )
+        }
+
+        return connectedCallback(null, socket);
+    }
+
+    private killServer() {
+        this.server.close();
+        delete this.server;
+        delete this.serverCallback;
     }
 }

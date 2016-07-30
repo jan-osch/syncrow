@@ -29,15 +29,21 @@ export class TransferActions {
     public static listenAndDownloadFile(fileName:string,
                                         host:string,
                                         destinationContainer:FileContainer,
-                                        doneCallback:Function,
-                                        listeningCallback:ListenCallback) {
+                                        doneCallback:ErrorCallback,
+                                        listeningCallback:ListenCallback,token?:string) {
 
         debug(`executing: listenAndDownloadFile - fileName: ${fileName}, host: ${host}`);
         const filePullingServer = createServer(
-            (socket)=> TransferActions.consumeFileFromSocket(socket,
-                fileName,
-                destinationContainer,
-                ()=>TransferActions.closeServer(filePullingServer, doneCallback))
+
+            (socket)=> {
+                aut
+                TransferActions.consumeFileFromSocket(socket,
+                    fileName,
+                    destinationContainer,
+                    ()=>TransferActions.closeServer(filePullingServer, doneCallback))
+            }
+
+
         ).listen(()=> {
 
             const address = {

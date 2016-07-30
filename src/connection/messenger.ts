@@ -206,9 +206,9 @@ export class Messenger extends EventEmitter implements Closable {
     }
 
     private static validateParams(params:MessengerParams) {
-        if (params.listen && !params.host) throw new Error('If not Messenger is not listening, host is needed');
+        if (params.listen && !params.host) throw new Error('If not Messenger is not listening, remoteHost is needed');
 
-        if (params.listen && !params.port) throw new Error('If not Messenger is not listening, port is needed');
+        if (params.listen && !params.port) throw new Error('If not Messenger is not listening, remotePort is needed');
 
         if (params.reconnect && !params.await && !params.retries) throw new Error('If Messenger has to reconnect automatically, it needs retries');
 

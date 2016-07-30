@@ -10,7 +10,8 @@ import {EventMessenger} from "../connection/evented_messenger";
 export interface TransferHelperOptions {
     transferQueueSize?:number,
     name:string,
-    preferConnecting:boolean;
+    preferConnecting:boolean;,
+
 }
 
 const callbackHelper = CallbackHelper.getInstance();
@@ -24,7 +25,7 @@ interface TransferMessage {
     command:string,
     id?:string
     port?:number,
-    host?:string
+    host?:string,
 }
 
 export class TransferHelper {

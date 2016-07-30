@@ -14,7 +14,7 @@ export function bucketRouter(host:string, bucketService:BucketService) {
         });
     });
 
-    router.get('/:bucketName/port', (req, res) => {
+    router.get('/:bucketName/remotePort', (req, res) => {
         debug(`requested port for ${req.params.bucketName}`);
         bucketService.requestPortForBucket('', '', req.params.bucketName, (err, port)=> {
             res.json({
