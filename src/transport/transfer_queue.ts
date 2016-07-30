@@ -1,16 +1,16 @@
 import {FileContainer} from "../fs_helpers/file_container";
-import {TransferActions, ListenCallback} from "./transfer_actions";
+import {TransferActions} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
 import {loggerFor} from "../utils/logger";
-import {ConnectionAddress, ConnectionHelper} from "../connection/connection_helper";
+import {ConnectionAddress, ConnectionHelper, ListenCallback} from "../connection/connection_helper";
 
 const debug = debugFor("syncrow:trasfer_queue");
 const logger = loggerFor('TransferQueue');
 
 export class TransferQueue {
 
-    private queue:AsyncQueue;
+    private queue:AsyncQueue<Function>;
     private name:string;
 
     constructor(concurrency:number, name:string = '') {
@@ -22,6 +22,7 @@ export class TransferQueue {
      * @param fileName
      * @param address
      * @param sourceContainer
+     * @param connectionHelper
      * @param doneCallback
      */
     public addConnectAndUploadJobToQueue(fileName:string,
@@ -35,11 +36,13 @@ export class TransferQueue {
 
             console.time(timingMessage);
 
-            TransferActions.connectAndUploadFile(fileName, address, sourceContainer, (err)=> {
-                console.timeEnd(timingMessage);
+            return TransferActions.connectAndUploadFile(fileName, address, sourceContainer, connectionHelper,
+                (err)=> {
+                    console.timeEnd(timingMessage);
 
-                uploadingDoneCallback(err)
-            });
+                    return uploadingDoneCallback(err)
+                }
+            );
         };
 
         this.queue.push(job, doneCallback);
@@ -50,12 +53,15 @@ export class TransferQueue {
      * @param address
      * @param fileName
      * @param destinationContainer
+     * @param connectionHelper
      * @param doneCallback
      */
     public addConnectAndDownloadJobToQueue(fileName:string,
-                                           address:{port:number, host:string},
+                                           address:ConnectionAddress,
                                            destinationContainer:FileContainer,
+                                           connectionHelper:ConnectionHelper,
                                            doneCallback?:ErrorCallback) {
+
         debug(`adding job: connectAndDownloadFile: ${fileName}`);
 
         const timingMessage = `${this.name} - connecting and downloading file: ${fileName}`;
@@ -64,11 +70,13 @@ export class TransferQueue {
 
             console.time(timingMessage);
 
-            TransferActions.connectAndDownloadFile(fileName, address, destinationContainer, (err)=> {
-                console.timeEnd(timingMessage);
+            return TransferActions.connectAndDownloadFile(fileName, address, destinationContainer, connectionHelper,
+                (err)=> {
+                    console.timeEnd(timingMessage);
 
-                downloadingDoneCallback(err);
-            });
+                    return downloadingDoneCallback(err);
+                }
+            );
         };
 
         this.queue.push(job, doneCallback);
@@ -77,48 +85,53 @@ export class TransferQueue {
     /**
      *
      * @param fileName
-     * @param host
      * @param sourceContainer
+     * @param connectionHelper
      * @param listeningCallback
      * @param doneCallback
      */
     public  addListenAndUploadJobToQueue(fileName:string,
-                                         host:string,
                                          sourceContainer:FileContainer,
+                                         connectionHelper:ConnectionHelper,
                                          listeningCallback:ListenCallback,
                                          doneCallback:ErrorCallback) {
 
         const timingMessage = `${this.name} - listening and uploading file: ${fileName}`;
         debug(`adding job: listenAndUploadFile ${fileName}`);
+
         const job = (uploadingDoneCallback)=> {
 
             console.time(timingMessage);
 
-            TransferActions.listenAndUploadFile(fileName, host, sourceContainer, (err)=> {
-                console.timeEnd(timingMessage);
+            return TransferActions.listenAndUploadFile(fileName, sourceContainer, connectionHelper,
+                (err)=> {
+                    console.timeEnd(timingMessage);
 
-                uploadingDoneCallback(err)
-            }, listeningCallback);
+                    return uploadingDoneCallback(err)
+                },
+                listeningCallback
+            );
 
         };
+
         this.queue.push(job, doneCallback);
     }
 
     /**
      *
      * @param fileName
-     * @param host
      * @param destinationContainer
+     * @param connectionHelper
      * @param doneCallback
      * @param listeningCallback
      */
     public  addListenAndDownloadJobToQueue(fileName:string,
-                                           host:string,
                                            destinationContainer:FileContainer,
+                                           connectionHelper:ConnectionHelper,
                                            listeningCallback:ListenCallback,
                                            doneCallback:ErrorCallback) {
 
-        debug(`adding job: listenAndDownloadFile - fileName: ${fileName} host: ${host}`);
+        debug(`adding job: listenAndDownloadFile - fileName: ${fileName}`);
 
         const timingMessage = `${this.name} - listening and downloading file: ${fileName}`;
 
@@ -126,12 +139,17 @@ export class TransferQueue {
 
             console.time(timingMessage);
 
-            TransferActions.listenAndDownloadFile(fileName, host, destinationContainer, (err)=> {
-                console.timeEnd(timingMessage);
-                downloadingDoneCallback(err)
-            }, listeningCallback);
+            return TransferActions.listenAndDownloadFile(fileName, destinationContainer, connectionHelper,
+
+                (err)=> {
+                    console.timeEnd(timingMessage);
+                    return downloadingDoneCallback(err)
+                },
+
+                listeningCallback
+            );
         };
 
-        this.queue.push(job, doneCallback);
+        return this.queue.push(job, doneCallback);
     }
 }

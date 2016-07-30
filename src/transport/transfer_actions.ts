@@ -1,7 +1,7 @@
 import {FileContainer} from "../fs_helpers/file_container";
-import {Socket, Server, createServer, connect} from "net";
+import {Socket} from "net";
 import {loggerFor, debugFor} from "../utils/logger";
-import {ListenCallback, ConnectionHelper} from "../connection/connection_helper";
+import {ListenCallback, ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
@@ -40,8 +40,7 @@ export class TransferActions {
 
                 return TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback)
             },
-            null,
-            listeningCallback
+            {listen: true, listenCallback: listeningCallback}
         );
     }
 
@@ -49,6 +48,7 @@ export class TransferActions {
      * Listen for other party to connect, and then send the file to it
      * @param fileName
      * @param sourceContainer
+     * @param connectionHelper
      * @param doneCallback
      * @param listenCallback
      */
@@ -60,22 +60,17 @@ export class TransferActions {
 
 
         debug(`executing: listenAndUploadFile - fileName: ${fileName}`);
-        const fileOfferingServer = createServer(
-            (fileTransferSocket)=> {
+
+        return connectionHelper.getNewSocket(
+            (err, fileTransferSocket)=> {
+                if (err)return doneCallback(err);
+
                 fileTransferSocket.on('end', doneCallback);
                 fileTransferSocket.on('error', doneCallback);
                 sourceContainer.getReadStreamForFile(fileName).pipe(fileTransferSocket);
-            }
-        ).listen(()=> {
-
-            const address = {
-                port: fileOfferingServer.address().port,
-                host: host
-            };
-
-            listenCallback(address);
-
-        }).on('error', doneCallback);
+            },
+            {listenCallback: listenCallback, listen: true}
+        );
     }
 
     /**
@@ -83,18 +78,27 @@ export class TransferActions {
      * @param fileName
      * @param address
      * @param sourceContainer
+     * @param connectionHelper
      * @param doneCallback
      */
     public static connectAndUploadFile(fileName:string,
-                                       address:{host:string, port:number},
+                                       address:ConnectionAddress,
                                        sourceContainer:FileContainer,
+                                       connectionHelper:ConnectionHelper,
                                        doneCallback:ErrorCallback) {
-        debug(`connectAndUploadFile: connecting to ${address.host}:${address.port}`);
-        const fileSendingSocket = connect(address, ()=> {
-            fileSendingSocket.on('end', doneCallback);
 
-            sourceContainer.getReadStreamForFile(fileName).pipe(fileSendingSocket);
-        }).on('error', doneCallback)
+        debug(`connectAndUploadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
+
+        connectionHelper.getNewSocket(
+            (err, socket)=> {
+                if (err) return doneCallback(err);
+                socket.on('end', doneCallback);
+                socket.on('error', doneCallback);
+
+                return sourceContainer.getReadStreamForFile(fileName).pipe(socket);
+            },
+            address
+        );
 
     }
 
@@ -103,22 +107,21 @@ export class TransferActions {
      * @param fileName
      * @param address
      * @param destinationContainer
+     * @param connectionHelper
      * @param doneCallback
      */
     public static connectAndDownloadFile(fileName:string,
-                                         address:{host:string, port:number},
+                                         address:ConnectionAddress,
                                          destinationContainer:FileContainer,
+                                         connectionHelper:ConnectionHelper,
                                          doneCallback:ErrorCallback) {
 
-        debug(`connectAndDownloadFile: connecting to ${address.host}:${address.port}`);
-        const fileTransferSocket = connect(address, ()=> {
-            TransferActions.consumeFileFromSocket(fileTransferSocket, fileName, destinationContainer, doneCallback);
-        }).on('error', doneCallback);
-    }
+        debug(`connectAndDownloadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
 
-    private static closeServer(server:Server, callback:Function) {
-        server.close();
-        callback();
+        connectionHelper.getNewSocket(
+            (err, socket)=>TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback),
+            address
+        )
     }
 
     private static consumeFileFromSocket(fileTransferSocket:Socket, fileName:string, destinationContainer:FileContainer, callback:ErrorCallback) {
