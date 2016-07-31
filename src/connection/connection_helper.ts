@@ -1,6 +1,6 @@
 import {Socket, Server, createServer, connect} from "net";
 import {loggerFor, debugFor, Closable} from "../utils/logger";
-import {AuthorisationHelper} from "../security/authorisation_helper";
+import {AuthorisationHelper} from "./authorisation_helper";
 import * as async from "async";
 
 const debug = debugFor("syncrow:connection:helper");

@@ -1,5 +1,5 @@
 import {Socket} from "net";
-import {ParseHelper} from "../connection/parse_helper";
+import {ParseHelper} from "./parse_helper";
 import * as crypto from "crypto";
 import * as async from "async";
 

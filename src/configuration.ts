@@ -1,26 +1,23 @@
 /// <reference path="../typings/globals/node/index.d.ts" />
-import *  as fs from "fs";
+/// <reference path="../typings/index.d.ts" />
 
-const configuration:Config = JSON.parse(fs.readFileSync(__dirname + '/../config/config.json', 'utf8'));
-
-interface Config {
+export const Config ={
     fileContainer:{
-        watchTimeout:number,
-        processedFilesLimit:number
+        watchTimeout:100,
+        processedFilesLimit:300
     },
     client:{
-        socketsLimit:number
+        socketsLimit:300
     },
     connectionHelper:{
-        reconnectionInterval:number
+        reconnectionInterval:3000
     },
     server:{
-        transferQueueSize:number
+        transferQueueSize:1000
     },
     transferHelper:{
-        transferQueueSize:number
+        transferQueueSize:1999
     }
-}
+};
 
 
-export default configuration;

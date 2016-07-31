@@ -4,7 +4,7 @@ import * as crypto from "crypto";
 import {SyncData} from "../sync/sync_actions";
 import {debugFor} from "../utils/logger";
 
-const debug = debugFor('syncrow:file_meta_queue');
+const debug = debugFor('syncrow:fs:file_meta_queue');
 
 export class FileMetaComputingQueue {
     private queue:AsyncQueue<Function>;

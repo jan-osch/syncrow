@@ -10,5 +10,6 @@
 /// <reference path="globals/mkdirp/index.d.ts" />
 /// <reference path="globals/mocha/index.d.ts" />
 /// <reference path="globals/node/index.d.ts" />
+/// <reference path="globals/request/index.d.ts" />
 /// <reference path="globals/rimraf/index.d.ts" />
 /// <reference path="globals/sinon/index.d.ts" />

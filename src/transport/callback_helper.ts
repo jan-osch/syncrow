@@ -1,10 +1,9 @@
 import {debugFor} from "../utils/logger";
 
-const debug = debugFor('syncrow:callback_helper');
+const debug = debugFor('syncrow:transport:callback_helper');
 
+let instance:CallbackHelper;
 
-//TODO add timeout ability
-//TODO add clear ability - delete all callbacks that are awaiting from otherParty that disconnected
 export class CallbackHelper {
     private callbackMap:Map<string,Function>;
 
@@ -51,7 +50,6 @@ export class CallbackHelper {
 
         debug(`setting a callback for id: ${id}`);
         this.callbackMap.set(id, callback);
-        console.warn(Array.from(this.callbackMap.entries()))
     }
 
     /**
