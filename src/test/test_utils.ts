@@ -69,7 +69,7 @@ export function pathExists(path):boolean {
  * @param secondFilePath
  * @param doneCallback
  */
-export function compareTwoFiles(firstFilePath:string, secondFilePath:string, doneCallback:(err:Error, result:{first:string, second:string})=>any) {
+export function compareTwoFiles(firstFilePath:string, secondFilePath:string, doneCallback:(err:Error, result:{first?:string, second?:string})=>any) {
     async.parallel(
         {
             first: callback=>fs.readFile(firstFilePath, callback),

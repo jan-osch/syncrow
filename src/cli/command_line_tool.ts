@@ -1,5 +1,4 @@
 import * as program from "commander";
-import * as request from "request";
 import {debugFor, loggerFor} from "../utils/logger";
 import {Messenger} from "../connection/messenger";
 import {Engine} from "../client/engine";
@@ -8,6 +7,9 @@ import * as _ from "lodash";
 import * as path from "path";
 import {SyncAction} from "../sync/sync_actions";
 import * as anymatch from "anymatch";
+import {pullAction} from "../sync/pull_action";
+import {FileContainer} from "../fs_helpers/file_container";
+import {ConnectionHelper} from "../connection/connection_helper";
 
 const logger = loggerFor("CLI");
 const debug = debugFor("syncrow:cli");
@@ -32,32 +34,28 @@ function main() {
     const chosenStrategy = getStrategy(chosenConfig.strategy);
     const filterFunction = createFilterFunction(chosenConfig.filter, path.resolve(chosenConfig.directory));
 
-    if (chosenConfig.listen) {
-        return listenAndStart(chosenConfig.port, chosenConfig.directory, chosenStrategy, filterFunction);
-    }
-
-    if (chosenConfig.bucket) {
-        return connectWithBucketAndStart(chosenConfig.host,
-            chosenConfig.port,
-            chosenConfig.bucket,
-            chosenConfig.directory,
-            chosenStrategy,
-            filterFunction);
-    }
-
-    return connectWithRetryAndStart(chosenConfig.host, chosenConfig.port, chosenConfig.directory, chosenStrategy, filterFunction)
+    startEngine(chosenConfig);
 }
 
 interface ProgramOptions {
-    host?:string,
-    port?:number,
-    bucket?:string,
-    strategy?:string,
-    directory?:string,
-    init?:boolean,
-    filter?:string,
-    listen?:boolean,
-    token?:string
+    remoteHost?:string;
+    remotePort?:number;
+    localPort?:number;
+    externalHost?:string;
+    strategy?:string;
+    directory?:string;
+    filter?:string;
+    listen?:boolean;
+    initialToken?:string;
+    listenForMultiple?:boolean;
+    abort?:boolean;
+    deleteLocalFiles?:boolean;
+    deleteRemoteFiles?:boolean;
+    skipWatching?:boolean;
+    authenticate?:boolean;
+    reconnect?:boolean;
+    times?:number;
+    interval?:number;
 }
 
 //TODO add initialize token
@@ -166,53 +164,35 @@ function validateConfig(config) {
 
 
 function getStrategy(codeName):SyncAction {
-    let strategy;
-    switch (codeName) {
-        case 'no':
-            strategy = new NoActionStrategy();
-            break;
-        case 'pull':
-            strategy = new PullStrategy();
-            break;
-        case 'newest':
-            strategy = new GetNewestSyncAction();
-            break;
+    return pullAction;
+}
+
+function startEngine(options:ProgramOptions) {
+
+    const container = new FileContainer(options.directory, {filter: options.filter});
+
+    const overrideHost = options.externalHost;
+
+    const connectionHelper = new ConnectionHelper(connectionHelperParams, overrideHost);
+
+    if(options.listenForMultiple){
+        connectionHelper.setupServer(()=>{
+
+        });
     }
-    return strategy;
-}
 
-function getPortForBucket(host, port, bucket, callback) {
-    const requestUrl = `http://${host}:${port}/bucket/${bucket}/port`;
-    debug(`requesting port with url: ${requestUrl}`);
-
-    request({
-        url: requestUrl,
-        json: true
-    }, (err, res, body) => {
-        if (err) return callback(err);
-
-        if (res.statusCode !== 200) return callback(new Error(`Invalid response code ${res.statusCode}`));
-
-        debug(`got host: ${body.host} port: ${body.port} for bucket: ${bucket} `);
-
-        callback(null, body.port);
-    });
-}
-//TODO implement token
-
-function listenAndStart(localPort:number, directory:string, strategy:SyncAction, filterFunction:(s:string) => boolean) {
-    const messenger = new Messenger({
-        port: localPort,
-        listen: true,
-        reconnect: true
-    }, (err)=> {
-
-        ifErrorThrow(err);
-
-        logger.info('Connected');
-
-        const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
-    });
+    // const messenger = new Messenger({
+    //     port: localPort,
+    //     listen: true,
+    //     reconnect: true
+    // }, (err)=> {
+    //
+    //     ifErrorThrow(err);
+    //
+    //     logger.info('Connected');
+    //
+    //     const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
+    // });
 }
 
 
@@ -238,63 +218,6 @@ function connectWithRetryAndStart(remoteHost:string,
     })
 }
 
-function connectWithBucketAndStart(remoteHost:string,
-                                   servicePort:number,
-                                   bucketName:string,
-                                   directory:string,
-                                   strategy:SyncAction,
-                                   filterFunction:(s:string) => boolean) {
-    
-
-    getPortForBucket(remoteHost, servicePort, bucketName,
-
-        (err, bucketPort) => {
-            ifErrorThrow(err);
-
-            const messenger = new Messenger({
-                    host: remoteHost,
-                    port: bucketPort,
-                    reconnect: true,
-                    await: true,
-                    listen: false
-                },
-
-                (err) => {
-                    ifErrorThrow(err);
-
-
-                    logger.info('Connected');
-                    const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
-
-                    messenger.on(Messenger.events.recovering,
-
-                        ()=> {
-                            async.retry({times: 10, interval: 4000},
-
-                                (cb)=> getPortForBucketAndObtainNewSocket(remoteHost, servicePort, bucketName, messenger, cb),
-
-                                (err)=> {
-                                    ifErrorThrow(err);
-                                }
-                            )
-                        }
-                    );
-                }
-            );
-        }
-    )
-}
-
-function getPortForBucketAndObtainNewSocket(remoteHost, servicePort, bucketName, messenger, callback) {
-    getPortForBucket(remoteHost, servicePort, bucketName,
-
-        (err, newPort)=> {
-            if (err) return callback(err);
-
-            return messenger.getAndAddNewSocket({host: remoteHost, port: newPort}, callback);
-        }
-    );
-}
 
 function ifErrorThrow(err?:Error) {
     if (err) throw err;
