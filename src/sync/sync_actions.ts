@@ -15,6 +15,7 @@ export interface SyncActionSubject {
     requestRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
     pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
     deleteRemoteFile(otherParty:EventMessenger, fileName:string):any;
+    createRemoteDirectory(otherParty:EventMessenger, fileName:string);
 }
 
 export interface SyncActionParams {
@@ -28,3 +29,77 @@ export interface SyncActionParams {
 export interface SyncAction {
     (params:SyncActionParams, callback:ErrorCallback):any;
 }
+
+/**
+ * @param action
+ * @returns {(params:SyncActionParams, callback:ErrorCallback)=>any}
+ */
+export function setDeleteLocalFiles(action:SyncAction):SyncAction {
+
+    return (params:SyncActionParams, callback:ErrorCallback)=> {
+        params.deleteLocalIfRemoteMissing = true;
+        return action(params, callback);
+    }
+
+}
+
+/**
+ * @param action
+ * @returns {(params:SyncActionParams, callback:ErrorCallback)=>any}
+ */
+export function setDeleteRemoteFiles(action:SyncAction):SyncAction {
+
+    return (params:SyncActionParams, callback:ErrorCallback)=> {
+        params.deleteRemoteIfLocalMissing = true;
+        return action(params, callback);
+    }
+
+}
+
+export interface MetaTuple {
+    localMeta?:SyncData;
+    remoteMeta?:SyncData;
+}
+
+/**
+ * @param params
+ * @param file
+ * @param callback
+ */
+export function getMetaTupleForFile(params:SyncActionParams, file:string, callback:(err:Error, result:MetaTuple)=>any):any {
+    debug(`getting file meta from both remote and local: ${file}`);
+
+    async.parallel<MetaTuple>(
+        {
+            localMeta: (parallelCallback)=> {
+                params.container.getFileMeta(file, parallelCallback)
+            },
+            remoteMeta: (parallelCallback)=> {
+                params.subject.getRemoteFileMeta(params.remoteParty, file, parallelCallback);
+            }
+        },
+
+        callback
+    );
+}
+
+export interface FileLists {
+    localList?:Array<string>;
+    remoteList?:Array<string>;
+}
+
+/**
+ * @param params
+ * @param callback
+ */
+export function getFileLists(params:SyncActionParams, callback:(err:Error, result:FileLists)=>any) {
+    return async.parallel<FileLists>(
+        {
+            localList: (cb)=>params.container.getFileTree(cb),
+            remoteList: (cb)=>params.subject.getRemoteFileList(params.remoteParty, cb)
+        },
+
+        callback
+    );
+}
+

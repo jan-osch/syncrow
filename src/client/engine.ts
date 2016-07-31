@@ -8,12 +8,10 @@ import {EventMessenger} from "../connection/evented_messenger";
 import * as _ from "lodash";
 import {noAction} from "../sync/no_action";
 
-const debug = debugFor("syncrow:client:client");
+const debug = debugFor("syncrow:client:engine");
 const logger = loggerFor('Engine');
 
 export interface EngineOptions {
-    socketsLimit?:number;
-    preferConnecting:boolean;
     watch?:boolean;
     onFirstConnection?:SyncAction;
     onReconnection?:SyncAction;
@@ -21,6 +19,7 @@ export interface EngineOptions {
 }
 
 export class Engine implements SyncActionSubject, Closable {
+
     static events = {
         fileChanged: 'fileChanged',
         fileCreated: 'fileCreated',
@@ -28,26 +27,19 @@ export class Engine implements SyncActionSubject, Closable {
         directoryCreated: 'directoryCreated',
 
         getFileList: 'getFileList',
-        getMetaForFile: 'getMetaForFile',
+        getMetaForFile: 'getMetaTupleForFile',
         metaDataForFile: 'metaDataForFile',
         fileList: 'fileList'
     };
 
     private otherParties:Array<EventMessenger>;
     private callbackHelper:CallbackHelper;
-    private transferHelper:TransferHelper;
     private options:EngineOptions;
 
-    constructor(private fileContainer:FileContainer, options:EngineOptions, callback:ErrorCallback) {
+    constructor(private fileContainer:FileContainer, private transferHelper:TransferHelper, options:EngineOptions, callback:ErrorCallback) {
         this.options = Engine.prepareOptions(options);
-
-        this.transferHelper = new TransferHelper(this.fileContainer, {
-            preferConnecting: this.options.preferConnecting,
-            transferQueueSize: this.options.socketsLimit,
-            name: 'Engine'
-        });
-
         this.callbackHelper = new CallbackHelper();
+        this.otherParties = [];
         this.addListenersToFileContainer(this.fileContainer);
 
         if (!this.options.watch) {
@@ -97,6 +89,9 @@ export class Engine implements SyncActionSubject, Closable {
         this.addEngineListenersToOtherParty(otherParty);
     }
 
+    /**
+     * Stops engine activity
+     */
     public shutdown() {
         this.otherParties.forEach(otherParty => this.removeOtherParty(otherParty));
         this.fileContainer.shutdown();
@@ -116,7 +111,7 @@ export class Engine implements SyncActionSubject, Closable {
      * @param fileName
      */
     public deleteRemoteFile(otherParty:EventMessenger, fileName:string):any {
-        return otherParty.send(Engine.events.fileDeleted, {fileName: fileName})
+        return otherParty.send(Engine.events.fileDeleted, {fileName: fileName});
     }
 
     /**
@@ -126,6 +121,14 @@ export class Engine implements SyncActionSubject, Closable {
      */
     public pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any {
         this.transferHelper.sendFileToRemote(otherParty, fileName, callback);
+    }
+
+    /**
+     * @param otherParty
+     * @param fileName
+     */
+    public createRemoteDirectory(otherParty:EventMessenger, fileName:string) {
+        return otherParty.send(Engine.events.directoryCreated, {fileName:fileName});
     }
 
     /**
@@ -159,7 +162,6 @@ export class Engine implements SyncActionSubject, Closable {
     private static prepareOptions(options:EngineOptions):EngineOptions {
         return _.extend(
             {
-                socketsLimit: 300,
                 onFirstConnection: noAction,
                 onReconnection: noAction
             },

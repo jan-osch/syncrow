@@ -1,11 +1,7 @@
 import {Socket} from "net";
 import {ParseHelper} from "../connection/parse_helper";
 import * as crypto from "crypto";
-
-export interface AuthorisationHelperOptions {
-    timeout:number;
-    token:string;
-}
+import * as async from "async";
 
 export class AuthorisationHelper {
 
@@ -21,7 +17,7 @@ export class AuthorisationHelper {
      * @param options
      * @param callback
      */
-    public static authorizeToSocket(socket:Socket, token:any, options:{timeout:number}, callback:ErrorCallback) {
+    public static authorizeToSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
         const wrapped = async.timeout(
@@ -29,7 +25,8 @@ export class AuthorisationHelper {
                 parser.shutdown();
                 return callback(err);
             },
-            options.timeout, new Error('Authorisation timeout')
+            options.timeout,
+            new Error('Authorisation timeout')
         );
 
         parser.once(ParseHelper.events.message,
@@ -50,7 +47,7 @@ export class AuthorisationHelper {
      * @param options
      * @param callback
      */
-    public static authorizeSocket(socket:Socket, token:any, options:{timeout:number}, callback:ErrorCallback) {
+    public static authorizeSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
         const wrapped = async.timeout(

@@ -9,7 +9,7 @@ import * as path from "path";
 import {SyncAction} from "../sync/sync_actions";
 import {NoActionStrategy} from "../sync/no_action";
 import {PullStrategy} from "../sync/pull_action";
-import {GetNewestSyncAction} from "../sync/get_newest_action";
+import {GetNewestSyncAction} from "../sync/push_action";
 import * as anymatch from "anymatch";
 
 const logger = loggerFor("CLI");
