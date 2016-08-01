@@ -10,6 +10,9 @@ import * as anymatch from "anymatch";
 import {pullAction} from "../sync/pull_action";
 import {FileContainer} from "../fs_helpers/file_container";
 import {ConnectionHelper} from "../connection/connection_helper";
+import {TransferHelper} from "../transport/transfer_helper";
+import * as async from "async";
+import {EventMessenger} from "../connection/evented_messenger";
 
 const logger = loggerFor("CLI");
 const debug = debugFor("syncrow:cli");
@@ -44,7 +47,7 @@ interface ProgramOptions {
     externalHost?:string;
     strategy?:string;
     directory?:string;
-    filter?:string;
+    filter?:(s:string)=>boolean;
     listen?:boolean;
     initialToken?:string;
     listenForMultiple?:boolean;
@@ -167,32 +170,69 @@ function getStrategy(codeName):SyncAction {
     return pullAction;
 }
 
-function startEngine(options:ProgramOptions) {
+function startEngineAsServer(options:ProgramOptions) {
+    if (!options.listen) throw new Error('Server needs to listen');
 
     const container = new FileContainer(options.directory, {filter: options.filter});
 
-    const overrideHost = options.externalHost;
+    const paramsForEntry = {
+        localPort: options.localPort,
+        localHost: options.externalHost,
+        listen: options.listen,
+        authenticate: options.authenticate,
+        token: options.initialToken
+    };
 
-    const connectionHelper = new ConnectionHelper(connectionHelperParams, overrideHost);
+    const connectionHelperEntry = new ConnectionHelper(paramsForEntry);
 
-    if(options.listenForMultiple){
-        connectionHelper.setupServer(()=>{
+    const paramsForTransfer = {
+        localPort: options.localPort,
+        localHost: options.externalHost,
+        listen: options.listen,
+        authenticate: options.authenticate,
+    };
 
-        });
-    }
+    const connectionHelperForTransfer = new ConnectionHelper(paramsForTransfer);
 
-    // const messenger = new Messenger({
-    //     port: localPort,
-    //     listen: true,
-    //     reconnect: true
-    // }, (err)=> {
-    //
-    //     ifErrorThrow(err);
-    //
-    //     logger.info('Connected');
-    //
-    //     const client = new Engine(directory, messenger, {strategy: strategy, filter: filterFunction});
-    // });
+    const transferHelper = new TransferHelper(container, connectionHelperForTransfer,{});
+
+    const engine = new Engine(container, transferHelper, {watch: !!options.skipWatching},
+
+        (err)=> {
+            ifErrorThrow(err);
+            return connectionHelperEntry.setupServer(
+
+                ()=> {
+                    if (options.listenForMultiple) {
+                        return listenForMultipleConnections(engine, connectionHelperEntry, ifErrorThrow);
+                    }
+
+                    return connectionHelperEntry.getNewSocket((err, socket)=> {
+                        ifErrorThrow(err);
+                        const messenger = new EventMessenger({reconnect: false}, socket, connectionHelperEntry);
+                        return engine.addOtherPartyMessenger(messenger);
+                    })
+                }
+            );
+        }
+    );
+}
+
+
+function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper, callback:ErrorCallback) {
+
+    async.whilst(()=>true,
+        (cb)=> {
+            return helper.getNewSocket((err, socket)=> {
+                if (err) return cb(err);
+
+                const messenger = new EventMessenger({reconnect: false}, socket, helper);
+                engine.addOtherPartyMessenger(messenger);
+                return cb();
+            })
+        },
+        callback
+    )
 }
 
 

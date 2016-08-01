@@ -24,7 +24,7 @@ export interface ConnectionHelperParams {
     remotePort?:number;
     remoteHost?:string;
     localHost?:string;
-    localPort?:string;
+    localPort?:number;
     listen?:boolean
     override?:boolean;
     token?:string;
@@ -45,7 +45,7 @@ export class ConnectionHelper implements Closable {
      * @param params
      * @param host
      */
-    constructor(params:ConnectionHelperParams, private host?:string) {
+    constructor(params:ConnectionHelperParams) {
         this.params = this.validateAndUpdateParams(params);
     }
 
@@ -129,6 +129,10 @@ export class ConnectionHelper implements Closable {
 
         if (params.listen && !params.listenCallback) {
             throw new Error('listenCallback is needed for listening');
+        }
+
+        if (params.listen && !params.localHost) {
+            throw new Error('server is listening but local host is not provided');
         }
 
         if (params.times || params.interval) {
@@ -242,13 +246,10 @@ export class ConnectionHelper implements Closable {
     private createNewServer(params:ConnectionHelperParams, callback:(server:Server)=>any) {
         const listenOptions:any = {};
 
-        if (params.localHost) listenOptions.host = params.localHost;
         if (params.localPort) listenOptions.port = params.localPort;
 
         const server = createServer().listen(listenOptions,
-            ()=> {
-                return callback(server)
-            }
+            ()=>callback(server)
         );
     }
 

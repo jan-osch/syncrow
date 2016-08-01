@@ -6,7 +6,6 @@ declare module 'request' {
 	import https = require('https');
 	import url = require('url');
 	import fs = require('fs');
-	import FormData = require('form-data');
 
 	namespace request {
 		export interface RequestAPI<TRequest extends Request,
