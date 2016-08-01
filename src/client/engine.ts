@@ -8,7 +8,7 @@ import {EventMessenger} from "../connection/evented_messenger";
 import * as _ from "lodash";
 import {noAction} from "../sync/no_action";
 
-const debug = debugFor("syncrow:client:engine");
+const debug = debugFor("syncrow:engine");
 const logger = loggerFor('Engine');
 
 export interface EngineOptions {

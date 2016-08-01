@@ -4,7 +4,7 @@ import {AuthorisationHelper} from "./authorisation_helper";
 import * as async from "async";
 
 const debug = debugFor("syncrow:connection:helper");
-const logger = loggerFor('ConnectionServer');
+const logger = loggerFor('ConnectionHelper');
 
 export interface ConnectionAddress {
     remotePort:number;

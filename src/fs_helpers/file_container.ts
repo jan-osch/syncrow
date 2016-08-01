@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import {EventEmitter} from "events";
-import config from "../configuration";
 import {loggerFor, debugFor, Closable} from "../utils/logger";
 import {PathHelper} from "./path_helper";
 import {SyncData} from "../sync/sync_actions";
@@ -45,9 +44,9 @@ export class FileContainer extends EventEmitter implements Closable{
     constructor(directoryToWatch:string, options:FileContainerOptions = {}) {
         super();
 
-        const fileLimit = options.fileLimit ? options.fileLimit : config.fileContainer.processedFilesLimit;
+        const fileLimit = options.fileLimit ? options.fileLimit : 1000;
         this.filterFunction = options.filter ? options.filter : s => false;
-        this.watchTimeout = options.timeout ? options.timeout : config.fileContainer.watchTimeout;
+        this.watchTimeout = options.timeout ? options.timeout : 200;
         this.directoryToWatch = directoryToWatch;
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();

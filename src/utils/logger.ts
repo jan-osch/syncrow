@@ -1,7 +1,11 @@
+/// <reference path="../../typings/globals/node/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
+
 import * as chalk from "chalk";
 import * as moment from "moment";
 import * as debug from "debug";
 
+//TODO implement logger to file system
 export class Logger {
     private context:string;
 
@@ -84,21 +88,6 @@ export function debugFor(routingKey:string) {
     return debug(routingKey);
 }
 
-
-/**
- * Decorator for passing an exception to last argument - callback
- * @param fun
- * @returns {function(): (any|AsyncFunction<any>|any)}
- */
-export function forwardEception(fun) {
-    return function () {
-        try {
-            return fun.apply(this, arguments);
-        } catch (exception) {
-            return arguments[arguments.length - 1](exception);
-        }
-    }
-}
 
 export interface Closable {
     shutdown:()=>any

@@ -3,7 +3,6 @@ import {FileContainer} from "../fs_helpers/file_container";
 import {CallbackHelper} from "./callback_helper";
 import {TransferActions} from "./transfer_actions";
 import {loggerFor} from "../utils/logger";
-import config from "../configuration";
 import {EventMessenger} from "../connection/evented_messenger";
 import {ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 
@@ -36,7 +35,7 @@ export class TransferHelper {
     private container:FileContainer;
 
     constructor(container:FileContainer, private connectionHelper:ConnectionHelper, options:TransferHelperOptions) {
-        const queueSize = options.transferQueueSize ? options.transferQueueSize : config.transferHelper.transferQueueSize;
+        const queueSize = options.transferQueueSize ? options.transferQueueSize : 1000;
 
         this.queue = new TransferQueue(queueSize, options.name);
         this.preferConnecting = options.preferConnecting;
