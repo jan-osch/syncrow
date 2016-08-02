@@ -6,6 +6,8 @@ import * as async from "async";
 const debug = debugFor("syncrow:connection:helper");
 const logger = loggerFor('ConnectionHelper');
 
+const DEFAULT_TIMEOUT = 1000;
+
 export interface ConnectionAddress {
     remotePort:number;
     remoteHost:string;
@@ -116,7 +118,7 @@ export class ConnectionHelper implements Closable {
         }
 
         if (params.token && !params.timeout) {
-            throw new Error('timeout is needed when authorisation is on');
+            params.timeout = DEFAULT_TIMEOUT;
         }
 
         if (!params.listen && !params.remoteHost) {
