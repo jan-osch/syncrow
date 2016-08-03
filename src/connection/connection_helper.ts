@@ -2,6 +2,7 @@ import {Socket, Server, createServer, connect} from "net";
 import {loggerFor, debugFor, Closable} from "../utils/logger";
 import {AuthorisationHelper} from "./authorisation_helper";
 import * as async from "async";
+import * as _ from "lodash";
 
 const debug = debugFor("syncrow:connection:helper");
 const logger = loggerFor('ConnectionHelper');
@@ -45,7 +46,6 @@ export class ConnectionHelper implements Closable {
 
     /**
      * @param params
-     * @param host
      */
     constructor(params:ConnectionHelperParams) {
         this.params = this.validateAndUpdateParams(params);

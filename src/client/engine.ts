@@ -15,7 +15,6 @@ export interface EngineOptions {
     watch?:boolean;
     onFirstConnection?:SyncAction;
     onReconnection?:SyncAction;
-    allowReconnecting?:boolean;
 }
 
 export class Engine implements SyncActionSubject, Closable {
@@ -59,9 +58,6 @@ export class Engine implements SyncActionSubject, Closable {
 
         otherParty.on(Messenger.events.recovering, ()=> {
             debug(`lost connection with remote party - recovering`);
-            if (!this.options.allowReconnecting) {
-                return this.removeOtherParty(otherParty);
-            }
         });
 
         otherParty.on(Messenger.events.died, ()=> {

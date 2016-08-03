@@ -14,10 +14,14 @@ import ReadableStream = NodeJS.ReadableStream;
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
 
+export interface FilterFunction{
+    (s:string):boolean;
+}
+
 export interface FileContainerOptions {
     timeout?:number;
     fileLimit?:number;
-    filter?:(s:string)=>boolean;
+    filter?:FilterFunction;
 }
 
 export class FileContainer extends EventEmitter implements Closable{

@@ -12,6 +12,7 @@
     "chokidar": "registry:dt/chokidar#1.4.3+20160316155526",
     "commander": "registry:dt/commander#2.3.0+20160317120654",
     "debug": "registry:dt/debug#0.0.0+20160317120654",
+    "inquirer": "registry:dt/inquirer#0.0.0+20160316155526",
     "lodash": "registry:dt/lodash#3.10.0+20160720001309",
     "mkdirp": "registry:dt/mkdirp#0.3.0+20160317120654",
     "mocha": "registry:dt/mocha#2.2.5+20160619032855",
