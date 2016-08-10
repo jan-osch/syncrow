@@ -1,6 +1,8 @@
 import {EventEmitter} from "events";
 import {Socket} from "net";
-import {Closable} from "../utils/logger";
+import {Closable, debugFor} from "../utils/logger";
+
+const debug = debugFor('syncrow:connection:parse_helper');
 
 export class ParseHelper extends EventEmitter implements Closable {
     private messageBuffer:string;
@@ -59,7 +61,9 @@ export class ParseHelper extends EventEmitter implements Closable {
 
     private checkIfMessageIsComplete() {
         if (this.expectedLength && this.messageBuffer.length >= this.expectedLength) {
-            this.emit(ParseHelper.events.message, this.messageBuffer.slice(0, this.expectedLength));
+            const message = this.messageBuffer.slice(0, this.expectedLength);
+            debug(`got message: ${message}`);
+            this.emit(ParseHelper.events.message, message);
             this.restartParsingMessage(this.messageBuffer.slice(this.expectedLength));
         }
     }

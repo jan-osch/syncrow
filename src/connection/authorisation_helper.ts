@@ -1,7 +1,10 @@
 import {Socket} from "net";
 import {ParseHelper} from "./parse_helper";
 import * as crypto from "crypto";
-import * as async from "async";
+import {timeout} from "../utils/timeout";
+import {debugFor} from "../utils/logger";
+
+const debug = debugFor('syncrow:connection:authorisation_helper')
 
 export class AuthorisationHelper {
 
@@ -20,7 +23,7 @@ export class AuthorisationHelper {
     public static authorizeToSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
-        const wrapped = async.timeout(
+        const wrapped = timeout(
             (err:Error)=> {
                 parser.shutdown();
                 return callback(err);
@@ -50,7 +53,7 @@ export class AuthorisationHelper {
     public static authorizeSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
-        const wrapped = async.timeout(
+        const wrapped = timeout(
             (err:Error)=> {
                 if (err) {
                     AuthorisationHelper.writeToParser(parser,
@@ -60,11 +63,19 @@ export class AuthorisationHelper {
                             reason: err
                         }
                     );
+                } else {
+                    AuthorisationHelper.writeToParser(parser,
+                        {
+                            type: AuthorisationHelper.messages.handshakeResponse,
+                            success: true
+                        }
+                    );
                 }
                 parser.shutdown();
                 return callback(err);
             },
-            options.timeout, new Error('Authorisation timeout')
+            options.timeout,
+            new Error('Authorisation timeout')
         );
 
         parser.once(ParseHelper.events.message,
@@ -85,6 +96,7 @@ export class AuthorisationHelper {
 
     private static handleExpectedHandshakeResponse(rawMessage:string, callback:ErrorCallback) {
         try {
+            debug(`handleExpectedHandshakeResponse - got raw message: ${rawMessage}`);
             const parsed = JSON.parse(rawMessage);
             if (parsed.type === AuthorisationHelper.messages.handshakeResponse) {
                 if (parsed.success) {
@@ -101,9 +113,11 @@ export class AuthorisationHelper {
 
     private static handleExpectedHandshake(rawMessage:string, token:string, callback:ErrorCallback) {
         try {
+            debug(`got handleExpectedHandshake - got raw message: ${rawMessage}`);
             const parsed = JSON.parse(rawMessage);
             if (parsed.type === AuthorisationHelper.messages.handshake) {
                 const tokenMatches = parsed.token === token;
+                debug(`handleExpectedHandshake - token matches: ${tokenMatches}`);
 
                 if (!tokenMatches) return callback(new Error(`Invalid token: ${parsed.token}`));
                 return callback();

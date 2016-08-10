@@ -54,6 +54,7 @@ export class EventMessenger extends Messenger {
             return this.emit(EventMessenger.error, {title: `Unknown event type: ${event.type}`, details: event})
         }
 
+        debug(`emitting event: ${event.type}`);
         return this.emit(event.type, event);
     }
 }

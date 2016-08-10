@@ -15,7 +15,7 @@ export interface ProgramOptions {
     listen?:boolean;
     initialToken?:string;
     listenForMultiple?:boolean;
-    abort?:boolean;
+    abort?:boolean; //abort listening if client disconnects
     deleteLocalFiles?:boolean;
     deleteRemoteFiles?:boolean;
     skipWatching?:boolean;

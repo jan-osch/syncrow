@@ -77,7 +77,7 @@ export class Messenger extends EventEmitter implements Closable {
 
     private createParser(socket:Socket):ParseHelper {
         const parser = new ParseHelper(socket);
-        parser.on(ParseHelper.events.message, (message)=>this.emit(message));
+        parser.on(ParseHelper.events.message, (message)=>this.emit(Messenger.events.message, message));
 
         return parser;
     }

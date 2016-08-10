@@ -46,7 +46,7 @@ function loadConfigFromFile(path:string):ProgramOptions {
 
         return result;
     } catch (e) {
-        return {};
+        throw new Error('Configuration file not found or invalid')
     }
 }
 
@@ -115,6 +115,7 @@ function chooseStrategy(key:string):SyncAction {
 function printDebugAboutConfig(finalConfig:ProgramOptions) {
     debug(`final config: ${JSON.stringify(finalConfig, null, 2)}`);
 }
+
 function startEngineAsListeningClient(options:ProgramOptions) {
     if (!options.listen) throw new Error('Listening client needs to listen');
 
@@ -292,7 +293,10 @@ function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper, ca
 }
 
 function ifErrorThrow(err?:Error) {
-    if (err) throw err;
+    if (err) {
+        if(err.stack) console.error(err.stack);
+        throw err;
+    }
 }
 
 function buildEngineOptionsFromConfig(options:ProgramOptions):EngineOptions {

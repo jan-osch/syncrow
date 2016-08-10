@@ -7,7 +7,7 @@ import * as _ from "lodash";
 const debug = debugFor("syncrow:connection:helper");
 const logger = loggerFor('ConnectionHelper');
 
-const DEFAULT_TIMEOUT = 1000;
+const DEFAULT_TIMEOUT = 5000;
 
 export interface ConnectionAddress {
     remotePort:number;
@@ -250,9 +250,16 @@ export class ConnectionHelper implements Closable {
 
         if (params.localPort) listenOptions.port = params.localPort;
 
-        const server = createServer().listen(listenOptions,
-            ()=>callback(server)
-        );
+        if (listenOptions.port) {
+            const server = createServer().listen(listenOptions,
+                ()=>callback(server)
+            );
+        } else {
+            const server = createServer().listen(
+                ()=>callback(server)
+            );
+        }
+
     }
 
     private handleIncomingSocket(socket:Socket, params:ConnectionHelperParams, connectedCallback:SocketCallback) {
@@ -270,7 +277,7 @@ export class ConnectionHelper implements Closable {
     }
 
     private killServer() {
-        this.server.close();
+        if (this.server)this.server.close();
         delete this.server;
         delete this.serverCallback;
     }
