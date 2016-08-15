@@ -90,9 +90,7 @@ export function debugFor(routingKey:string) {
 }
 
 
-export interface Closable {
-    shutdown:()=>any
-}
+
 
 export interface ErrorCallback {
     (err:Error):any

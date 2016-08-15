@@ -3,7 +3,7 @@ import {FileContainer} from "../fs_helpers/file_container";
 import {CallbackHelper} from "./callback_helper";
 import {TransferActions} from "./transfer_actions";
 import {loggerFor} from "../utils/logger";
-import {EventMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/event_messenger";
 import {ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 
 export interface TransferHelperOptions {
@@ -17,7 +17,7 @@ const callbackHelper = CallbackHelper.getInstance();
 const logger = loggerFor('TransferHelper');
 
 /**
- * Private events
+ * Private messages
  */
 interface TransferMessage {
     fileName:string;
@@ -43,7 +43,7 @@ export class TransferHelper {
     }
 
     /**
-     * Used to handle events passed by caller
+     * Used to handle messages passed by caller
      * @param transferMessage
      * @param otherParty
      */

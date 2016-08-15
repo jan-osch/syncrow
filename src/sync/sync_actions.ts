@@ -1,5 +1,5 @@
 import {FileContainer} from "../fs_helpers/file_container";
-import {EventMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/event_messenger";
 
 export interface SyncData {
     hashCode:string;

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import {EventEmitter} from "events";
-import {loggerFor, debugFor, Closable} from "../utils/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 import {PathHelper} from "./path_helper";
 import {SyncData} from "../sync/sync_actions";
 import {FileMetaComputingQueue} from "./file_meta_queue";
@@ -10,6 +10,7 @@ import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
 import * as chokidar from "chokidar";
 import ReadableStream = NodeJS.ReadableStream;
+import {Closable} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
@@ -150,7 +151,7 @@ export class FileContainer extends EventEmitter implements Closable{
     }
 
     /**
-     * Starts watching and emitting events
+     * Starts watching and emitting messages
      * @param callback
      */
     public beginWatching(callback?:ErrorCallback) {

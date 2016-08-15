@@ -1,10 +1,10 @@
 import {Socket} from "net";
 import {ParseHelper} from "./parse_helper";
 import * as crypto from "crypto";
-import {timeout} from "../utils/timeout";
+import * as async from "async";
 import {debugFor} from "../utils/logger";
 
-const debug = debugFor('syncrow:connection:authorisation_helper')
+const debug = debugFor('syncrow:connection:authorisation_helper');
 
 export class AuthorisationHelper {
 
@@ -23,25 +23,28 @@ export class AuthorisationHelper {
     public static authorizeToSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
-        const wrapped = timeout(
-            (err:Error)=> {
-                parser.shutdown();
-                return callback(err);
+        const wrapped = async.timeout((cb)=> {
+
+                parser.once(ParseHelper.events.message,
+                    (message)=> AuthorisationHelper.handleExpectedHandshakeResponse(message, cb)
+                );
+
+                const handshake = {
+                    type: AuthorisationHelper.messages.handshake,
+                    token: token
+                };
+
+                AuthorisationHelper.writeToParser(parser, handshake);
             },
             options.timeout,
             new Error('Authorisation timeout')
         );
 
-        parser.once(ParseHelper.events.message,
-            (message)=> AuthorisationHelper.handleExpectedHandshakeResponse(message, wrapped)
-        );
+        wrapped((err)=> {
+            parser.shutdown();
+            return callback(err);
+        })
 
-        const handshake = {
-            type: AuthorisationHelper.messages.handshake,
-            token: token
-        };
-
-        AuthorisationHelper.writeToParser(parser, handshake);
     }
 
     /**
@@ -53,8 +56,17 @@ export class AuthorisationHelper {
     public static authorizeSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
-        const wrapped = timeout(
-            (err:Error)=> {
+        const wrapped = async.timeout(
+            (cb)=> {
+                parser.once(ParseHelper.events.message,
+                    (message)=> AuthorisationHelper.handleExpectedHandshake(message, token, cb)
+                );
+            },
+            options.timeout,
+            new Error('Authorisation timeout')
+        );
+
+        wrapped((err:Error)=> {
                 if (err) {
                     AuthorisationHelper.writeToParser(parser,
                         {
@@ -73,13 +85,7 @@ export class AuthorisationHelper {
                 }
                 parser.shutdown();
                 return callback(err);
-            },
-            options.timeout,
-            new Error('Authorisation timeout')
-        );
-
-        parser.once(ParseHelper.events.message,
-            (message)=> AuthorisationHelper.handleExpectedHandshake(message, token, wrapped)
+            }
         );
     }
 
@@ -115,17 +121,24 @@ export class AuthorisationHelper {
         try {
             debug(`got handleExpectedHandshake - got raw message: ${rawMessage}`);
             const parsed = JSON.parse(rawMessage);
-            if (parsed.type === AuthorisationHelper.messages.handshake) {
-                const tokenMatches = parsed.token === token;
-                debug(`handleExpectedHandshake - token matches: ${tokenMatches}`);
 
-                if (!tokenMatches) return callback(new Error(`Invalid token: ${parsed.token}`));
-                return callback();
+            if (parsed.type === AuthorisationHelper.messages.handshake) {
+                return this.checkToken(parsed, token, callback);
             }
+
             return callback(new Error(`Unrecognised message type: ${parsed.type}`));
         } catch (e) {
             return callback(new Error(`Malformed message - reason: ${e}`));
         }
+    }
+
+    private static checkToken(parsed:any, token:string, callback:ErrorCallback) {
+        const tokenMatches = parsed.token === token;
+        debug(`handleExpectedHandshake - token matches: ${tokenMatches}`);
+
+        if (!tokenMatches)return callback(new Error(`Invalid token: ${parsed.token}`));
+
+        return callback();
     }
 
     private static writeToParser(parser:ParseHelper, data:any) {

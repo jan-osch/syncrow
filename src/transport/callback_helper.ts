@@ -8,7 +8,7 @@ export class CallbackHelper {
     private callbackMap:Map<string,Function>;
 
     /**
-     * Used to exchange events with callbacks
+     * Used to exchange messages with callbacks
      */
     constructor() {
         this.callbackMap = new Map();

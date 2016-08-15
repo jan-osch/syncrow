@@ -8,7 +8,7 @@ import {FileContainer, FilterFunction} from "../fs_helpers/file_container";
 import {ConnectionHelper} from "../connection/connection_helper";
 import {TransferHelper} from "../transport/transfer_helper";
 import * as async from "async";
-import {EventMessenger} from "../connection/evented_messenger";
+import {EventMessenger} from "../connection/event_messenger";
 import {ProgramOptions, ProgramTypes} from "./program";
 import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
