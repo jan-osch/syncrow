@@ -1,32 +1,37 @@
 import {SyncAction} from "../sync/sync_actions";
 import {FilterFunction} from "../fs_helpers/file_container";
 
-
 export interface ProgramOptions {
-    type?:string;
+    listen?:boolean;
+
     remoteHost?:string;
     remotePort?:number;
+
     localPort?:number;
     externalHost?:string;
-    strategy?:SyncAction;
+
+    sync?:SyncAction;
     rawStrategy?:string
+
     filter?:FilterFunction;
     rawFilter?:Array<string>;
-    listen?:boolean;
+
+
     initialToken?:string;
-    listenForMultiple?:boolean;
-    abort?:boolean; //abort listening if client disconnects
-    deleteLocalFiles?:boolean;
-    deleteRemoteFiles?:boolean;
-    skipWatching?:boolean;
+
+    deleteLocal?:boolean;
+
+    deleteRemote?:boolean;
+
     authenticate?:boolean;
     reconnect?:boolean;
+
     times?:number;
+
     interval?:number;
+
+    watch?:boolean
 }
 
-export const ProgramTypes = {
-    server: 'server',
-    clientListening: 'clientListening',
-    clientConnecting: 'clientConnecting'
-};
+
+export const configurationFileName = '.syncrow.json';

@@ -1,5 +1,9 @@
 import {FileContainer} from "../fs_helpers/file_container";
 import {EventMessenger} from "../connection/event_messenger";
+import * as async from "async";
+import {debugFor} from "../utils/logger";
+
+const debug = debugFor('syncrow:sync_actions');
 
 export interface SyncData {
     hashCode:string;

@@ -1,18 +1,15 @@
 import {debugFor, loggerFor} from "../utils/logger";
-import {Engine, EngineOptions} from "../client/engine";
+import {Engine} from "../client/engine";
 import * as fs from "fs";
 import {SyncAction} from "../sync/sync_actions";
 import * as anymatch from "anymatch";
 import {pullAction} from "../sync/pull_action";
-import {FileContainer, FilterFunction} from "../fs_helpers/file_container";
-import {ConnectionHelper} from "../connection/connection_helper";
-import {TransferHelper} from "../transport/transfer_helper";
-import * as async from "async";
-import {EventMessenger} from "../connection/event_messenger";
-import {ProgramOptions, ProgramTypes} from "./program";
+import {FilterFunction} from "../fs_helpers/file_container";
+import {ProgramOptions, configurationFileName} from "./program";
 import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
-import * as _ from "lodash";
+import startListeningEngine from "../utils/listen";
+import startConnectingEngine from "../utils/connect";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -20,20 +17,15 @@ const debug = debugFor("syncrow:cli:run");
 /**
  * MAIN
  */
-syncrowRun();
+debug('executing syncrow-run');
 
-function syncrowRun() {
-    debug('executing syncrow-run');
 
-    const configPath = '.syncrow.json';
-    const savedConfig = loadConfigFromFile(configPath);
+const savedConfig = loadConfigFromFile(configurationFileName);
+const preparedConfig = buildConfig(savedConfig);
 
-    const preparedConfig = buildConfig(savedConfig);
+printDebugAboutConfig(preparedConfig);
+startEngine(savedConfig);
 
-    printDebugAboutConfig(preparedConfig);
-
-    startEngine(savedConfig);
-}
 
 /**
  * @param path
@@ -56,10 +48,10 @@ function loadConfigFromFile(path:string):ProgramOptions {
  */
 function buildConfig(savedConfig:ProgramOptions):ProgramOptions {
     if (savedConfig.rawFilter) {
-        savedConfig.filter = createFilterFunction(savedConfig.rawFilter, '.');
+        savedConfig.filter = createFilterFunction(savedConfig.rawFilter.concat([configurationFileName]), '.');
     }
 
-    savedConfig.strategy = chooseStrategy(savedConfig.rawStrategy);
+    savedConfig.sync = chooseStrategy(savedConfig.rawStrategy);
 
     return savedConfig;
 }
@@ -83,19 +75,22 @@ function createFilterFunction(filterStrings:Array<string>, baseDir:string):Filte
 
 /**
  * @param chosenConfig
+ * @returns {undefined}
  */
 function startEngine(chosenConfig:ProgramOptions) {
-    if (chosenConfig.type === ProgramTypes.clientListening) {
-        return startEngineAsListeningClient(chosenConfig);
-    }
-    if (chosenConfig.type === ProgramTypes.clientConnecting) {
-        return startEngineAsConnectingClient(chosenConfig)
-    }
-    if (chosenConfig.type === ProgramTypes.server) {
-        return startEngineAsServer(chosenConfig);
+    if (chosenConfig.listen) {
+        return startListeningEngine('.', chosenConfig.localPort, chosenConfig, (err, engine)=> {
+            debug(`listening engine started`);
+            ifErrorThrow(err);
+            engine.on(Engine.events.error, ifErrorThrow);
+        })
     }
 
-    throw new Error(`Invalid or missing type: ${chosenConfig.type}`);
+    return startConnectingEngine(chosenConfig.remotePort, chosenConfig.remoteHost, '.', chosenConfig, (err, engine)=> {
+        ifErrorThrow(err);
+        debug(`engine connected`);
+        engine.on(Engine.events.error, ifErrorThrow);
+    })
 }
 
 function chooseStrategy(key:string):SyncAction {
@@ -116,196 +111,9 @@ function printDebugAboutConfig(finalConfig:ProgramOptions) {
     debug(`final config: ${JSON.stringify(finalConfig, null, 2)}`);
 }
 
-function startEngineAsListeningClient(options:ProgramOptions) {
-    if (!options.listen) throw new Error('Listening client needs to listen');
-
-    const container = new FileContainer('.', {filter: options.filter});
-
-    const paramsForEntry = {
-        localPort: options.localPort,
-        localHost: options.externalHost,
-        listen: true,
-        token: options.initialToken,
-        listenCallback: _.noop
-    };
-
-    const connectionHelperEntry = new ConnectionHelper(paramsForEntry);
-
-    const paramsForTransfer = {
-        localHost: options.externalHost,
-        listen: true,
-        authenticate: options.authenticate,
-        listenCallback: (address)=>{
-            logger.info(`Client listening on port: ${address.port}`);
-        }
-    };
-
-    const connectionHelperForTransfer = new ConnectionHelper(paramsForTransfer);
-
-    const transferHelper = new TransferHelper(container, connectionHelperForTransfer, {
-        name: 'Client',
-        preferConnecting: false
-    });
-
-    const engineOptions = buildEngineOptionsFromConfig(options);
-
-    const engine = new Engine(container, transferHelper, engineOptions,
-
-        (err)=> {
-            ifErrorThrow(err);
-
-            if (options.reconnect) {
-                return connectionHelperEntry.setupServer(
-                    (server)=> {
-                        logger.info(`Client listening on port: ${server.address().port}`);
-
-                        return getSocketAndAddToEngine(engine, connectionHelperEntry, true, ifErrorThrow)
-                    }
-                )
-            }
-
-            return getSocketAndAddToEngine(engine, connectionHelperEntry, false, ifErrorThrow);
-        }
-    );
-}
-
-
-
-function startEngineAsConnectingClient(options:ProgramOptions) {
-    if (options.listen) throw new Error(`Connecting client has can't listen`);
-
-    const container = new FileContainer('.', {filter: options.filter});
-
-    const paramsForEntry = {
-        remotePort: options.remotePort,
-        remoteHost: options.remoteHost,
-        listen: false,
-        token: options.initialToken
-    };
-
-    const connectionHelperEntry = new ConnectionHelper(paramsForEntry);
-
-    const paramsForTransfer = {
-        localHost: options.externalHost,
-        remotePort: options.remotePort,
-        remoteHost: options.remoteHost,
-        listen: false,
-        authenticate: options.authenticate
-    };
-
-    const connectionHelperForTransfer = new ConnectionHelper(paramsForTransfer);
-
-    const transferHelper = new TransferHelper(container, connectionHelperForTransfer, {
-        name: 'Client',
-        preferConnecting: true
-    });
-
-    const engineOptions = buildEngineOptionsFromConfig(options);
-    const engine = new Engine(container, transferHelper, engineOptions,
-
-        (err)=> {
-            ifErrorThrow(err);
-
-            return getSocketAndAddToEngine(engine, connectionHelperEntry, options.reconnect, ifErrorThrow);
-        }
-    );
-}
-
-function startEngineAsServer(options:ProgramOptions) {
-    if (!options.listen) throw new Error('Server needs to listen');
-    if (options.reconnect) throw new Error('Listening Server cannot allow reconnection');
-
-    const container = new FileContainer('.', {filter: options.filter});
-
-    const paramsForEntry = {
-        localPort: options.localPort,
-        localHost: options.externalHost,
-        listen: options.listen,
-        listenCallback: _.noop,
-        token: options.initialToken
-    };
-
-    const connectionHelperEntry = new ConnectionHelper(paramsForEntry);
-
-    const paramsForTransfer = {
-        localPort: options.localPort,
-        localHost: options.externalHost,
-        listen: options.listen,
-        listenCallback: _.noop,
-        authenticate: options.authenticate,
-    };
-
-    const connectionHelperForTransfer = new ConnectionHelper(paramsForTransfer);
-
-    const transferHelper = new TransferHelper(container, connectionHelperForTransfer, {
-        name: 'Server',
-        preferConnecting: false
-    });
-
-    const engineOptions = buildEngineOptionsFromConfig(options);
-    const engine = new Engine(container, transferHelper, engineOptions,
-
-        (err)=> {
-            ifErrorThrow(err);
-            return connectionHelperEntry.setupServer(
-                ()=> {
-                    if (options.listenForMultiple) {
-                        return listenForMultipleConnections(engine, connectionHelperEntry, ifErrorThrow);
-                    }
-
-                    return getSocketAndAddToEngine(engine, connectionHelperEntry, false, ifErrorThrow)
-                }
-            );
-        }
-    );
-}
-
-function getSocketAndAddToEngine(engine:Engine, connectionHelper:ConnectionHelper, reconnect:boolean, callback) {
-    return connectionHelper.getNewSocket(
-        (err, socket)=> {
-            if (err)return callback(err);
-
-            const messenger = new EventMessenger({reconnect: reconnect}, socket, connectionHelper);
-            engine.addOtherPartyMessenger(messenger);
-
-            return callback(null, messenger);
-        }
-    )
-}
-
-
-function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper, callback:ErrorCallback) {
-
-    return async.whilst(
-        ()=>true,
-
-        (cb)=> {
-            return helper.getNewSocket((err, socket)=> {
-                if (err) return cb(err);
-
-                const messenger = new EventMessenger({reconnect: false}, socket, helper);
-                engine.addOtherPartyMessenger(messenger);
-                return cb();
-            })
-        },
-
-        callback
-    )
-}
-
 function ifErrorThrow(err?:Error) {
     if (err) {
-        if(err.stack) console.error(err.stack);
+        if (err.stack) console.error(err.stack);
         throw err;
     }
-}
-
-function buildEngineOptionsFromConfig(options:ProgramOptions):EngineOptions {
-    const engineOptions:EngineOptions = {};
-
-    engineOptions.watch = !!options.skipWatching;
-    engineOptions.sync = options.strategy;
-    engineOptions.onReconnection = options.strategy;
-
-    return engineOptions;
 }

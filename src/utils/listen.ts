@@ -25,7 +25,7 @@ export interface ListenOptions {
  * @param {ListenOptions} options
  * @param {EngineCallback} callback
  */
-function startListeningEngine(path:string, port:number, options:ListenOptions, callback:EngineCallback) {
+export default function startListeningEngine(path:string, port:number, options:ListenOptions, callback:EngineCallback) {
     const container = new FileContainer(path, {filter: options.filterFunction});
 
     const connectionHelperEntry = new ConnectionHelper({

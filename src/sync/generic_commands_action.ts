@@ -1,6 +1,8 @@
 import {SyncActionParams, MetaTuple, getFileLists, FileLists, getMetaTupleForFile} from "./sync_actions";
+import * as async from "async";
+import * as _ from "lodash";
 
-export interface CommandsFunction{
+export interface CommandsFunction {
     (params:SyncActionParams, metaTuple:MetaTuple, callback:ErrorCallback):any;
 }
 

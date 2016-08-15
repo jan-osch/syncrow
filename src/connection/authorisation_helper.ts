@@ -1,6 +1,5 @@
 import {Socket} from "net";
 import {ParseHelper} from "./parse_helper";
-import * as crypto from "crypto";
 import * as async from "async";
 import {debugFor} from "../utils/logger";
 
@@ -56,6 +55,8 @@ export class AuthorisationHelper {
     public static authorizeSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
+        debug(`authorizeSocket called`);
+
         const wrapped = async.timeout(
             (cb)=> {
                 parser.once(ParseHelper.events.message,
@@ -93,17 +94,17 @@ export class AuthorisationHelper {
      * @param secret
      */
     public static generateToken(secret?:string):string {
-        const hash = crypto.createHmac('sha256', secret)
-            .update(Math.random().toString())
-            .digest('hex');
-
-        return hash;
+        // const hash = crypto.createHmac('sha256', secret)
+        //     .update(Math.random().toString())
+        //     .digest('hex');
+        return '123'
     }
 
     private static handleExpectedHandshakeResponse(rawMessage:string, callback:ErrorCallback) {
         try {
             debug(`handleExpectedHandshakeResponse - got raw message: ${rawMessage}`);
             const parsed = JSON.parse(rawMessage);
+            debug('called again');
             if (parsed.type === AuthorisationHelper.messages.handshakeResponse) {
                 if (parsed.success) {
                     return callback();
@@ -118,18 +119,22 @@ export class AuthorisationHelper {
     }
 
     private static handleExpectedHandshake(rawMessage:string, token:string, callback:ErrorCallback) {
+        debug(`got handleExpectedHandshake - got raw message: ${rawMessage}`);
+
+        let parsed;
+
         try {
-            debug(`got handleExpectedHandshake - got raw message: ${rawMessage}`);
-            const parsed = JSON.parse(rawMessage);
-
-            if (parsed.type === AuthorisationHelper.messages.handshake) {
-                return this.checkToken(parsed, token, callback);
-            }
-
-            return callback(new Error(`Unrecognised message type: ${parsed.type}`));
+            parsed = JSON.parse(rawMessage);
         } catch (e) {
             return callback(new Error(`Malformed message - reason: ${e}`));
         }
+
+        if (parsed.type === AuthorisationHelper.messages.handshake) {
+            return this.checkToken(parsed, token, callback);
+        }
+
+        return callback(new Error(`Unrecognised message type: ${parsed.type}`));
+
     }
 
     private static checkToken(parsed:any, token:string, callback:ErrorCallback) {

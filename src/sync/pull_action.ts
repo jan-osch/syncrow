@@ -2,7 +2,7 @@ import {debugFor, loggerFor} from "../utils/logger";
 import {SyncActionParams, MetaTuple} from "./sync_actions";
 import {genericCommandsAction} from "./generic_commands_action";
 
-const debug = debugFor('syncrow:strategy:pull');
+const debug = debugFor('syncrow:sync:pull');
 const logger = loggerFor('PullStrategy');
 
 

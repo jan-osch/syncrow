@@ -1,6 +1,4 @@
-import {SyncData, SyncActionParams, MetaTuple} from "./sync_actions";
-import * as async from "async";
-import * as _ from "lodash";
+import {SyncActionParams, MetaTuple} from "./sync_actions";
 import {debugFor, loggerFor} from "../utils/logger";
 import {genericCommandsAction} from "./generic_commands_action";
 

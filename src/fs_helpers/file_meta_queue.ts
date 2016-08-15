@@ -83,11 +83,17 @@ export class FileMetaComputingQueue {
         const hash = crypto.createHash('sha256');
         const stream = fs.createReadStream(`${this.basePath}/${syncData.name}`).pipe(hash);
 
-        stream.on('error', callback);
+        stream.on('error', (err)=> {
+            callback(err);
+        });
 
         hash.on('finish', ()=> {
-            syncData.hashCode = hash.digest().toString('hex');
-            callback(null, syncData);
+            try {
+                syncData.hashCode = hash.digest().toString('hex');
+                callback(null, syncData);
+            } catch (e) {
+                return callback(null, syncData);
+            }
         });
     }
 

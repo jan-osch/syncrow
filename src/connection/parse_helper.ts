@@ -1,6 +1,7 @@
 import {EventEmitter} from "events";
 import {Socket} from "net";
-import {Closable, debugFor} from "../utils/logger";
+import {debugFor} from "../utils/logger";
+import {Closable} from "../utils/interfaces";
 
 const debug = debugFor('syncrow:connection:parse_helper');
 
@@ -28,6 +29,7 @@ export class ParseHelper extends EventEmitter implements Closable {
      * @returns {string}
      */
     public writeMessage(data:string) {
+        debug(`writing message: ${data}`);
         this.socket.write(`${data.length}${ParseHelper.separator}${data}`);
     }
 

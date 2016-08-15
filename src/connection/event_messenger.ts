@@ -79,11 +79,14 @@ export class EventMessenger extends EventEmitter implements Closable {
     private disconnectAndDestroyCurrentSocket(error?:Error) {
         if (error)logger.error(`Socket error: ${error}`);
 
-        this.isAlive = false;
-        this.socket.removeAllListeners();
-        this.socket.destroy();
-        this.emit(EventMessenger.events.died);
-        delete this.socket;
+        if (this.socket) {
+            const socket = this.socket;
+            delete this.socket;
+            this.isAlive = false;
+            socket.removeAllListeners();
+            socket.destroy();
+            this.emit(EventMessenger.events.died);
+        }
     }
 
     private parseEvent(message:string):Event {

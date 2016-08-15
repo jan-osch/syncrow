@@ -10,9 +10,9 @@ export interface ConnectOptions {
     filter?:FilterFunction;
     initialToken?:string;
     authenticate?:boolean;
-    sync:SyncAction;
-    times:number;
-    interval:number;
+    sync?:SyncAction;
+    times?:number;
+    interval?:number;
 }
 
 /**
@@ -22,7 +22,7 @@ export interface ConnectOptions {
  * @param {ConnectOptions} options
  * @param {EngineCallback} callback
  */
-function connect(remotePort:number, remoteHost:string, path:string, options:ConnectOptions, callback:EngineCallback) {
+export default function startConnectingEngine(remotePort:number, remoteHost:string, path:string, options:ConnectOptions, callback:EngineCallback) {
     const container = new FileContainer(path, {filter: options.filter});
 
     const connectionHelperEntry = new ConnectionHelper({
