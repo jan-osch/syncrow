@@ -5,6 +5,7 @@ import {TransferHelper} from "../transport/transfer_helper";
 import {Engine} from "../client/engine";
 import {SyncAction} from "../sync/sync_actions";
 import {EventMessenger} from "../connection/event_messenger";
+import * as async from "async";
 
 export interface ConnectOptions {
     filter?:FilterFunction;
@@ -13,6 +14,7 @@ export interface ConnectOptions {
     sync?:SyncAction;
     times?:number;
     interval?:number;
+    watch?:boolean;
 }
 
 /**
@@ -48,19 +50,26 @@ export default function startConnectingEngine(remotePort:number, remoteHost:stri
 
     const engine = new Engine(container, transferHelper, {sync: options.sync});
 
-    connectionHelperEntry.getNewSocket(
-        (err, socket)=> {
-            if (err) return callback(err);
+    return async.waterfall(
+        [
+            (cb)=> {
+                if (options.watch) return container.beginWatching(cb);
+                cb();
+            },
 
-            const eventMessenger = new EventMessenger(socket);
-            engine.addOtherPartyMessenger(eventMessenger);
-            if (options.interval && options.times) {
-                connectAgainAfterPreviousDied(eventMessenger, engine, connectionHelperEntry);
+            (cb)=>connectionHelperEntry.getNewSocket(cb),
+
+            (socket, cb)=> {
+                const eventMessenger = new EventMessenger(socket);
+                engine.addOtherPartyMessenger(eventMessenger);
+                if (options.interval && options.times) {
+                    connectAgainAfterPreviousDied(eventMessenger, engine, connectionHelperEntry);
+                }
+                return cb(null, engine);
             }
-
-            return callback(null, engine);
-        }
-    )
+        ],
+        callback
+    );
 }
 
 function connectAgainAfterPreviousDied(previousMessenger:EventMessenger, engine:Engine, connectionHelper:ConnectionHelper) {

@@ -37,7 +37,6 @@ export default function startListeningEngine(path:string, port:number, options:L
     });
 
     const connectionHelperForTransfer = new ConnectionHelper({
-        localPort: port,
         localHost: options.externalHost,
         listen: true,
         listenCallback: _.noop,

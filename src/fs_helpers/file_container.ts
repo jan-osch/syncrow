@@ -51,7 +51,7 @@ export class FileContainer extends EventEmitter implements Closable{
 
         const fileLimit = options.fileLimit ? options.fileLimit : 1000;
         this.filterFunction = options.filter ? options.filter : s => false;
-        this.watchTimeout = options.timeout ? options.timeout : 200;
+        this.watchTimeout = options.timeout ? options.timeout : 400;
         this.directoryToWatch = directoryToWatch;
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();
