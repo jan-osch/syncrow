@@ -163,6 +163,8 @@ export class ConnectionHelper implements Closable {
     }
 
     private getSocketByConnecting(params:ConnectionHelperParams, callback:(err:Error, socket?:Socket)=>any) {
+        debug(`getting a socket by connecting`);
+        
         const socket = connect({port: params.remotePort, host: params.remoteHost},
             (err)=> {
                 if (err)return callback(err);
@@ -180,6 +182,8 @@ export class ConnectionHelper implements Closable {
                 return callback(null, socket);
             }
         );
+
+        socket.on('error', callback);
     }
 
     private createOneTimeServerAndHandleConnection(params:ConnectionHelperParams, listenCallback:ListenCallback, connectedCallback:SocketCallback) {

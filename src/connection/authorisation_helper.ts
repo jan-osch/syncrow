@@ -2,6 +2,7 @@ import {Socket} from "net";
 import {ParseHelper} from "./parse_helper";
 import * as async from "async";
 import {debugFor} from "../utils/logger";
+import * as crypto from "crypto";
 
 const debug = debugFor('syncrow:connection:authorisation_helper');
 
@@ -22,7 +23,8 @@ export class AuthorisationHelper {
     public static authorizeToSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
-        const wrapped = async.timeout((cb)=> {
+        const wrapped = async.timeout(
+            (cb)=> {
 
                 parser.once(ParseHelper.events.message,
                     (message)=> AuthorisationHelper.handleExpectedHandshakeResponse(message, cb)
@@ -91,13 +93,12 @@ export class AuthorisationHelper {
     }
 
     /**
-     * @param secret
+     * Generates new token for authorisation
      */
-    public static generateToken(secret?:string):string {
-        // const hash = crypto.createHmac('sha256', secret)
-        //     .update(Math.random().toString())
-        //     .digest('hex');
-        return '123'
+    public static generateToken():string {
+        return crypto.createHash('sha256')
+            .update(Math.random().toString())
+            .digest('hex');
     }
 
     private static handleExpectedHandshakeResponse(rawMessage:string, callback:ErrorCallback) {

@@ -6,6 +6,9 @@ import {Engine} from "../client/engine";
 import {SyncAction} from "../sync/sync_actions";
 import {EventMessenger} from "../connection/event_messenger";
 import * as async from "async";
+import {debugFor} from "./logger";
+
+const debug = debugFor('syncrow:connect');
 
 export interface ConnectOptions {
     filter?:FilterFunction;
@@ -74,6 +77,8 @@ export default function startConnectingEngine(remotePort:number, remoteHost:stri
 
 function connectAgainAfterPreviousDied(previousMessenger:EventMessenger, engine:Engine, connectionHelper:ConnectionHelper) {
     previousMessenger.on(EventMessenger.events.died, ()=> {
+
+            debug(`obtaining new socket`);
 
             connectionHelper.getNewSocket((err, socket)=> {
                     if (err) {
