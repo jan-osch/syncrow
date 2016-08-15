@@ -1,8 +1,9 @@
 import {Socket, Server, createServer, connect} from "net";
-import {loggerFor, debugFor, Closable} from "../utils/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 import {AuthorisationHelper} from "./authorisation_helper";
 import * as async from "async";
 import * as _ from "lodash";
+import {Closable} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:connection:helper");
 const logger = loggerFor('ConnectionHelper');
@@ -64,7 +65,7 @@ export class ConnectionHelper implements Closable {
      * @param callback
      * @param params
      */
-    public setupServer(callback:(server?:Server)=>any, params?:ConnectionHelperParams) {
+    public setupServer(callback:(err:Error, server?:Server)=>any, params?:ConnectionHelperParams) {
         try {
             params = this.validateAndUpdateParams(params);
         } catch (e) {
@@ -209,7 +210,7 @@ export class ConnectionHelper implements Closable {
         )
     }
 
-    private createLastingServer(params:ConnectionHelperParams, callback:(server:Server)=>any) {
+    private createLastingServer(params:ConnectionHelperParams, callback:ErrorCallback) {
         return this.createNewServer(params,
 
             (server)=> {
@@ -239,7 +240,7 @@ export class ConnectionHelper implements Closable {
                     this.killServer();
                 });
 
-                return callback(server);
+                return callback();
             }
         )
     }

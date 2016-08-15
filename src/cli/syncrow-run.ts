@@ -288,6 +288,7 @@ function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper, ca
                 return cb();
             })
         },
+
         callback
     )
 }
@@ -303,7 +304,7 @@ function buildEngineOptionsFromConfig(options:ProgramOptions):EngineOptions {
     const engineOptions:EngineOptions = {};
 
     engineOptions.watch = !!options.skipWatching;
-    engineOptions.onFirstConnection = options.strategy;
+    engineOptions.sync = options.strategy;
     engineOptions.onReconnection = options.strategy;
 
     return engineOptions;

@@ -12,7 +12,7 @@ const logger = loggerFor('Engine');
 
 
 export interface EngineOptions {
-    onFirstConnection:SyncAction;
+    sync:SyncAction;
 }
 
 export class Engine extends EventEmitter implements SyncActionSubject, Closable {
@@ -23,7 +23,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         newDirectory: 'newDirectory',
         changedFile: 'changedFile',
         deletedPath: 'deletedPath',
-        synced: 'synced'
+        synced: 'synced',
     };
 
     static messages = {
@@ -49,13 +49,6 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     }
 
     /**
-     * @param callback
-     */
-    public startWatching(callback:ErrorCallback) {
-        return this.fileContainer.beginWatching(callback);
-    }
-
-    /**
      * @param otherParty
      */
     public addOtherPartyMessenger(otherParty:EventMessenger) {
@@ -68,7 +61,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
             this.removeOtherParty(otherParty);
         });
 
-        this.options.onFirstConnection(syncParams,
+        this.options.sync(syncParams,
             (err)=> {
                 if (err)return logger.error(err);
 
