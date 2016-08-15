@@ -4,7 +4,8 @@
   "description": "Easy directory synchronization over the network",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --recursive build/test"
+    "test": "mocha --recursive build/test",
+    "build": "tsc || true"
   },
   "repository": {
     "type": "git",

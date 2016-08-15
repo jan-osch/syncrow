@@ -1,10 +1,9 @@
-/// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/index.d.ts" />
-
 
 import * as chalk from "chalk";
 import * as moment from "moment";
 import * as debug from "debug";
+
 
 //TODO implement logger to file system
 export class Logger {
@@ -88,8 +87,6 @@ export function loggerFor(context:string):Logger {
 export function debugFor(routingKey:string) {
     return debug(routingKey);
 }
-
-
 
 
 export interface ErrorCallback {

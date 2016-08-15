@@ -9,7 +9,8 @@
   },
   "exclude": [
     "node_modules",
-    "typings",
-    "testdir"
+    "testdir",
+    ".git",
+    "typings"
   ]
 }

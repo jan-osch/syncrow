@@ -164,7 +164,7 @@ export class ConnectionHelper implements Closable {
 
     private getSocketByConnecting(params:ConnectionHelperParams, callback:(err:Error, socket?:Socket)=>any) {
         debug(`getting a socket by connecting`);
-        
+
         const socket = connect({port: params.remotePort, host: params.remoteHost},
             (err)=> {
                 if (err)return callback(err);

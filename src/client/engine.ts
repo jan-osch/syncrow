@@ -143,7 +143,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     }
 
     private addEngineListenersToOtherParty(otherParty:EventMessenger) {
-        otherParty.on(EventMessenger.error, (event)=> {
+        otherParty.on(EventMessenger.events.error, (event)=> {
             return logger.error(`received error message ${JSON.stringify(event.body)}`);
         });
 

@@ -1,8 +1,8 @@
 import {debugFor, loggerFor} from "../utils/logger";
 import {Socket} from "net";
-import {EventEmitter} from "events";
 import {ParseHelper} from "./parse_helper";
 import {Closable} from "../utils/interfaces";
+import {EventEmitter} from "events";
 
 const debug = debugFor('syncrow:evented_messenger');
 const logger = loggerFor('Messenger');
@@ -22,9 +22,8 @@ export class EventMessenger extends EventEmitter implements Closable {
     static events = {
         message: 'message',
         died: 'disconnected',
+        error: 'error'
     };
-
-    static error:'error';
 
     /**
      * Enables sending string messages between parties
@@ -94,7 +93,7 @@ export class EventMessenger extends EventEmitter implements Closable {
             return JSON.parse(message.toString());
         } catch (e) {
             debug(`Sending error: exception during parsing message: ${message}`);
-            this.send(EventMessenger.error, {title: 'Bad event', details: message});
+            this.send(EventMessenger.events.error, {title: 'Bad event', details: message});
         }
     }
 
@@ -102,7 +101,7 @@ export class EventMessenger extends EventEmitter implements Closable {
         const event = this.parseEvent(rawMessage);
 
         if (this.listenerCount(event.type) == 0) {
-            return this.emit(EventMessenger.error, {title: `Unknown event type: ${event.type}`, details: event})
+            return this.emit(EventMessenger.events.error, {title: `Unknown event type: ${event.type}`, details: event})
         }
 
         debug(`emitting event: ${event.type}`);

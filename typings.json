@@ -13,10 +13,10 @@
     "commander": "registry:dt/commander#2.3.0+20160317120654",
     "debug": "registry:dt/debug#0.0.0+20160317120654",
     "inquirer": "registry:dt/inquirer#0.0.0+20160316155526",
-    "lodash": "registry:dt/lodash#3.10.0+20160720001309",
+    "lodash": "registry:dt/lodash#4.14.0+20160802150749",
     "mkdirp": "registry:dt/mkdirp#0.3.0+20160317120654",
     "mocha": "registry:dt/mocha#2.2.5+20160619032855",
-    "node": "registry:env/node#6.0.0+20160723033700",
+    "node": "registry:dt/node#6.0.0+20160813124416",
     "rimraf": "registry:dt/rimraf#0.0.0+20160317120654",
     "sinon": "registry:dt/sinon#1.16.0+20160517064723"
   }
