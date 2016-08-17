@@ -4,5 +4,7 @@ node_modules
 testdir
 docs
 docker
+typings
+src
 
 

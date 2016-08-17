@@ -49,7 +49,7 @@ export class FileContainer extends EventEmitter implements Closable{
     constructor(directoryToWatch:string, options:FileContainerOptions = {}) {
         super();
 
-        const fileLimit = options.fileLimit ? options.fileLimit : 1000;
+        const fileLimit = options.fileLimit ? options.fileLimit : 1000; //TODO extract this as a CAPITALIZED_CONSTANT to the top
         this.filterFunction = options.filter ? options.filter : s => false;
         this.watchTimeout = options.timeout ? options.timeout : 400;
         this.directoryToWatch = directoryToWatch;

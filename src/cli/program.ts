@@ -2,36 +2,42 @@ import {SyncAction} from "../sync/sync_actions";
 import {FilterFunction} from "../fs_helpers/file_container";
 
 export interface ProgramOptions {
-    listen?:boolean;
+    listen?:boolean; //Listen or connect
 
+    /**
+     * For connecting
+     */
     remoteHost?:string;
     remotePort?:number;
 
+
+    /**
+     * For listening
+     */
     localPort?:number;
-    externalHost?:string;
-
-    sync?:SyncAction;
-    rawStrategy?:string
-
-    filter?:FilterFunction;
-    rawFilter?:Array<string>;
+    externalHost?:string;//This should be external IP/domain hostname
 
 
-    initialToken?:string;
+    sync?:SyncAction; //Action that will be taken on each new connection
+    rawStrategy?:string //string code that denotes each action
+    deleteLocal?:boolean; //Flag tor SyncAction - will delete local files when they are missing remotely
+    deleteRemote?:boolean; //Flag for SyncAction - will delete remote files when they are missing locally
 
-    deleteLocal?:boolean;
+    filter?:FilterFunction; //function that will filter out files that should not be watched/transferred
+    rawFilter?:Array<string>; //Array of anymatch patterns that will construct filter
 
-    deleteRemote?:boolean;
+    initialToken?:string; //Token for first connection
+    authenticate?:boolean; //flag that will enable authentication of all sockets
 
-    authenticate?:boolean;
+    /**
+     * Reconnect params
+     */
     reconnect?:boolean;
-
     times?:number;
-
     interval?:number;
 
-    watch?:boolean
-}
 
+    watch?:boolean //Watch local filesystem
+}
 
 export const configurationFileName = '.syncrow.json';
