@@ -26,7 +26,7 @@ declare module "inquirer" {
              * @param cb Callback being passed the user answers
              * @return
              */
-            prompt(questions: Questions, cb?: (answers: Answers) => any): ui.Prompt;
+            prompt(questions: Questions, cb?: (answers: Answers) => any): Promise;
             prompts: Prompts;
             Separator: objects.SeparatorStatic;
             ui: {

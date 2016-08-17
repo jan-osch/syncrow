@@ -88,8 +88,7 @@ export class FileMetaComputingQueue {
         });
 
         hash.on('finish', ()=> {
-            console.log(hash)
-            syncData.hashCode = hash.digest('hex');
+            syncData.hashCode = hash.read().toString('hex');
             callback(null, syncData);
         });
     }
