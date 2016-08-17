@@ -20,7 +20,7 @@ export class AuthorisationHelper {
      * @param options
      * @param callback
      */
-    public static authorizeToSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
+    public static authorizeAsClient(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
         const wrapped = async.timeout(
@@ -54,7 +54,7 @@ export class AuthorisationHelper {
      * @param options
      * @param callback
      */
-    public static authorizeSocket(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
+    public static authorizeAsServer(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         const parser = new ParseHelper(socket);
 
         debug(`authorizeSocket called`);
@@ -102,10 +102,11 @@ export class AuthorisationHelper {
     }
 
     private static handleExpectedHandshakeResponse(rawMessage:string, callback:ErrorCallback) {
+        debug(`handleExpectedHandshakeResponse - got raw message: ${rawMessage}`);
+
         try {
-            debug(`handleExpectedHandshakeResponse - got raw message: ${rawMessage}`);
             const parsed = JSON.parse(rawMessage);
-            debug('called again');
+
             if (parsed.type === AuthorisationHelper.messages.handshakeResponse) {
                 if (parsed.success) {
                     return callback();

@@ -170,7 +170,7 @@ export class ConnectionHelper implements Closable {
                 if (err)return callback(err);
 
                 if (params.token) {
-                    return AuthorisationHelper.authorizeToSocket(socket, params.token, {timeout: params.timeout},
+                    return AuthorisationHelper.authorizeAsClient(socket, params.token, {timeout: params.timeout},
                         (err)=> {
                             if (err) return callback(err);
 
@@ -187,6 +187,7 @@ export class ConnectionHelper implements Closable {
     }
 
     private createOneTimeServerAndHandleConnection(params:ConnectionHelperParams, listenCallback:ListenCallback, connectedCallback:SocketCallback) {
+        debug(`creating new one time server on port: ${params.localPort}`);
         return this.createNewServer(params,
 
             (server)=> {
@@ -269,7 +270,7 @@ export class ConnectionHelper implements Closable {
 
     private handleIncomingSocket(socket:Socket, params:ConnectionHelperParams, connectedCallback:SocketCallback) {
         if (params.token) {
-            return AuthorisationHelper.authorizeSocket(socket, params.token, {timeout: params.timeout},
+            return AuthorisationHelper.authorizeAsServer(socket, params.token, {timeout: params.timeout},
                 (err)=> {
                     if (err) return connectedCallback(err);
 

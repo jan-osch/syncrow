@@ -1,8 +1,8 @@
-import {createPathSeries, removePath, pathExists, createPath, getRandomString} from "../test_utils";
+import {createPathSeries, removePath, pathExists, createPath, getRandomString} from "./test_utils";
 import * as chai from "chai";
 import {expect} from "chai";
 import * as sinon from "sinon";
-import {FileContainer} from "../../fs_helpers/file_container";
+import {FileContainer} from "../fs_helpers/file_container";
 import * as async from "async";
 import * as sinonChai from "sinon-chai";
 import * as fs from "fs";

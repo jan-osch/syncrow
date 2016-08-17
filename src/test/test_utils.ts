@@ -5,25 +5,37 @@ import * as fs from "fs";
 import * as rimraf from "rimraf";
 
 /**
+ * @returns {Function} a cleanup function that will close the server and paired sockets
  * @param doneCallback
  */
-export function obtainTwoSockets(doneCallback:(err, result?:{client:net.Socket, server:net.Socket})=>any) {
+export function obtainTwoSockets(doneCallback:(err, result?:{client:net.Socket, server:net.Socket})=>any):Function {
     let clientSocket;
-    const port = 3124;
+    let server;
+
+    const port = 3124; //A constant port is used to ensure that the cleanup function is called
+
     const listener = (socket)=> {
         return doneCallback(null, {client: clientSocket, server: socket});
     };
 
-    async.series([
-        (callback)=> {
-            net.createServer(listener).listen(port, callback);
-        },
-        (callback)=> {
-            clientSocket = net.connect({port: port}, callback)
+    async.series(
+        [
+            (callback)=> {
+                server = net.createServer(listener).listen(port, callback);
+            },
+            (callback)=> {
+                clientSocket = net.connect({port: port}, callback)
+            }
+        ],
+        (err)=> {
+            if (err)return doneCallback(err);
         }
-    ], (err)=> {
-        if (err) return doneCallback(err);
-    });
+    );
+
+    return ()=> {
+        clientSocket.end();
+        server.close();
+    }
 }
 
 /**
