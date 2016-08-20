@@ -73,6 +73,8 @@ export default function startListeningEngine(path:string, port:number, options:L
     )
 }
 
+//TODO add a closing function return -cleanup
+
 function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper) {
     return async.whilst(
         ()=>true,

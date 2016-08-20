@@ -145,6 +145,76 @@ describe('Engine', function () {
             ],
             cleanup
         )
+    });
+
+    xit('two engines will transfer handle deleting files', function (done) {
+        const token = '121cb2897o1289nnjos';
+
+        let listeningEngine;
+        let connectingEngine;
+
+        const cleanup = (previousError)=> {
+            if (listeningEngine)listeningEngine.shutdown();
+            if (connectingEngine)connectingEngine.shutdown();
+
+            return removePath('engine_test', (err)=> {
+                if (err)return done(err);
+                if (previousError)return done(previousError);
+
+                return done();
+            });
+        };
+
+        return async.waterfall(
+            [
+                (cb)=>createPathSeries(
+                    [
+                        {path: 'engine_test/aaa', directory: true},
+                        {path: 'engine_test/bbb', directory: true}
+                    ],
+                    cb
+                ),
+
+                (cb)=> {
+                    startListeningEngine('engine_test/aaa', 4325, {
+                        authenticate: true,
+                        externalHost: '0.0.0.0',
+                        initialToken: token,
+                        watch: true
+                    }, cb);
+                },
+
+                (engine, cb)=> {
+                    listeningEngine = engine;
+
+                    return startConnectingEngine(4325, '0.0.0.0', 'engine_test/bbb', {
+                        authenticate: true,
+                        initialToken: token,
+                        watch: true
+                    }, cb)
+                },
+
+                (engine, cb)=> {
+                    connectingEngine = engine;
+
+                    countEvents(listeningEngine, Engine.events.deletedPath, 1, cb);
+
+                    const ifErrorBreak = (err)=> {
+                        if (err)return cb(err);
+                    };
+
+                    async.waterfall(
+                        [
+                            cb=>mkdirp('engine_test/bbb/inner', cb),
+                            cb=>fs.writeFile('engine_test/bbb/inner/file_1.txt', '123123123', cb),
+                            cb=>removePath('engine_test/bbb/inner/file_1.txt', cb)
+                        ],
+                        ifErrorBreak
+                    )
+                }
+            ],
+            cleanup
+        )
     })
 });
 
