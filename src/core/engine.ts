@@ -1,11 +1,12 @@
 import {loggerFor, debugFor} from "../utils/logger";
 import {FileContainer} from "../fs_helpers/file_container";
 import {SyncData, SyncAction, SyncActionSubject, SyncActionParams} from "../sync/sync_actions";
-import {CallbackHelper} from "../transport/callback_helper";
+import {CallbackHelper} from "../connection/callback_helper";
 import {TransferHelper} from "../transport/transfer_helper";
 import {EventMessenger} from "../connection/event_messenger";
 import {Closable} from "../utils/interfaces";
 import {EventEmitter} from "events";
+import {noAction} from "../sync/no_action";
 
 const debug = debugFor("syncrow:engine");
 const logger = loggerFor('Engine');
@@ -26,6 +27,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         synced: 'synced',
     };
 
+    //TODO add support for emitting newFile
     static messages = {
         fileChanged: 'fileChanged',
         fileCreated: 'fileCreated',
@@ -43,6 +45,9 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
     constructor(private fileContainer:FileContainer, private transferHelper:TransferHelper, private options:EngineOptions) {
         super();
+
+        this.options.sync = this.options.sync ? this.options.sync : noAction;
+
         this.callbackHelper = new CallbackHelper();
         this.otherParties = [];
         this.addListenersToFileContainer(this.fileContainer);
@@ -155,6 +160,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
         otherParty.on(Engine.messages.directoryCreated, (event)=> {
             this.fileContainer.createDirectory(event.body.fileName);
+            debug(`finished creating a new directory: ${event.body.fileName} - emitting newDirectory event`);
             this.emit(Engine.events.newDirectory, event.body.fileName);
 
             return this.broadcastEvent(event.type, {fileName: event.body.fileName}, otherParty);
@@ -169,6 +175,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
         otherParty.on(Engine.messages.fileChanged, (event)=> {
             return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
+                debug(`finished downloading a file: ${event.body.fileName} - emitting changedFile event`);
                 this.emit(Engine.events.changedFile, event.body.fileName);
 
                 return this.broadcastEvent(event.type, event.body, otherParty);

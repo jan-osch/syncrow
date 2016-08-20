@@ -1,5 +1,5 @@
 import {debugFor, loggerFor} from "../utils/logger";
-import {Engine} from "../client/engine";
+import {Engine} from "../core/engine";
 import * as fs from "fs";
 import {SyncAction} from "../sync/sync_actions";
 import * as anymatch from "anymatch";
@@ -8,8 +8,8 @@ import {FilterFunction} from "../fs_helpers/file_container";
 import {ProgramOptions, configurationFileName} from "./program";
 import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
-import startListeningEngine from "../utils/listen";
-import startConnectingEngine from "../utils/connect";
+import startListeningEngine from "../core/listen";
+import startConnectingEngine from "../core/connect";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");

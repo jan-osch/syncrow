@@ -1951,7 +1951,7 @@ declare module "tls" {
          */
         getSession(): any;
         /**
-         * NOTE: Works only with client TLS sockets.
+         * NOTE: Works only with core TLS sockets.
          * Useful only for debugging, for session reuse provide session option to tls.connect().
          * @returns {any} - TLS session ticket or undefined if none was negotiated.
          */
@@ -1990,7 +1990,7 @@ declare module "tls" {
         renegotiate(options: TlsOptions, callback: (err: Error) => any): any;
         /**
          * Set maximum TLS fragment size (default and maximum value is: 16384, minimum is: 512).
-         * Smaller fragment size decreases buffering latency on the client: large fragments are buffered by
+         * Smaller fragment size decreases buffering latency on the core: large fragments are buffered by
          * the TLS layer until the entire fragment is received and its integrity is verified;
          * large fragments can span multiple roundtrips, and their processing can be delayed due to packet
          * loss or reordering. However, smaller fragments add extra TLS framing bytes and CPU overhead,

@@ -66,7 +66,7 @@ describe('AuthorisationHelper', function () {
         })
     });
 
-    it('if token is correct but timeout is exceeded on client side - result will be negative', function (done) {
+    it('if token is correct but timeout is exceeded on core side - result will be negative', function (done) {
         const finished = (err?)=> {
             pairedSocketsShutdown();
             return done(err);

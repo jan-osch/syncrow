@@ -1,7 +1,7 @@
 import {FilterFunction, FileContainer} from "../fs_helpers/file_container";
 import {ConnectionHelper} from "../connection/connection_helper";
 import {TransferHelper} from "../transport/transfer_helper";
-import {Engine} from "../client/engine";
+import {Engine} from "./engine";
 import {SyncAction} from "../sync/sync_actions";
 import {EventMessenger} from "../connection/event_messenger";
 import * as async from "async";

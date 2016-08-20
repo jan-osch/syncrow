@@ -1,6 +1,6 @@
 import {TransferQueue} from "./transfer_queue";
 import {FileContainer} from "../fs_helpers/file_container";
-import {CallbackHelper} from "./callback_helper";
+import {CallbackHelper} from "../connection/callback_helper";
 import {TransferActions} from "./transfer_actions";
 import {loggerFor} from "../utils/logger";
 import {EventMessenger} from "../connection/event_messenger";
