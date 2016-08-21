@@ -9,13 +9,16 @@ import {readTree} from "./read_tree";
 import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
 import * as chokidar from "chokidar";
-import ReadableStream = NodeJS.ReadableStream;
 import {Closable} from "../utils/interfaces";
+import ReadableStream = NodeJS.ReadableStream;
 
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
 
-export interface FilterFunction{
+const WATCH_TIMEOUT = 400;
+const TRANSFER_FILE_LIMIT = 1000;
+
+export interface FilterFunction {
     (s:string):boolean;
 }
 
@@ -25,7 +28,7 @@ export interface FileContainerOptions {
     filter?:FilterFunction;
 }
 
-export class FileContainer extends EventEmitter implements Closable{
+export class FileContainer extends EventEmitter implements Closable {
     static events = {
         changed: 'changed',
         deleted: 'deleted',
@@ -49,9 +52,9 @@ export class FileContainer extends EventEmitter implements Closable{
     constructor(directoryToWatch:string, options:FileContainerOptions = {}) {
         super();
 
-        const fileLimit = options.fileLimit ? options.fileLimit : 1000; //TODO extract this as a CAPITALIZED_CONSTANT to the top
+        const fileLimit = options.fileLimit ? options.fileLimit : TRANSFER_FILE_LIMIT;
         this.filterFunction = options.filter ? options.filter : s => false;
-        this.watchTimeout = options.timeout ? options.timeout : 400;
+        this.watchTimeout = options.timeout ? options.timeout : WATCH_TIMEOUT;
         this.directoryToWatch = directoryToWatch;
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();

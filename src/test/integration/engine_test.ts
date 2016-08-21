@@ -1,5 +1,5 @@
 import * as async from "async";
-import {createPathSeries, removePath, compareTwoFiles, getRandomString} from "../test_utils";
+import {createPathSeries, removePath, compareTwoFiles, getRandomString, compareDirectories} from "../test_utils";
 import startListeningEngine from "../../core/listen";
 import startConnectingEngine from "../../core/connect";
 import {Engine} from "../../core/engine";
@@ -108,7 +108,38 @@ describe('Engine', function () {
             ],
             ifErrorBreak
         )
-    })
+    });
+
+
+    it('two engines will synchronize multiple files both ways', function (done) {
+        const ifErrorBreak = (err)=> {
+            if (err)return done(err);
+        };
+
+        let shouldEnd = false;
+
+        const testEnd = (err)=> {
+            if (err)return done(err);
+            if (shouldEnd) return compareDirectories('engine_test/aaa', 'engine_test/bbb', done);
+            shouldEnd = true;
+        };
+
+        countEvents(listeningEngine, Engine.events.changedFile, 4, testEnd);
+        countEvents(connectingEngine, Engine.events.changedFile, 2, testEnd);
+
+        createPathSeries(
+            [
+                {path: 'engine_test/aaa/a.txt', content: getRandomString(50000)},
+                {path: 'engine_test/aaa/b.txt', content: getRandomString(50000)},
+                {path: 'engine_test/bbb/c.txt', content: getRandomString(50000)},
+                {path: 'engine_test/bbb/d.txt', content: getRandomString(500000)},
+                {path: 'engine_test/bbb/e.txt', content: getRandomString(500)},
+                {path: 'engine_test/bbb/f.txt', content: getRandomString(500)},
+            ],
+            ifErrorBreak
+        )
+    });
+
 });
 
 function countMultipleEvents(emitter:EventEmitter, events:Array<{eventName:string, count:number}>, callback:ErrorCallback) {

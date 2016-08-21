@@ -3,6 +3,9 @@ import * as mkdirp from "mkdirp";
 import * as async from "async";
 import * as fs from "fs";
 import * as rimraf from "rimraf";
+import * as path from "path";
+import {readTree} from "../fs_helpers/read_tree";
+
 
 /**
  * @returns {Function} a cleanup function that will close the server and paired sockets
@@ -127,4 +130,65 @@ export function getRandomString(length:number):string {
     }
 
     return result;
+}
+
+
+/**
+ * @param pathA
+ * @param pathB
+ * @param callback
+ */
+export function compareDirectories(pathA:string, pathB:string, callback:ErrorCallback) {
+
+    return async.waterfall(
+        [
+            (seriesCallback)=> {
+                return async.parallel({
+                        pathA: (cb)=> readTree(pathA, {}, cb),
+                        pathB: (cb)=> readTree(pathB, {}, cb)
+                    },
+                    seriesCallback
+                )
+            },
+            (results, seriesCallback)=> compareFileTrees(pathA, results.pathA, pathB, results.pathB, seriesCallback)
+        ],
+
+        callback
+    )
+}
+
+function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, filesB:Array<string>, callback:ErrorCallback) {
+    if (filesA.length !== filesB.length) {
+        return callback(new Error(`File trees are not matching - ${filesA.length} and ${filesB.length}`));
+    }
+
+    return async.each(filesA,
+
+        (file, cb)=> {
+            const firstFilePath = path.join(pathA, file);
+            const secondFilePath = path.join(pathB, file);
+
+            return compareTwoFiles(firstFilePath, secondFilePath,
+                (err, results)=> {
+                    if (err)return cb(err);
+                    return compareFileContents(firstFilePath, results.first, secondFilePath, results.second, cb);
+                }
+            )
+        },
+
+        callback
+    )
+}
+
+function compareFileContents(pathA:string, contentA:string|Buffer, pathB:string, contentB:string|Buffer, callback) {
+    if (Buffer.isBuffer(contentA) && Buffer.isBuffer(contentB)) {
+        if (!contentA.compare(contentB) === 0) {
+            return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
+        }
+    }
+
+    const doesContentMatch = contentA === contentB;
+    if (!doesContentMatch) return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Strings) do not match`))
+
+    return setImmediate(callback);
 }
