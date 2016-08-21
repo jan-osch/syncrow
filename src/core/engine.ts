@@ -17,17 +17,17 @@ export interface EngineOptions {
 }
 
 export class Engine extends EventEmitter implements SyncActionSubject, Closable {
-
+    //TODO add newFile support
     static events = {
         error: 'error',
         newFile: 'newFile',
-        newDirectory: 'newDirectory',
         changedFile: 'changedFile',
         deletedPath: 'deletedPath',
         synced: 'synced',
+        shutdown: 'shutdown',
+        newDirectory: 'newDirectory'
     };
 
-    //TODO add support for emitting newFile
     static messages = {
         fileChanged: 'fileChanged',
         fileCreated: 'fileCreated',
@@ -81,6 +81,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * Stops engine activity
      */
     public shutdown() {
+        this.emit(Engine.events.shutdown);
         this.otherParties.forEach(otherParty => this.removeOtherParty(otherParty));
         this.fileContainer.shutdown();
     }

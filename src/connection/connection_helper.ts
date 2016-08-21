@@ -44,12 +44,14 @@ export class ConnectionHelper implements Closable {
     private params:ConnectionHelperParams;
     private server:Server;
     private serverCallback:SocketCallback;
+    private oneTimeServers:Set<Server>;
 
     /**
      * @param params
      */
     constructor(params:ConnectionHelperParams) {
         this.params = this.validateAndUpdateParams(params);
+        this.oneTimeServers = new Set();
     }
 
 
@@ -59,6 +61,7 @@ export class ConnectionHelper implements Closable {
     public shutdown() {
         logger.info('Connection Helper closing');
         this.killServer();
+        this.oneTimeServers.forEach(s =>s.close())
     }
 
     /**
@@ -192,6 +195,8 @@ export class ConnectionHelper implements Closable {
 
             (server)=> {
 
+                this.oneTimeServers.add(server);
+
                 listenCallback({
                     remotePort: server.address().port,
                     remoteHost: params.localHost,
@@ -204,7 +209,10 @@ export class ConnectionHelper implements Closable {
                             if (err)return connectedCallback(err);
 
                             debug('Got a new socket - closing the one time server');
+
+                            this.oneTimeServers.delete(server);
                             server.close();
+
                             return connectedCallback(null, socket)
                         }
                     )

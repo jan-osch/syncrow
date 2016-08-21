@@ -19,6 +19,8 @@ export interface ListenOptions {
     sync?:SyncAction;
     watch?:boolean;
 }
+
+//TODO make the order of parameters the same as in connect
 /**
  * @param path
  * @param {Number} port
@@ -54,7 +56,12 @@ export default function startListeningEngine(path:string, port:number, options:L
 
     const engine = new Engine(container, transferHelper, {sync: options.sync});
 
-    async.waterfall(
+    engine.on(Engine.events.shutdown, ()=> {
+        connectionHelperForTransfer.shutdown();
+        connectionHelperEntry.shutdown();
+    });
+
+    return async.waterfall(
         [
             (cb)=> {
                 if (options.watch)return container.beginWatching(cb);
@@ -72,8 +79,6 @@ export default function startListeningEngine(path:string, port:number, options:L
         }
     )
 }
-
-//TODO add a closing function return -cleanup
 
 function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper) {
     return async.whilst(

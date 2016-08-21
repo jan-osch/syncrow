@@ -5,12 +5,13 @@ import {Closable} from "../utils/interfaces";
 
 const debug = debugFor('syncrow:connection:parse_helper');
 
+
 export class ParseHelper extends EventEmitter implements Closable {
     private messageBuffer:string;
 
     private expectedLength:number;
     private static separator = ':';
-
+    private listener:Function;
     static events = {
         message: 'message',
     };
@@ -20,8 +21,9 @@ export class ParseHelper extends EventEmitter implements Closable {
      */
     constructor(private socket:Socket) {
         super();
+        this.listener = (data)=>this.parseData(data);
         this.resetBuffers();
-        this.socket.on('data', (data)=>this.parseData(data))
+        this.socket.on('data', this.listener)
     }
 
     /**
@@ -37,7 +39,8 @@ export class ParseHelper extends EventEmitter implements Closable {
      * Removes own listener from socket
      */
     public shutdown() {
-        this.socket.removeListener('data', (data)=>this.parseData(data));
+        debug(`removing listeners`);
+        this.socket.removeListener('data', this.listener);
     }
 
     private parseData(data:Buffer) {
@@ -54,7 +57,8 @@ export class ParseHelper extends EventEmitter implements Closable {
     }
 
     private checkIfExpectedLengthArrived() {
-        var indexOfContentLengthHeaderSeparator = this.messageBuffer.indexOf(ParseHelper.separator);
+        const indexOfContentLengthHeaderSeparator = this.messageBuffer.indexOf(ParseHelper.separator);
+
         if (indexOfContentLengthHeaderSeparator !== -1) {
             this.expectedLength = parseInt(this.messageBuffer.slice(0, indexOfContentLengthHeaderSeparator));
             this.messageBuffer = this.messageBuffer.slice(indexOfContentLengthHeaderSeparator + 1);

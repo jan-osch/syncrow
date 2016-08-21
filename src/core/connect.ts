@@ -53,6 +53,11 @@ export default function startConnectingEngine(remotePort:number, remoteHost:stri
 
     const engine = new Engine(container, transferHelper, {sync: options.sync});
 
+    engine.on(Engine.events.shutdown, ()=> {
+        connectionHelperForTransfer.shutdown();
+        connectionHelperEntry.shutdown();
+    });
+
     return async.waterfall(
         [
             (cb)=> {

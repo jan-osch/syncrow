@@ -139,7 +139,6 @@ export class FileContainer extends EventEmitter implements Closable{
      * @returns {ReadStream}
      */
     public getReadStreamForFile(fileName:string):ReadableStream {
-        debug(`attempting to get a read stream: ${fileName} current dir ${__dirname}`);
         try {
             return fs.createReadStream(this.createAbsolutePath(fileName)).on('error', (error)=> {
                 logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
@@ -215,6 +214,7 @@ export class FileContainer extends EventEmitter implements Closable{
     }
 
     private emitEventIfFileNotBlocked(event:string, fullFileName:string) {
+        debug(`could emit ${event} for ${fullFileName}`);
         if (!this.blockedFiles.has(fullFileName)) {
             debug(`emitting ${event} for file: ${fullFileName}`);
             this.emit(event, fullFileName);
