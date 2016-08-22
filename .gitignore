@@ -12,7 +12,7 @@ src/**/*.js
 src/**/*.js.map
 .idea
 
-#build
+
 testdir
 
 # Runtime data
