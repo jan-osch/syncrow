@@ -2,8 +2,8 @@ import {SyncActionParams, MetaTuple} from "./sync_actions";
 import {debugFor, loggerFor} from "../utils/logger";
 import {genericCommandsAction} from "./generic_commands_action";
 
-const debug = debugFor('syncrow:sync:newest');
-const logger = loggerFor('GetNewestSyncAction');
+const debug = debugFor('syncrow:sync:push');
+const logger = loggerFor('PushAction');
 
 
 /**

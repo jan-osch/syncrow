@@ -10,6 +10,7 @@ import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
+import filter = ts.filter;
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -63,14 +64,12 @@ function buildConfig(savedConfig:ProgramOptions):ProgramOptions {
 function createFilterFunction(filterStrings:Array<string>, baseDir:string):FilterFunction {
     const baseLength = baseDir.length + 1;
 
-    if (filterStrings.length > 0) {
-        return (s:string) => {
-            const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
-            return anymatch(filterStrings, actual);
-        }
-    }
+    filterStrings.push(configurationFileName);
 
-    return s => false;
+    return (s:string) => {
+        const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
+        return anymatch(filterStrings, actual);
+    };
 }
 
 /**
