@@ -21,13 +21,13 @@ export interface ConnectOptions {
 }
 
 /**
+ * @param {String} path
  * @param {Number} remotePort
  * @param {String} remoteHost
- * @param {String} path
  * @param {ConnectOptions} options
  * @param {EngineCallback} callback
  */
-export default function startConnectingEngine(remotePort:number, remoteHost:string, path:string, options:ConnectOptions, callback:EngineCallback) {
+export default function startConnectingEngine(path:string, remotePort:number, remoteHost:string, options:ConnectOptions, callback:EngineCallback) {
     const container = new FileContainer(path, {filter: options.filter});
 
     const connectionHelperEntry = new ConnectionHelper({

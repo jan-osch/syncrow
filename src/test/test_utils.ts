@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as rimraf from "rimraf";
 import * as path from "path";
 import {readTree} from "../fs_helpers/read_tree";
+import {EventEmitter} from "events";
 
 
 /**
@@ -47,7 +48,7 @@ export function obtainTwoSockets(doneCallback:(err, result?:{client:net.Socket, 
  * @param directory
  * @param doneCallback
  */
-export function createPath(path:string, content:string, directory:boolean, doneCallback:ErrorCallback) {
+export function createPath(path:string, content:string|Buffer, directory:boolean, doneCallback:ErrorCallback) {
     if (directory) {
         return createDir(path, doneCallback);
     }
@@ -58,7 +59,7 @@ export function createPath(path:string, content:string, directory:boolean, doneC
  * @param files
  * @param doneCallback
  */
-export function createPathSeries(files:Array<{path:string, content?:string, directory?:boolean}>, doneCallback:ErrorCallback) {
+export function createPathSeries(files:Array<{path:string, content?:string|Buffer, directory?:boolean}>, doneCallback:ErrorCallback) {
     async.eachSeries(files,
 
         (file, callback)=> createPath(file.path, file.content, file.directory, callback),
@@ -134,6 +135,21 @@ export function getRandomString(length:number):string {
 
 
 /**
+ * @param emitter
+ * @param events
+ * @param callback
+ */
+export function countMultipleEvents(emitter:EventEmitter, events:Array<{eventName:string, count:number}>, callback:ErrorCallback) {
+    return async.each(
+        events,
+
+        (eventAndCount, cb)=> countEvents(emitter, eventAndCount.eventName, eventAndCount.count, cb),
+
+        callback
+    )
+}
+
+/**
  * @param pathA
  * @param pathB
  * @param callback
@@ -156,6 +172,35 @@ export function compareDirectories(pathA:string, pathB:string, callback:ErrorCal
         callback
     )
 }
+
+
+//TODO - remove
+/**
+ * @param emitter
+ * @param eventName
+ * @param count
+ * @param callback
+ * @returns {EventEmitter}
+ */
+export function countEvents(emitter:EventEmitter, eventName:string, count:number, callback:Function) {
+    let emitted = 0;
+
+    const finish = ()=> {
+        emitter.removeListener(eventName, checkEmitted);
+        callback();
+    };
+
+    const checkEmitted = ()=> {
+        emitted++;
+
+        if (emitted === count) {
+            finish();
+        }
+    };
+
+    return emitter.on(eventName, checkEmitted);
+}
+
 
 function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, filesB:Array<string>, callback:ErrorCallback) {
     if (filesA.length !== filesB.length) {
@@ -182,7 +227,7 @@ function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, file
 
 function compareFileContents(pathA:string, contentA:string|Buffer, pathB:string, contentB:string|Buffer, callback) {
     if (Buffer.isBuffer(contentA) && Buffer.isBuffer(contentB)) {
-        if (!contentA.compare(contentB) === 0) {
+        if (!(contentA.compare(contentB) === 0)) {
             return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
         }
     }

@@ -20,7 +20,6 @@ export interface ListenOptions {
     watch?:boolean;
 }
 
-//TODO make the order of parameters the same as in connect
 /**
  * @param path
  * @param {Number} port

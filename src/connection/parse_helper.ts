@@ -12,6 +12,7 @@ export class ParseHelper extends EventEmitter implements Closable {
     private expectedLength:number;
     private static separator = ':';
     private listener:Function;
+    private id:number;
     static events = {
         message: 'message',
     };
@@ -23,7 +24,8 @@ export class ParseHelper extends EventEmitter implements Closable {
         super();
         this.listener = (data)=>this.parseData(data);
         this.resetBuffers();
-        this.socket.on('data', this.listener)
+        this.socket.on('data', this.listener);
+        this.id = Math.floor(Math.random() * 10000)
     }
 
     /**
@@ -31,7 +33,7 @@ export class ParseHelper extends EventEmitter implements Closable {
      * @returns {string}
      */
     public writeMessage(data:string) {
-        debug(`writing message: ${data}`);
+        debug(`${this.id} writing message: ${data}`);
         this.socket.write(`${data.length}${ParseHelper.separator}${data}`);
     }
 
@@ -68,7 +70,7 @@ export class ParseHelper extends EventEmitter implements Closable {
     private checkIfMessageIsComplete() {
         if (this.expectedLength && this.messageBuffer.length >= this.expectedLength) {
             const message = this.messageBuffer.slice(0, this.expectedLength);
-            debug(`got message: ${message}`);
+            debug(`${this.id}  got message: ${message}`);
             this.emit(ParseHelper.events.message, message);
             this.restartParsingMessage(this.messageBuffer.slice(this.expectedLength));
         }

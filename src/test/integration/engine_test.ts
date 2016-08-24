@@ -1,9 +1,16 @@
 import * as async from "async";
-import {createPathSeries, removePath, compareTwoFiles, getRandomString, compareDirectories} from "../test_utils";
+import {
+    createPathSeries,
+    removePath,
+    compareTwoFiles,
+    getRandomString,
+    compareDirectories,
+    countMultipleEvents,
+    countEvents
+} from "../test_utils";
 import startListeningEngine from "../../core/listen";
 import startConnectingEngine from "../../core/connect";
 import {Engine} from "../../core/engine";
-import {EventEmitter} from "events";
 import * as mkdirp from "mkdirp";
 import * as fs from "fs";
 import {assert} from "chai";
@@ -42,7 +49,7 @@ describe('Engine', function () {
                 (engine, cb)=> {
                     listeningEngine = engine;
 
-                    return startConnectingEngine(port, '0.0.0.0', 'engine_test/bbb', {
+                    return startConnectingEngine('engine_test/bbb', port, '0.0.0.0', {
                             authenticate: true,
                             initialToken: token,
                             watch: true
@@ -142,32 +149,3 @@ describe('Engine', function () {
 
 });
 
-function countMultipleEvents(emitter:EventEmitter, events:Array<{eventName:string, count:number}>, callback:ErrorCallback) {
-    return async.each(
-        events,
-
-        (eventAndCount, cb)=> countEvents(emitter, eventAndCount.eventName, eventAndCount.count, cb),
-
-        callback
-    )
-}
-
-
-function countEvents(emitter:EventEmitter, eventName:string, count:number, callback:Function) {
-    let emitted = 0;
-
-    const finish = ()=> {
-        emitter.removeListener(eventName, checkEmitted);
-        callback();
-    };
-
-    const checkEmitted = ()=> {
-        emitted++;
-
-        if (emitted === count) {
-            finish();
-        }
-    };
-
-    return emitter.on(eventName, checkEmitted);
-}

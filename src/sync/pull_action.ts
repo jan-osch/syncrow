@@ -13,6 +13,8 @@ const logger = loggerFor('PullAction');
  * @param callback
  */
 export function pullAction(params:SyncActionParams, callback:ErrorCallback):any {
+    debug(`starting pull action`);
+
     return genericCommandsAction(params, callback, issueCommands)
 }
 

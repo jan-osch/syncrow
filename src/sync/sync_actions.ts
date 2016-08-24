@@ -97,7 +97,8 @@ export interface FileLists {
  * @param callback
  */
 export function getFileLists(params:SyncActionParams, callback:(err:Error, result:FileLists)=>any) {
-    return async.parallel<FileLists>(
+
+    return async.parallel(
         {
             localList: (cb)=>params.container.getFileTree(cb),
             remoteList: (cb)=>params.subject.getRemoteFileList(params.remoteParty, cb)

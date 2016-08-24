@@ -17,7 +17,9 @@ export interface CommandsFunction {
 export function genericCommandsAction(params:SyncActionParams, callback:ErrorCallback, commandsFunction:CommandsFunction):any {
     return async.waterfall(
         [
-            (cb)=>getFileLists(params, cb),
+            (cb)=> {
+                getFileLists(params, cb)
+            },
             (list, cb)=>processFileLists(params, list, cb, commandsFunction)
         ],
 

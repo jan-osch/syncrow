@@ -67,7 +67,7 @@ export class TransferHelper {
             );
 
         } else if (transferMessage.command === TransferActions.events.listenAndDownload) {
-            return this.sendFileViaListening(transferMessage.fileName, otherParty, {id: transferMessage.id});
+            return this.getFileViaListening(transferMessage.fileName, otherParty, {id: transferMessage.id});
 
         } else if (transferMessage.command === TransferActions.events.listenAndUpload) {
             return this.sendFileViaListening(transferMessage.fileName, otherParty, {id: transferMessage.id});

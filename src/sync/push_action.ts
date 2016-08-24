@@ -13,6 +13,8 @@ const logger = loggerFor('PushAction');
  * @param callback
  */
 export function pushAction(params:SyncActionParams, callback:ErrorCallback):any {
+    debug(`starting push action`);
+
     return genericCommandsAction(params, callback, issueCommands)
 }
 

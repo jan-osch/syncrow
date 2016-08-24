@@ -35,13 +35,14 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         directoryCreated: 'directoryCreated',
 
         getFileList: 'getFileList',
-        getMetaForFile: 'getMetaTupleForFile',
+        getMetaForFile: 'getMetaForFile',
         metaDataForFile: 'metaDataForFile',
         fileList: 'fileList'
     };
 
     private otherParties:Array<EventMessenger>;
     private callbackHelper:CallbackHelper;
+
 
     constructor(private fileContainer:FileContainer, private transferHelper:TransferHelper, private options:EngineOptions) {
         super();
@@ -66,13 +67,14 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
             this.removeOtherParty(otherParty);
         });
 
-        this.options.sync(syncParams,
-            (err)=> {
-                if (err)return logger.error(err);
+        const syncCallback = (err)=> {
+            if (err)return logger.error(err);
 
-                return logger.info(`Synced successfully on first connection`);
-            }
-        );
+            this.emit(Engine.events.synced);
+            return logger.info(`Synced successfully on first connection`);
+        };
+
+        this.options.sync(syncParams, syncCallback);
 
         this.addEngineListenersToOtherParty(otherParty);
     }
@@ -135,6 +137,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param callback
      */
     public getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
+        debug(`getRemoteFileListCalled`)
         const id = this.callbackHelper.addCallback(callback);
         otherParty.send(Engine.messages.getFileList, {id: id});
     }

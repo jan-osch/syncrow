@@ -10,7 +10,6 @@ import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
-import filter = ts.filter;
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -85,7 +84,7 @@ function startEngine(chosenConfig:ProgramOptions) {
         })
     }
 
-    return startConnectingEngine(chosenConfig.remotePort, chosenConfig.remoteHost, '.', chosenConfig, (err, engine)=> {
+    return startConnectingEngine('.', chosenConfig.remotePort, chosenConfig.remoteHost, chosenConfig, (err, engine)=> {
         ifErrorThrow(err);
         debug(`engine connected`);
         engine.on(Engine.events.error, ifErrorThrow);

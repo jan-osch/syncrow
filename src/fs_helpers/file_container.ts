@@ -95,6 +95,7 @@ export class FileContainer extends EventEmitter implements Closable {
 
             const fileTree = results.map(PathHelper.normalizePath);
             debug(`detected files: ${fileTree.length}`);
+
             callback(null, fileTree)
         });
     }
