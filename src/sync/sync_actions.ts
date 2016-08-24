@@ -92,6 +92,8 @@ export interface FileLists {
     remoteList?:Array<string>;
 }
 
+
+//TODO find out why callbacks are disappearing here
 /**
  * @param params
  * @param callback
