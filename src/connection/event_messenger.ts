@@ -36,6 +36,9 @@ export class EventMessenger extends EventEmitter implements Closable {
      */
     constructor(socket:Socket) {
         super();
+
+        debug('creating new event messenger');
+
         this.socket = socket;
         this.socket.on('error', (error)=>this.disconnectAndDestroyCurrentSocket(error));
         this.socket.on('close', (error)=>this.disconnectAndDestroyCurrentSocket(error));
@@ -127,7 +130,10 @@ export class EventMessenger extends EventEmitter implements Closable {
     }
 
     private parseAndEmit(rawMessage:string) {
+        debug(`got an event: ${rawMessage}`);
+
         const event = this.parseEvent(rawMessage);
+
 
         if (event.type === EventMessenger.response) {
             try {

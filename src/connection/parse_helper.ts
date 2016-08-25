@@ -41,7 +41,7 @@ export class ParseHelper extends EventEmitter implements Closable {
      * Removes own listener from socket
      */
     public shutdown() {
-        debug(`removing listeners`);
+        debug(`${this.id} removing listeners`);
         this.socket.removeListener('data', this.listener);
     }
 

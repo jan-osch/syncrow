@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --recursive build/test",
-    "build": "tsc || true"
+    "build": "tsc || true",
+    "benchmark": "node build/benchmarks/engine_benchmark.js"
   },
   "repository": {
     "type": "git",

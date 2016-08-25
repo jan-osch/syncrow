@@ -11,6 +11,7 @@ import {noAction} from "../sync/no_action";
 const debug = debugFor("syncrow:engine");
 const logger = loggerFor('Engine');
 
+const INITIAL_TIMEOUT = 10;
 
 export interface EngineOptions {
     sync:SyncAction;
@@ -56,6 +57,8 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param otherParty
      */
     public addOtherPartyMessenger(otherParty:EventMessenger) {
+        debug('adding new other party');
+
         this.otherParties.push(otherParty);
 
         const syncParams:SyncActionParams = {remoteParty: otherParty, container: this.fileContainer, subject: this};
@@ -72,7 +75,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
             return logger.info(`Synced successfully on first connection`);
         };
 
-        this.options.sync(syncParams, syncCallback);
+        setTimeout(()=>this.options.sync(syncParams, syncCallback), INITIAL_TIMEOUT);
 
         this.addEngineListenersToOtherParty(otherParty);
     }
@@ -197,6 +200,8 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
                 return otherParty.sendResponse(event, syncData)
             })
         });
+
+        debug(`finished adding listeners`);
     }
 
     private addListenersToFileContainer(fileContainer:FileContainer) {

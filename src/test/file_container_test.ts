@@ -1,4 +1,4 @@
-import {createPathSeries, removePath, pathExists, createPath, getRandomString} from "./test_utils";
+import {createPathSeries, removePath, pathExists, createPath, getRandomString} from "../utils/test_utils";
 import * as chai from "chai";
 import {expect} from "chai";
 import * as sinon from "sinon";

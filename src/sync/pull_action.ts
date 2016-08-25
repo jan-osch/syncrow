@@ -30,6 +30,7 @@ function issueCommands(params:SyncActionParams, metaTuple:MetaTuple, callback:Er
 
     if (!metaTuple.remoteMeta.exists && metaTuple.localMeta.exists) {
         if (params.deleteLocalIfRemoteMissing) {
+            debug(`File: ${metaTuple.localMeta.name} exists locally but does not remotely - deleted`);
             return params.container.deleteFile(metaTuple.localMeta.name, callback);
         }
 

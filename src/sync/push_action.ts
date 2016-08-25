@@ -29,7 +29,7 @@ function issueCommands(params:SyncActionParams, metaTuple:MetaTuple, callback:Er
         return params.subject.pushFileToRemote(params.remoteParty, metaTuple.localMeta.name, callback);
     }
 
-    if (metaTuple.localMeta.exists && metaTuple.remoteMeta.exists) {
+    if (!metaTuple.localMeta.exists && metaTuple.remoteMeta.exists) {
         if (params.deleteRemoteIfLocalMissing) {
             params.subject.deleteRemoteFile(params.remoteParty, metaTuple.localMeta.name);
             return callback();
