@@ -13,7 +13,6 @@ export interface TransferHelperOptions {
 
 }
 
-const callbackHelper = CallbackHelper.getInstance();
 const logger = loggerFor('TransferHelper');
 
 /**
@@ -33,6 +32,7 @@ export class TransferHelper {
     private queue:TransferQueue;
     private preferConnecting:boolean;
     private container:FileContainer;
+    private callbackHelper:CallbackHelper;
 
     constructor(container:FileContainer, private connectionHelper:ConnectionHelper, options:TransferHelperOptions) {
         const queueSize = options.transferQueueSize ? options.transferQueueSize : 1000;
@@ -40,6 +40,7 @@ export class TransferHelper {
         this.queue = new TransferQueue(queueSize, options.name);
         this.preferConnecting = options.preferConnecting;
         this.container = container;
+        this.callbackHelper = new CallbackHelper();
     }
 
     /**
@@ -83,7 +84,7 @@ export class TransferHelper {
     public getFileFromRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback) {
 
         if (this.preferConnecting) {
-            const id = callbackHelper.addCallback(callback);
+            const id = this.callbackHelper.addCallback(callback);
 
             const message:TransferMessage = {
                 fileName: fileName,
@@ -106,7 +107,7 @@ export class TransferHelper {
     public sendFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback) {
 
         if (this.preferConnecting) {
-            const id = callbackHelper.addCallback(callback);
+            const id = this.callbackHelper.addCallback(callback);
 
             const message:TransferMessage = {
                 command: TransferActions.events.listenAndDownload,
@@ -164,7 +165,7 @@ export class TransferHelper {
     }
 
     private getCallbackForIdOrErrorLogger(id?:string):ErrorCallback {
-        if (id) return <ErrorCallback> callbackHelper.getCallback(id);
+        if (id) return <ErrorCallback> this.callbackHelper.getCallback(id);
 
         return (err)=> {
             logger.error(err)

@@ -4,15 +4,16 @@ import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
 import * as crypto from "crypto";
-import {EventCounter} from "../test/event_counter";
+import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pullAction} from "../sync/pull_action";
 import {pushAction} from "../sync/push_action";
 
+
 const token = '121cb2897o1289nnjos';
 const port = 4321;
 
-const SAMPLE_SIZE = 20000000; // 20 MB
+const SAMPLE_SIZE = 200000000; // 200 MB
 
 let listeningEngine;
 let connectingEngine;

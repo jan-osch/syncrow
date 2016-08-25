@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {debugFor} from "../utils/logger";
+import {debugFor} from "./logger";
 
 export class EventCounter extends EventEmitter {
     static events = {

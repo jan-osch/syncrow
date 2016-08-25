@@ -35,9 +35,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         directoryCreated: 'directoryCreated',
 
         getFileList: 'getFileList',
-        getMetaForFile: 'getMetaForFile',
-        metaDataForFile: 'metaDataForFile',
-        fileList: 'fileList'
+        getMetaForFile: 'getMetaForFile'
     };
 
     private otherParties:Array<EventMessenger>;
@@ -128,8 +126,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param callback
      */
     public getRemoteFileMeta(otherParty:EventMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
-        const id = this.callbackHelper.addCallback(callback);
-        otherParty.send(Engine.messages.getMetaForFile, {fileName: fileName, id: id});
+        return otherParty.sendRequest(Engine.messages.getMetaForFile, {fileName: fileName}, callback);
     }
 
     /**
@@ -137,9 +134,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param callback
      */
     public getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
-        debug(`getRemoteFileListCalled`)
-        const id = this.callbackHelper.addCallback(callback);
-        otherParty.send(Engine.messages.getFileList, {id: id});
+        return otherParty.sendRequest(Engine.messages.getFileList, {}, callback);
     }
 
     /**
@@ -158,9 +153,6 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
         otherParty.on(TransferHelper.outerEvent, (event)=> this.transferHelper.consumeMessage(event.body, otherParty));
 
-        otherParty.on(Engine.messages.metaDataForFile, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.syncData));
-
-        otherParty.on(Engine.messages.fileList, (event)=> this.callbackHelper.getCallback(event.body.id)(null, event.body.fileList));
 
         otherParty.on(Engine.messages.directoryCreated, (event)=> {
             this.fileContainer.createDirectory(event.body.fileName);
@@ -192,7 +184,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
                     return logger.error(err);
                 }
 
-                return otherParty.send(Engine.messages.fileList, {fileList: fileList, id: event.body.id});
+                return otherParty.sendResponse(event, fileList);
             });
         });
 
@@ -202,7 +194,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
                     return logger.error(err);
                 }
 
-                return otherParty.send(Engine.messages.metaDataForFile, {syncData: syncData, id: event.body.id})
+                return otherParty.sendResponse(event, syncData)
             })
         });
     }

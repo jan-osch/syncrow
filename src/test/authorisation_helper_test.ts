@@ -1,8 +1,7 @@
-import * as chai from "chai";
+import {expect} from "chai";
 import {AuthorisationHelper} from "../connection/authorisation_helper";
 import {obtainTwoSockets} from "./test_utils";
 
-const expect = chai.expect;
 
 describe('AuthorisationHelper', function () {
 

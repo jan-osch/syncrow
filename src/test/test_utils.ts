@@ -5,7 +5,6 @@ import * as fs from "fs";
 import * as rimraf from "rimraf";
 import * as path from "path";
 import {readTree} from "../fs_helpers/read_tree";
-import {EventEmitter} from "events";
 
 
 /**
@@ -57,14 +56,15 @@ export function createPath(path:string, content:string|Buffer, directory:boolean
 
 /**
  * @param files
- * @param doneCallback
+ * @param callback
  */
-export function createPathSeries(files:Array<{path:string, content?:string|Buffer, directory?:boolean}>, doneCallback:ErrorCallback) {
-    async.eachSeries(files,
+export function createPathSeries(files:Array<{path:string, content?:string|Buffer, directory?:boolean}>, callback:ErrorCallback) {
+    return async.eachSeries(files,
 
-        (file, callback)=> createPath(file.path, file.content, file.directory, callback),
+        (file, cb)=> createPath(file.path, file.content, file.directory, cb),
 
-        doneCallback);
+        callback
+    );
 }
 
 /**
@@ -83,17 +83,17 @@ export function pathExists(path):boolean {
 /**
  * @param firstFilePath
  * @param secondFilePath
- * @param doneCallback
+ * @param callback
  */
-export function compareTwoFiles(firstFilePath:string, secondFilePath:string, doneCallback:(err:Error, result:{first?:string, second?:string})=>any) {
-    async.parallel(
-        {
-            first: callback=>fs.readFile(firstFilePath, callback),
-            second: callback=>fs.readFile(secondFilePath, callback)
-        },
+export function compareTwoFiles(firstFilePath:string, secondFilePath:string, callback:ErrorCallback) {
+    return async.waterfall(
+        [
+            (cb)=>getTwoFiles(firstFilePath, secondFilePath, cb),
 
-        doneCallback
-    );
+            (results, cb)=>compareFileContents(firstFilePath, results.first, secondFilePath, results.second, cb)
+        ],
+        callback
+    )
 }
 
 /**
@@ -101,52 +101,16 @@ export function compareTwoFiles(firstFilePath:string, secondFilePath:string, don
  * @param doneCallback
  */
 export function createDir(dirPath:string, doneCallback:ErrorCallback) {
-    mkdirp(dirPath, doneCallback);
+    return mkdirp(dirPath, doneCallback);
 }
+
 
 /**
  * @param path
  * @param callback
  */
 export function removePath(path:string, callback:ErrorCallback) {
-    rimraf(path, callback);
-}
-
-/**
- * @param length
- * @returns {string}
- */
-export function getRandomString(length:number):string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-
-    function getRandomChar() {
-        const position = Math.floor(Math.random() * chars.length);
-        return chars.charAt(position);
-    }
-
-    while (length > 0) {
-        length--;
-        result += getRandomChar();
-    }
-
-    return result;
-}
-
-
-/**
- * @param emitter
- * @param events
- * @param callback
- */
-export function countMultipleEvents(emitter:EventEmitter, events:Array<{eventName:string, count:number}>, callback:ErrorCallback) {
-    return async.each(
-        events,
-
-        (eventAndCount, cb)=> countEvents(emitter, eventAndCount.eventName, eventAndCount.count, cb),
-
-        callback
-    )
+    return rimraf(path, callback);
 }
 
 /**
@@ -173,38 +137,42 @@ export function compareDirectories(pathA:string, pathB:string, callback:ErrorCal
     )
 }
 
-
-//TODO - remove
 /**
- * @param emitter
- * @param eventName
- * @param count
- * @param callback
- * @returns {EventEmitter}
+ * @param length
+ * @returns {string}
  */
-export function countEvents(emitter:EventEmitter, eventName:string, count:number, callback:Function) {
-    let emitted = 0;
+export function getRandomString(length:number):string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
 
-    const finish = ()=> {
-        emitter.removeListener(eventName, checkEmitted);
-        callback();
-    };
+    function getRandomChar() {
+        const position = Math.floor(Math.random() * chars.length);
+        return chars.charAt(position);
+    }
 
-    const checkEmitted = ()=> {
-        emitted++;
+    while (length > 0) {
+        length--;
+        result += getRandomChar();
+    }
 
-        if (emitted === count) {
-            finish();
-        }
-    };
-
-    return emitter.on(eventName, checkEmitted);
+    return result;
 }
 
 
+function getTwoFiles(firstFilePath:string, secondFilePath:string, doneCallback:(err:Error, result:{first?:string, second?:string})=>any) {
+    async.parallel(
+        {
+            first: callback=>fs.readFile(firstFilePath, callback),
+            second: callback=>fs.readFile(secondFilePath, callback)
+        },
+
+        doneCallback
+    );
+}
+
 function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, filesB:Array<string>, callback:ErrorCallback) {
     if (filesA.length !== filesB.length) {
-        return callback(new Error(`File trees are not matching - ${filesA.length} and ${filesB.length}`));
+        return setImmediate(callback, new Error(`File trees are not matching - ${filesA.length} and ${filesB.length}`));
     }
 
     return async.each(filesA,
@@ -213,12 +181,7 @@ function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, file
             const firstFilePath = path.join(pathA, file);
             const secondFilePath = path.join(pathB, file);
 
-            return compareTwoFiles(firstFilePath, secondFilePath,
-                (err, results)=> {
-                    if (err)return cb(err);
-                    return compareFileContents(firstFilePath, results.first, secondFilePath, results.second, cb);
-                }
-            )
+            return compareTwoFiles(firstFilePath, secondFilePath, cb);
         },
 
         callback
@@ -227,13 +190,13 @@ function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, file
 
 function compareFileContents(pathA:string, contentA:string|Buffer, pathB:string, contentB:string|Buffer, callback) {
     if (Buffer.isBuffer(contentA) && Buffer.isBuffer(contentB)) {
-        if (!(contentA.compare(contentB) === 0)) {
-            return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
-        }
-    }
+        const buffersAreEqual = (contentA.compare(contentB) === 0);
+        if (!buffersAreEqual) return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
 
-    const doesContentMatch = contentA === contentB;
-    if (!doesContentMatch) return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Strings) do not match`))
+    } else {
+        const stringsAreEqual = contentA === contentB;
+        if (!stringsAreEqual) return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Strings) do not match`))
+    }
 
     return setImmediate(callback);
 }

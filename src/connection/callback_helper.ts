@@ -2,8 +2,6 @@ import {debugFor} from "../utils/logger";
 
 const debug = debugFor('syncrow:transport:callback_helper');
 
-let instance:CallbackHelper;
-
 export class CallbackHelper {
     private callbackMap:Map<string,Function>;
 
@@ -61,19 +59,6 @@ export class CallbackHelper {
         const id = CallbackHelper.generateEventId();
         this.addCallbackWithId(id, callback);
         return id;
-    }
-
-    /**
-     * Returns global instance of CallbackHelper
-     * @returns {null}
-     */
-    public static getInstance():CallbackHelper {
-        if (!instance) {
-            debug(`New instance of callbackHelper is created`);
-            instance = new CallbackHelper();
-        }
-
-        return instance;
     }
 
     /**
