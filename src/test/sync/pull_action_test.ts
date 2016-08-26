@@ -5,13 +5,9 @@ import {EventCounter} from "../../utils/event_counter";
 import startListeningEngine from "../../core/listen";
 import startConnectingEngine from "../../core/connect";
 import {setDeleteLocalFiles} from "../../sync/sync_actions";
-import * as chai from "chai";
+import {expect} from "chai";
 import {pullAction} from "../../sync/pull_action";
 import * as sinon from "sinon";
-import * as sinonChai from "sinon-chai";
-
-const expect = chai.expect;
-chai.use(sinonChai);
 
 describe('PullAction', function () {
 

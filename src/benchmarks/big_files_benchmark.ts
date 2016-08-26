@@ -76,7 +76,7 @@ async.waterfall(
                 return setImmediate(cb);
             }
 
-            return eventCounter.once(EventCounter.events.done, cb);
+            eventCounter.once(EventCounter.events.done, cb);
         },
 
         (cb)=> {

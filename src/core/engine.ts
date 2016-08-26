@@ -119,6 +119,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     /**
      * @param otherParty
      * @param fileName
+     * @param callback
      */
     public createRemoteDirectory(otherParty:EventMessenger, fileName:string, callback:ErrorCallback) {
         return otherParty.sendRequest(Engine.commands.createDirectory, {fileName: fileName}, callback);
@@ -150,6 +151,11 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
+    emit(event:string, ...args:Array<any>):boolean {
+        debug(`emitting: ${event} with body: ${args}`);
+        return super.emit(event, args);
+    }
+
     private addEngineListenersToOtherParty(otherParty:EventMessenger) {
         otherParty.on(TransferHelper.outerEvent, (event)=> this.transferHelper.consumeMessage(event.body, otherParty));
 
@@ -171,7 +177,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
         otherParty.on(Engine.commands.downloadChanged, (event)=> {
             return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
-                debug(`finished downloading a file: ${event.body.fileName} - emitting changedFile event`);
+                debug(`finished downloading a changed file: ${event.body.fileName}`);
 
                 this.emit(Engine.events.changedFile, event.body.fileName);
 
@@ -181,7 +187,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
         otherParty.on(Engine.commands.downloadNew, (event)=> {
             return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
-                debug(`finished downloading a file: ${event.body.fileName} - emitting changedFile event`);
+                debug(`finished downloading a new file: ${event.body.fileName}`);
 
                 this.emit(Engine.events.newFile, event.body.fileName);
 
@@ -228,7 +234,6 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     private createDirectoryEmitAndBroadcast(directoryName:string, otherParty:EventMessenger, callback = this.errorSink) {
         this.fileContainer.createDirectory(directoryName, (err)=> {
             if (err)return callback(err);
-            debug(`finished creating a new directory: ${directoryName} - emitting newDirectory event`);
 
             this.emit(Engine.events.newDirectory, directoryName);
             this.broadcastCommand(Engine.commands.createDirectory, {fileName: directoryName}, otherParty);
@@ -268,11 +273,6 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
             return otherParty.send(eventType, body);
         })
-    }
-
-    private emit(event, body) {
-        debug(`emitting: ${event} with body: ${body}`);
-        super.emit(event, body);
     }
 
     private errorSink(err?:Error) {
