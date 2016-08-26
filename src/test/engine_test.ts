@@ -72,14 +72,14 @@ describe('Engine', function () {
     it('two engines will transfer new file and and create new directory when needed', function (done) {
         counter = new EventCounter(connectingEngine, [
             {name: Engine.events.newDirectory, count: 1},
-            {name: Engine.events.changedFile, count: 1}
+            {name: Engine.events.newFile, count: 1}
         ]);
 
         async.series(
             [
-                (cb)=>mkdirp('engine_test/aaa/response', cb),
+                (cb)=>mkdirp('engine_test/aaa/directory', cb),
 
-                (cb)=>fs.writeFile('engine_test/aaa/response/file.txt', getRandomString(4000), cb),
+                (cb)=>fs.writeFile('engine_test/aaa/file.txt', getRandomString(4000), cb),
 
                 (cb)=> {
                     if (counter.hasFinished()) return setImmediate(cb);
@@ -87,7 +87,7 @@ describe('Engine', function () {
                     return counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareTwoFiles('engine_test/aaa/response/file.txt', 'engine_test/bbb/response/file.txt', cb)
+                (cb)=>compareTwoFiles('engine_test/aaa/file.txt', 'engine_test/bbb/file.txt', cb)
             ],
 
             done
@@ -99,11 +99,11 @@ describe('Engine', function () {
 
         async.series(
             [
-                (cb)=>mkdirp('engine_test/bbb/response/', cb),
+                (cb)=>mkdirp('engine_test/bbb/', cb),
 
-                (cb)=>fs.writeFile('engine_test/bbb/response/file_1.txt', '123123123', 'utf8', cb),
+                (cb)=>fs.writeFile('engine_test/bbb/file_1.txt', '123123123', 'utf8', cb),
 
-                (cb)=>setTimeout(()=>removePath('engine_test/bbb/response/file_1.txt', cb), FS_TIMEOUT),
+                (cb)=>setTimeout(()=>removePath('engine_test/bbb/file_1.txt', cb), FS_TIMEOUT),
 
                 (cb)=> {
                     if (counter.hasFinished()) return setImmediate(cb);
@@ -118,8 +118,8 @@ describe('Engine', function () {
 
 
     it('two engines will synchronize multiple files both ways', function (done) {
-        const listenerCounter = EventCounter.getCounter(listeningEngine, Engine.events.changedFile, 4);
-        const connectingCounter = EventCounter.getCounter(connectingEngine, Engine.events.changedFile, 2);
+        const listenerCounter = EventCounter.getCounter(listeningEngine, Engine.events.newFile, 4);
+        const connectingCounter = EventCounter.getCounter(connectingEngine, Engine.events.newFile, 2);
 
         async.series(
             [
@@ -128,6 +128,7 @@ describe('Engine', function () {
                         [
                             {path: 'engine_test/aaa/a.txt', content: getRandomString(50000)},
                             {path: 'engine_test/aaa/b.txt', content: getRandomString(50000)},
+
                             {path: 'engine_test/bbb/c.txt', content: getRandomString(50000)},
                             {path: 'engine_test/bbb/d.txt', content: getRandomString(500000)},
                             {path: 'engine_test/bbb/e.txt', content: getRandomString(500)},

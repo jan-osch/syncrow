@@ -16,7 +16,7 @@ export interface TransferHelperOptions {
 const logger = loggerFor('TransferHelper');
 
 /**
- * Private messages
+ * Private commands
  */
 interface TransferMessage {
     fileName:string;
@@ -44,7 +44,7 @@ export class TransferHelper {
     }
 
     /**
-     * Used to handle messages passed by caller
+     * Used to handle commands passed by caller
      * @param transferMessage
      * @param otherParty
      */

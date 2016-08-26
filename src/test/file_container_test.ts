@@ -192,7 +192,7 @@ describe('FileContainer', ()=> {
         })
     });
 
-    describe('emitting messages', function () {
+    describe('emitting commands', function () {
         it('will emit fileCreated event with correct path', function (done) {
             const testDir = 'emittingEvents';
             async.series(
@@ -290,7 +290,7 @@ describe('FileContainer', ()=> {
     });
 
     describe('consumeFileStream', function () {
-        it('will write the file to destination without emitting changed messages', function (done) {
+        it('will write the file to destination without emitting changed commands', function (done) {
             const testDir = 'consumeFileStream';
             const fileContent = getRandomString(1024);
             const fromPath = 'from.txt';

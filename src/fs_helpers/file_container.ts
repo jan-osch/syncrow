@@ -154,7 +154,7 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     /**
-     * Starts watching and emitting messages
+     * Starts watching and emitting commands
      * @param callback
      */
     public beginWatching(callback?:ErrorCallback) {

@@ -31,7 +31,7 @@ export class EventMessenger extends EventEmitter implements Closable {
     };
 
     /**
-     * Enables sending string messages between parties
+     * Enables sending string commands between parties
      * @param socket
      */
     constructor(socket:Socket) {
@@ -101,9 +101,13 @@ export class EventMessenger extends EventEmitter implements Closable {
     /**
      * @param source
      * @param payload
+     * @param error
      */
-    public sendResponse(source:Event, payload:any) {
-        this.send(EventMessenger.response, payload, source.id);
+    public sendResponse(source:Event, payload:any, error?:Error) {
+        if (source.id) {
+            return this.send(EventMessenger.response, {error: error, payload: payload}, source.id);
+        }
+        debug(`no response sent for event: ${source}`);
     }
 
 
@@ -137,7 +141,7 @@ export class EventMessenger extends EventEmitter implements Closable {
 
         if (event.type === EventMessenger.response) {
             try {
-                return this.callbackHelper.getCallback(event.id)(null, event.body);
+                return this.callbackHelper.getCallback(event.id)(event.body.error, event.body.payload);
             } catch (err) {
                 return this.emit(EventMessenger.events.error, {title: `unknown id: ${event.id}`, details: err});
             }

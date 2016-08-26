@@ -29,14 +29,14 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         newDirectory: 'newDirectory'
     };
 
-    static messages = {
-        fileChanged: 'fileChanged',
-        fileCreated: 'fileCreated',
-        fileDeleted: 'fileDeleted',
-        directoryCreated: 'directoryCreated',
+    static commands = {
+        createDirectory: 'createDirectory',
+        deletePath: 'deletePath',
+        downloadChanged: 'downloadChanged',
+        downloadNew: 'downloadNew',
 
-        getFileList: 'getFileList',
-        getMetaForFile: 'getMetaForFile'
+        getMetaForFile: 'getMetaForFile',
+        getFileList: 'getFileList'
     };
 
     private otherParties:Array<EventMessenger>;
@@ -101,9 +101,10 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     /**
      * @param otherParty
      * @param fileName
+     * @param callback
      */
-    public deleteRemoteFile(otherParty:EventMessenger, fileName:string):any {
-        return otherParty.send(Engine.messages.fileDeleted, {fileName: fileName});
+    public deleteRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any {
+        return otherParty.sendRequest(Engine.commands.deletePath, {fileName: fileName}, callback);
     }
 
     /**
@@ -119,8 +120,8 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param otherParty
      * @param fileName
      */
-    public createRemoteDirectory(otherParty:EventMessenger, fileName:string) {
-        return otherParty.send(Engine.messages.directoryCreated, {fileName: fileName});
+    public createRemoteDirectory(otherParty:EventMessenger, fileName:string, callback:ErrorCallback) {
+        return otherParty.sendRequest(Engine.commands.createDirectory, {fileName: fileName}, callback);
     }
 
     /**
@@ -129,7 +130,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param callback
      */
     public getRemoteFileMeta(otherParty:EventMessenger, fileName:string, callback:(err:Error, syncData?:SyncData)=>any):any {
-        return otherParty.sendRequest(Engine.messages.getMetaForFile, {fileName: fileName}, callback);
+        return otherParty.sendRequest(Engine.commands.getMetaForFile, {fileName: fileName}, callback);
     }
 
     /**
@@ -137,7 +138,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
      * @param callback
      */
     public getRemoteFileList(otherParty:EventMessenger, callback:(err:Error, fileList?:Array<string>)=>any):any {
-        return otherParty.sendRequest(Engine.messages.getFileList, {}, callback);
+        return otherParty.sendRequest(Engine.commands.getFileList, null, callback);
     }
 
     /**
@@ -150,51 +151,60 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     }
 
     private addEngineListenersToOtherParty(otherParty:EventMessenger) {
-        otherParty.on(EventMessenger.events.error, (event)=> {
-            return logger.error(`received error message ${JSON.stringify(event.body)}`);
-        });
-
         otherParty.on(TransferHelper.outerEvent, (event)=> this.transferHelper.consumeMessage(event.body, otherParty));
 
-
-        otherParty.on(Engine.messages.directoryCreated, (event)=> {
-            this.fileContainer.createDirectory(event.body.fileName);
-            debug(`finished creating a new directory: ${event.body.fileName} - emitting newDirectory event`);
-            this.emit(Engine.events.newDirectory, event.body.fileName);
-
-            return this.broadcastEvent(event.type, {fileName: event.body.fileName}, otherParty);
+        otherParty.on(EventMessenger.events.error, (event)=> {
+            return logger.error(`received error message ${JSON.stringify(event)}`);
         });
 
-        otherParty.on(Engine.messages.fileDeleted, (event)=> {
-            this.fileContainer.deleteFile(event.body.fileName);
-            this.emit(Engine.events.deletedPath, event.body.fileName);
-
-            return this.broadcastEvent(event.type, event.body, otherParty);
-        });
-
-        otherParty.on(Engine.messages.fileChanged, (event)=> {
-            return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
-                debug(`finished downloading a file: ${event.body.fileName} - emitting changedFile event`);
-                this.emit(Engine.events.changedFile, event.body.fileName);
-
-                return this.broadcastEvent(event.type, event.body, otherParty);
+        otherParty.on(Engine.commands.createDirectory, (event)=> {
+            this.createDirectoryEmitAndBroadcast(event.body.fileName, otherParty, (err)=> {
+                return otherParty.sendResponse(event, null, err);
             });
         });
 
-        otherParty.on(Engine.messages.getFileList, (event)=> {
+        otherParty.on(Engine.commands.deletePath, (event)=> {
+            this.deletePathEmitAndBroadCast(event.body.fileName, otherParty, (err)=> {
+                return otherParty.sendResponse(event, null, err);
+            });
+        });
+
+        otherParty.on(Engine.commands.downloadChanged, (event)=> {
+            return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
+                debug(`finished downloading a file: ${event.body.fileName} - emitting changedFile event`);
+
+                this.emit(Engine.events.changedFile, event.body.fileName);
+
+                return this.broadcastCommand(Engine.commands.downloadChanged, event.body, otherParty);
+            });
+        });
+
+        otherParty.on(Engine.commands.downloadNew, (event)=> {
+            return this.requestRemoteFile(otherParty, event.body.fileName, ()=> {
+                debug(`finished downloading a file: ${event.body.fileName} - emitting changedFile event`);
+
+                this.emit(Engine.events.newFile, event.body.fileName);
+
+                return this.broadcastCommand(Engine.commands.downloadNew, event.body, otherParty);
+            });
+        });
+
+        otherParty.on(Engine.commands.getFileList, (event)=> {
             return this.fileContainer.getFileTree((err, fileList)=> {
                 if (err) {
-                    return logger.error(err);
+                    logger.error(err);
+                    return otherParty.sendResponse(event, null, err);
                 }
 
                 return otherParty.sendResponse(event, fileList);
             });
         });
 
-        otherParty.on(Engine.messages.getMetaForFile, (event)=> {
+        otherParty.on(Engine.commands.getMetaForFile, (event)=> {
             return this.fileContainer.getFileMeta(event.body.fileName, (err, syncData)=> {
                 if (err) {
-                    return logger.error(err);
+                    logger.error(err);
+                    return otherParty.sendResponse(event, null, err);
                 }
 
                 return otherParty.sendResponse(event, syncData)
@@ -204,28 +214,53 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         debug(`finished adding listeners`);
     }
 
+    private deletePathEmitAndBroadCast(pathName:any, otherParty:EventMessenger, callback = this.errorSink) {
+        this.fileContainer.deleteFile(pathName, (err)=> {
+            if (err)return callback(err);
+
+            this.emit(Engine.events.deletedPath, pathName);
+            this.broadcastCommand(Engine.events.deletedPath, pathName, otherParty);
+
+            return callback();
+        });
+    }
+
+    private createDirectoryEmitAndBroadcast(directoryName:string, otherParty:EventMessenger, callback = this.errorSink) {
+        this.fileContainer.createDirectory(directoryName, (err)=> {
+            if (err)return callback(err);
+            debug(`finished creating a new directory: ${directoryName} - emitting newDirectory event`);
+
+            this.emit(Engine.events.newDirectory, directoryName);
+            this.broadcastCommand(Engine.commands.createDirectory, {fileName: directoryName}, otherParty);
+
+            return callback();
+        });
+    }
+
     private addListenersToFileContainer(fileContainer:FileContainer) {
         fileContainer.on(FileContainer.events.changed, (eventContent)=> {
             debug(`detected file changed: ${eventContent}`);
-            return this.broadcastEvent(Engine.messages.fileChanged, {fileName: eventContent});
+            return this.broadcastCommand(Engine.commands.downloadChanged, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.fileCreated, (eventContent)=> {
             debug(`detected file created: ${eventContent}`);
-            return this.broadcastEvent(Engine.messages.fileChanged, {fileName: eventContent});
+            return this.broadcastCommand(Engine.commands.downloadNew, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.deleted, (eventContent)=> {
             debug(`detected file deleted: ${eventContent}`);
-            return this.broadcastEvent(Engine.messages.fileDeleted, {fileName: eventContent});
+            return this.broadcastCommand(Engine.commands.deletePath, {fileName: eventContent});
         });
 
         fileContainer.on(FileContainer.events.createdDirectory, (eventContent)=> {
-            return this.broadcastEvent(Engine.messages.directoryCreated, {fileName: eventContent});
+            debug(`detected directory created: ${eventContent}`);
+            return this.broadcastCommand(Engine.commands.createDirectory, {fileName: eventContent});
         });
     }
 
-    private broadcastEvent(eventType:string, body:any, excludeParty?:EventMessenger) {
+    private broadcastCommand(eventType:string, body:any, excludeParty?:EventMessenger) {
+        debug(`broadcasting command: ${eventType} with content: ${JSON.stringify(body)}`);
         this.otherParties.forEach((otherParty)=> {
             if (excludeParty && excludeParty === otherParty) {
                 return;
@@ -233,5 +268,17 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
             return otherParty.send(eventType, body);
         })
+    }
+
+    private emit(event, body) {
+        debug(`emitting: ${event} with body: ${body}`);
+        super.emit(event, body);
+    }
+
+    private errorSink(err?:Error) {
+        if (err) {
+            logger.error(err);
+            this.emit(Engine.events.error, err);
+        }
     }
 }

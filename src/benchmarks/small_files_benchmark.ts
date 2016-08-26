@@ -6,14 +6,15 @@ import {Engine} from "../core/engine";
 import * as crypto from "crypto";
 import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
-import {pullAction} from "../sync/pull_action";
 import {pushAction} from "../sync/push_action";
 
 
 const token = '121cb2897o1289nnjos';
 const port = 4321;
 
-const SAMPLE_SIZE = 200000000; // 200 MB
+const SAMPLE_SIZE = 200000; // 200 KB
+
+const FILE_NUMBER = 100;
 
 let listeningEngine;
 let connectingEngine;
@@ -26,17 +27,18 @@ async.waterfall(
     [
         (cb)=>rimraf('benchmark', cb),
 
-        (cb)=>createPathSeries(
-            [
+        (cb)=> {
+            const files:Array<any> = [
                 {path: 'benchmark/aaa', directory: true},
                 {path: 'benchmark/bbb', directory: true},
-                {path: 'benchmark/bbb/big_1.txt', content: crypto.randomBytes(SAMPLE_SIZE)},
-                {path: 'benchmark/bbb/big_2.txt', content: crypto.randomBytes(SAMPLE_SIZE)},
-                {path: 'benchmark/bbb/big_3.txt', content: crypto.randomBytes(SAMPLE_SIZE)},
-                {path: 'benchmark/bbb/big_4.txt', content: crypto.randomBytes(SAMPLE_SIZE)}
-            ],
-            cb
-        ),
+            ];
+
+            for (let i = 0; i < FILE_NUMBER; i++) {
+                files.push({path: `benchmark/bbb/small_${i}.txt`, content: crypto.randomBytes(SAMPLE_SIZE)})
+            }
+
+            return createPathSeries(files, cb)
+        },
 
         (cb)=> {
             startTime = new Date();
@@ -97,7 +99,8 @@ async.waterfall(
 
         const difference = endTime.getTime() - startTime.getTime();
 
-        console.log(`Benchmark took: ${difference} ms`);
+        console.log(`Benchmark with ${FILE_NUMBER} small files took: ${difference} ms`);
     }
 );
+
 

@@ -18,7 +18,7 @@ export class ParseHelper extends EventEmitter implements Closable {
     };
 
     /**
-     * Enables sending string messages between parties
+     * Enables sending string commands between parties
      */
     constructor(private socket:Socket) {
         super();

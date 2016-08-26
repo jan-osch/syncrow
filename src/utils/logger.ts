@@ -18,7 +18,7 @@ export class Logger {
     }
 
     /**
-     * For important messages
+     * For important commands
      * @param message
      */
     public info(message?:string) {

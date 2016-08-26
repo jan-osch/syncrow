@@ -45,7 +45,6 @@ export class EventCounter extends EventEmitter {
         let emittedSoFar = 0;
 
         return ()=> {
-
             emittedSoFar++;
 
             if (emittedSoFar === count) {

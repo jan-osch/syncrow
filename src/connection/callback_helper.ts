@@ -6,7 +6,7 @@ export class CallbackHelper {
     private callbackMap:Map<string,Function>;
 
     /**
-     * Used to exchange messages with callbacks
+     * Used to exchange commands with callbacks
      */
     constructor() {
         this.callbackMap = new Map();

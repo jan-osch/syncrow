@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha --recursive build/test",
     "build": "tsc || true",
-    "benchmark": "node build/benchmarks/engine_benchmark.js"
+    "benchmark": "node build/benchmarks/big_files_benchmark.js && node build/benchmarks/small_files_benchmark.js"
   },
   "repository": {
     "type": "git",
