@@ -1,9 +1,9 @@
-import {FileContainer} from "../fs_helpers/file_container";
 import {TransferActions} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
 import {loggerFor} from "../utils/logger";
 import {ConnectionAddress, ConnectionHelper, ListenCallback} from "../connection/connection_helper";
+import {Container} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:trasfer_queue");
 const logger = loggerFor('TransferQueue');
@@ -27,7 +27,7 @@ export class TransferQueue {
      */
     public addConnectAndUploadJobToQueue(fileName:string,
                                          address:ConnectionAddress,
-                                         sourceContainer:FileContainer,
+                                         sourceContainer:Container,
                                          connectionHelper:ConnectionHelper,
                                          doneCallback:ErrorCallback) {
         const timingMessage = `${this.name} - connecting and uploading file: ${fileName}`;
@@ -58,7 +58,7 @@ export class TransferQueue {
      */
     public addConnectAndDownloadJobToQueue(fileName:string,
                                            address:ConnectionAddress,
-                                           destinationContainer:FileContainer,
+                                           destinationContainer:Container,
                                            connectionHelper:ConnectionHelper,
                                            doneCallback?:ErrorCallback) {
 
@@ -91,7 +91,7 @@ export class TransferQueue {
      * @param doneCallback
      */
     public  addListenAndUploadJobToQueue(fileName:string,
-                                         sourceContainer:FileContainer,
+                                         sourceContainer:Container,
                                          connectionHelper:ConnectionHelper,
                                          listeningCallback:ListenCallback,
                                          doneCallback:ErrorCallback) {
@@ -126,7 +126,7 @@ export class TransferQueue {
      * @param listeningCallback
      */
     public  addListenAndDownloadJobToQueue(fileName:string,
-                                           destinationContainer:FileContainer,
+                                           destinationContainer:Container,
                                            connectionHelper:ConnectionHelper,
                                            listeningCallback:ListenCallback,
                                            doneCallback:ErrorCallback) {

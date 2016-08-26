@@ -1,7 +1,7 @@
-import {FileContainer} from "../fs_helpers/file_container";
 import {Socket} from "net";
 import {loggerFor, debugFor} from "../utils/logger";
 import {ListenCallback, ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
+import {Container} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
@@ -27,7 +27,7 @@ export class TransferActions {
      * @param listeningCallback
      */
     public static listenAndDownloadFile(fileName:string,
-                                        destinationContainer:FileContainer,
+                                        destinationContainer:Container,
                                         connectionHelper:ConnectionHelper,
                                         doneCallback:ErrorCallback,
                                         listeningCallback:ListenCallback) {
@@ -53,7 +53,7 @@ export class TransferActions {
      * @param listenCallback
      */
     public static listenAndUploadFile(fileName:string,
-                                      sourceContainer:FileContainer,
+                                      sourceContainer:Container,
                                       connectionHelper:ConnectionHelper,
                                       doneCallback:ErrorCallback,
                                       listenCallback:ListenCallback) {
@@ -83,7 +83,7 @@ export class TransferActions {
      */
     public static connectAndUploadFile(fileName:string,
                                        address:ConnectionAddress,
-                                       sourceContainer:FileContainer,
+                                       sourceContainer:Container,
                                        connectionHelper:ConnectionHelper,
                                        doneCallback:ErrorCallback) {
 
@@ -112,7 +112,7 @@ export class TransferActions {
      */
     public static connectAndDownloadFile(fileName:string,
                                          address:ConnectionAddress,
-                                         destinationContainer:FileContainer,
+                                         destinationContainer:Container,
                                          connectionHelper:ConnectionHelper,
                                          doneCallback:ErrorCallback) {
 
@@ -124,7 +124,7 @@ export class TransferActions {
         )
     }
 
-    private static consumeFileFromSocket(fileTransferSocket:Socket, fileName:string, destinationContainer:FileContainer, callback:ErrorCallback) {
+    private static consumeFileFromSocket(fileTransferSocket:Socket, fileName:string, destinationContainer:Container, callback:ErrorCallback) {
         destinationContainer.consumeFileStream(fileName, fileTransferSocket, callback);
     }
 }
