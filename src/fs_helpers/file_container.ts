@@ -8,6 +8,7 @@ import {FileMetaComputingQueue} from "./file_meta_queue";
 import {readTree} from "./read_tree";
 import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
+import * as async from "async";
 import * as chokidar from "chokidar";
 import {Closable} from "../utils/interfaces";
 import ReadableStream = NodeJS.ReadableStream;
@@ -15,7 +16,7 @@ import ReadableStream = NodeJS.ReadableStream;
 const debug = debugFor("syncrow:file_container");
 const logger = loggerFor('FileContainer');
 
-const WATCH_TIMEOUT = 400;
+const WATCH_TIMEOUT = 700;
 const TRANSFER_FILE_LIMIT = 1000;
 
 export interface FilterFunction {
@@ -43,6 +44,7 @@ export class FileContainer extends EventEmitter implements Closable {
     private filterFunction:(s:string)=>boolean;
     private watchTimeout:number;
     private watcher:fs.FSWatcher;
+    private existingPaths:Set<string>;
 
     /**
      * Wrapper over filesystem
@@ -59,6 +61,7 @@ export class FileContainer extends EventEmitter implements Closable {
         this.blockedFiles = new Set();
         this.cachedSyncData = new Map();
         this.fileMetaQueue = new FileMetaComputingQueue(fileLimit, this.directoryToWatch);
+        this.existingPaths = null;
     }
 
     /**
@@ -76,7 +79,10 @@ export class FileContainer extends EventEmitter implements Closable {
     public createDirectory(directoryName:string, callback?:Function) {
         logger.info(`creating directory: ${directoryName}`);
 
+        this.addAllParentPathsToExisting(directoryName);
+        this.existingPaths.add(directoryName);
         this.blockFile(directoryName);
+
         return mkdirp(this.createAbsolutePath(directoryName), (error)=> {
             this.unBlockFileWithTimeout(directoryName);
 
@@ -106,7 +112,6 @@ export class FileContainer extends EventEmitter implements Closable {
      */
     public deleteFile(fileName:string, callback?:(err?:Error)=>any) {
         logger.info(`deleting file: ${fileName}`);
-
         this.blockFile(fileName);
         rimraf(this.createAbsolutePath(fileName), (error)=> {
             this.unBlockFileWithTimeout(fileName);
@@ -122,6 +127,8 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param callback
      */
     public consumeFileStream(fileName:string, readStream:ReadableStream, callback:ErrorCallback) {
+        this.addAllParentPathsToExisting(fileName);
+        this.existingPaths.add(fileName);
         try {
             debug(`starting to read from remote - file ${fileName} is blocked now`);
 
@@ -158,31 +165,20 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param callback
      */
     public beginWatching(callback?:ErrorCallback) {
-        this.watcher = chokidar.watch(path.resolve(this.directoryToWatch), {
-            persistent: true,
-            ignoreInitial: true,
-            usePolling: true,
-            cwd: this.directoryToWatch,
-            ignored: this.filterFunction
-        });
-
-        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
-
-        this.watcher.on('add', path => this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path));
-        this.watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
-        this.watcher.on('unlink', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
-        this.watcher.on('addDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path));
-        this.watcher.on('unlinkDir', path=> this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path));
-
-        this.watcher.on('ready', ()=> {
-            debug(`initial scan ready - watching ${Object.keys(this.watcher.getWatched()).length} directories`)
-            callback();
-        });
-        this.watcher.on('error', (err)=> {
-            logger.error(`watcher emitted: ${err}`);
-            callback(err);
-        });
+        return async.waterfall(
+            [
+                (cb)=>this.getFileTree(cb),
+                (results, cb)=> {
+                    this.existingPaths = new Set(results);
+                    debug(`initial scan ready - watching ${results.length} paths`);
+                    return setImmediate(cb);
+                },
+                (cb)=>this.startWatcher(cb)
+            ],
+            callback
+        )
     }
+
 
     /**
      * @param fileName
@@ -197,6 +193,48 @@ export class FileContainer extends EventEmitter implements Closable {
             if (!err && syncData) this.cachedSyncData.set(fileName, syncData);
 
             return callback(err, syncData);
+        });
+    }
+
+    private startWatcher(callback?:ErrorCallback) {
+        this.watcher = chokidar.watch(path.resolve(this.directoryToWatch), {
+            persistent: true,
+            ignoreInitial: true,
+            usePolling: true,
+            cwd: this.directoryToWatch,
+            ignored: this.filterFunction
+        });
+
+        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
+
+        this.watcher.on('add', path => {
+            if (!this.existingPaths.has(path)) {
+                this.existingPaths.add(path);
+                this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path)
+            }
+        });
+        this.watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
+        this.watcher.on('unlink', path=> {
+            this.existingPaths.delete(path);
+            this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path)
+        });
+        this.watcher.on('addDir', path=> {
+            if (!this.existingPaths.has(path)) {
+                this.existingPaths.add(path);
+                this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path)
+            }
+        });
+        this.watcher.on('unlinkDir', path=> {
+            this.existingPaths.delete(path);
+            this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path)
+        });
+
+        this.watcher.on('ready', ()=> {
+            callback();
+        });
+        this.watcher.on('error', (err)=> {
+            logger.error(`watcher emitted: ${err}`);
+            callback(err);
         });
     }
 
@@ -222,6 +260,14 @@ export class FileContainer extends EventEmitter implements Closable {
         if (!this.blockedFiles.has(fullFileName)) {
             debug(`emitting ${event} for file: ${fullFileName}`);
             this.emit(event, fullFileName);
+        }
+    }
+
+    private addAllParentPathsToExisting(path:string) {
+        for (let i = path.length - 1; i > 0; i--) {
+            if (path.charAt(i) === '/') {
+                this.existingPaths.add(path.slice(0, i - 1));
+            }
         }
     }
 

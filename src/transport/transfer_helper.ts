@@ -6,6 +6,8 @@ import {EventMessenger} from "../connection/event_messenger";
 import {ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 import {Container} from "../utils/interfaces";
 
+const TRANSFER_CONCURRENCY = 500;
+
 export interface TransferHelperOptions {
     transferQueueSize?:number,
     name:string,
@@ -35,7 +37,7 @@ export class TransferHelper {
     private callbackHelper:CallbackHelper;
 
     constructor(container:Container, private connectionHelper:ConnectionHelper, options:TransferHelperOptions) {
-        const queueSize = options.transferQueueSize ? options.transferQueueSize : 1000;
+        const queueSize = options.transferQueueSize ? options.transferQueueSize : TRANSFER_CONCURRENCY;
 
         this.queue = new TransferQueue(queueSize, options.name);
         this.preferConnecting = options.preferConnecting;

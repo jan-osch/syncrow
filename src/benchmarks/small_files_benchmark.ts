@@ -12,9 +12,9 @@ import {pushAction} from "../sync/push_action";
 const token = '121cb2897o1289nnjos';
 const port = 4321;
 
-const SAMPLE_SIZE = 200000; // 200 KB
+const SAMPLE_SIZE = 20000; // 20 KB
 
-const FILE_NUMBER = 100;
+const FILE_NUMBER = 5000; // 5000 * 20 = 100 000 KB = 100MB
 
 let listeningEngine;
 let connectingEngine;

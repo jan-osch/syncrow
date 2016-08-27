@@ -11,8 +11,8 @@ const questions = [
     {
         type: 'confirm',
         name: 'listen',
-        message: 'Do you want to listen for connections?',
-        default: false
+        message: 'Do you want to listen for connection?',
+        default: true
     },
 
     {
@@ -53,6 +53,7 @@ const questions = [
         type: 'input',
         name: 'externalHost',
         message: 'What is your external IP/hostname?',
+        default: '0.0.0.0',
         when: (answers)=>answers.listen
     },
 
@@ -101,7 +102,7 @@ const questions = [
         type: 'confirm',
         name: 'generateToken',
         message: 'Would you like to generate a new token?',
-        default: false,
+        default: true,
         when: (answers)=> !answers.initialToken
     },
 
@@ -123,7 +124,7 @@ const questions = [
         type: 'confirm',
         name: 'reconnect',
         message: 'Would you like to reconnect when connection was lost?',
-        default: false,
+        default: true,
         when: (answers)=>!answers.listen
     }
 ];
