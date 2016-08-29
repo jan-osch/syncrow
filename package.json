@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --recursive build/test",
-    "build": "tsc || true",
-    "benchmark": "node build/benchmarks/big_files_benchmark.js && node build/benchmarks/small_files_benchmark.js"
+    "build": "npm run clear && tsc || true",
+    "clear": "rm -Rf build",
+    "benchmark": "./housekeeping/benchmarks.sh"
   },
   "repository": {
     "type": "git",
@@ -36,11 +37,12 @@
     "upath": "^0.1.7"
   },
   "devDependencies": {
-    "tsc": "^1.20150623.0",
     "chai": "^3.5.0",
+    "git-rev-sync": "^1.6.0",
     "mocha": "^2.5.3",
     "rewire": "^2.5.1",
     "sinon": "^1.17.4",
-    "sinon-chai": "^2.8.0"
+    "sinon-chai": "^2.8.0",
+    "tsc": "^1.20150623.0"
   }
 }

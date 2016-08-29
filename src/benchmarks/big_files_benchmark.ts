@@ -7,43 +7,49 @@ import * as crypto from "crypto";
 import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pushAction} from "../sync/push_action";
+import saveResults from "./save_results";
 
 
-const token = '121cb2897o1289nnjos';
-const port = 4321;
-
+const TOKEN = '121cb2897o1289nnjos';
+const PORT = 4321;
 const SAMPLE_SIZE = 200000000; // 200 MB
+const FILE_NUMBER = 4;
+const TIMEOUT = 60 * 1000; //1 minute
+
+const benchmarkName = `big_files ${FILE_NUMBER} files x ${SAMPLE_SIZE}B`;
 
 let listeningEngine;
 let connectingEngine;
 let eventCounter:EventCounter;
-
 let startTime;
 let endTime;
 
+setTimeout(()=> {
+    throw new Error('Timeout out')
+}, TIMEOUT);
+
+const paths = [
+    {path: 'build/benchmark/aaa', directory: true},
+    {path: 'build/benchmark/bbb', directory: true},
+];
+
+for (let i = 0; i < FILE_NUMBER; i++) {
+    paths.push({path: `build/benchmark/bbb/big_${i + 1}.txt`, content: crypto.randomBytes(SAMPLE_SIZE)})
+}
+
 async.waterfall(
     [
-        (cb)=>rimraf('benchmark', cb),
+        (cb)=>rimraf('build/benchmark', cb),
 
-        (cb)=>createPathSeries(
-            [
-                {path: 'benchmark/aaa', directory: true},
-                {path: 'benchmark/bbb', directory: true},
-                {path: 'benchmark/bbb/big_1.txt', content: crypto.randomBytes(SAMPLE_SIZE)},
-                {path: 'benchmark/bbb/big_2.txt', content: crypto.randomBytes(SAMPLE_SIZE)},
-                {path: 'benchmark/bbb/big_3.txt', content: crypto.randomBytes(SAMPLE_SIZE)},
-                {path: 'benchmark/bbb/big_4.txt', content: crypto.randomBytes(SAMPLE_SIZE)}
-            ],
-            cb
-        ),
+        (cb)=>createPathSeries(paths, cb),
 
         (cb)=> {
             startTime = new Date();
 
-            return startListeningEngine('benchmark/aaa', port, {
+            return startListeningEngine('build/benchmark/aaa', PORT, {
                     authenticate: true,
                     externalHost: '0.0.0.0',
-                    initialToken: token,
+                    initialToken: TOKEN,
                     watch: true
                 },
                 cb
@@ -53,9 +59,9 @@ async.waterfall(
         (engine, cb)=> {
             listeningEngine = engine;
 
-            return startConnectingEngine('benchmark/bbb', port, '0.0.0.0', {
+            return startConnectingEngine('build/benchmark/bbb', PORT, '0.0.0.0', {
                     authenticate: true,
-                    initialToken: token,
+                    initialToken: TOKEN,
                     watch: true,
                     sync: pushAction
                 },
@@ -88,15 +94,20 @@ async.waterfall(
         (cb)=> {
             listeningEngine.shutdown();
             connectingEngine.shutdown();
-            return rimraf('benchmark', cb)
+            return rimraf('build/benchmark', cb)
+        },
+
+        (cb)=> {
+            const difference = endTime.getTime() - startTime.getTime();
+
+            console.log(`Benchmark with big files took: ${difference} ms`);
+
+            return saveResults(benchmarkName, difference, cb);
         }
     ],
     (err)=> {
         if (err) throw err;
-
-        const difference = endTime.getTime() - startTime.getTime();
-
-        console.log(`Benchmark with big files took: ${difference} ms`);
+        return process.exit(0);
     }
 );
 

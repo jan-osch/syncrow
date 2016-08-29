@@ -11,12 +11,12 @@ describe('ConnectionHelper', function () {
         new ConnectionHelper({remotePort: 10, remoteHost: '123'});
     });
 
-    it('will throw error when it should listen and no port, or listen callback is specified', function () {
+    it('will throw error when it should listen and no PORT, or listen callback is specified', function () {
         expect(()=>new ConnectionHelper({listen: true}).to.throw;
     });
 
     describe('getNewSocket', function () {
-        it('if set to listen, it will setup a temporary server on specified port and pass socket to callback', function (done) {
+        it('if set to listen, it will setup a temporary server on specified PORT and pass socket to callback', function (done) {
 
             let helper;
 

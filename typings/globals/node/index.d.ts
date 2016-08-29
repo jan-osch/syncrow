@@ -1901,9 +1901,9 @@ declare module "tls" {
 
     export class TLSSocket extends stream.Duplex {
         /**
-         * Returns the bound address, the address family name and port of the underlying socket as reported by
+         * Returns the bound address, the address family name and PORT of the underlying socket as reported by
          * the operating system.
-         * @returns {any} - An object with three properties, e.g. { port: 12346, family: 'IPv4', address: '127.0.0.1' }.
+         * @returns {any} - An object with three properties, e.g. { PORT: 12346, family: 'IPv4', address: '127.0.0.1' }.
          */
         address(): { port: number; family: string; address: string };
         /**

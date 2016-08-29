@@ -8,6 +8,24 @@ export class PathHelper {
      * @returns {string}
      */
     public static normalizePath(path:string):string {
-        return upath.normalize(path).replace(/\ /g, "\\ ");
+        return upath.normalize(path).replace(/(\ {1,})/g, "\\$1");
+    }
+
+    /**
+     * Returns path that is localized - e.g. windows specific
+     * @param path
+     * @param separator
+     * @returns {string}
+     */
+    public static denormalizePath(path:string, separator?:string):string {
+        separator = separator ? separator : path.sep;
+
+        if (separator != '\\') {
+            return path;
+        }
+
+        return path
+            .replace(/\\( {1,})/g, '$1')
+            .replace(/\//g, "\\");
     }
 }

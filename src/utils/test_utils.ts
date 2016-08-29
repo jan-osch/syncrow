@@ -15,7 +15,7 @@ export function obtainTwoSockets(doneCallback:(err, result?:{client:net.Socket, 
     let clientSocket;
     let server;
 
-    const port = 3124; //A constant port is used to ensure that the cleanup function is called
+    const port = 3124; //A constant PORT is used to ensure that the cleanup function is called
 
     const listener = (socket)=> {
         return doneCallback(null, {client: clientSocket, server: socket});
