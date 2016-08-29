@@ -80,7 +80,6 @@ export class FileContainer extends EventEmitter implements Closable {
         logger.info(`creating directory: ${directoryName}`);
 
         this.addAllParentPathsToExisting(directoryName);
-        this.existingPaths.add(directoryName);
         this.blockFile(directoryName);
 
         return mkdirp(this.createAbsolutePath(directoryName), (error)=> {
@@ -128,7 +127,7 @@ export class FileContainer extends EventEmitter implements Closable {
      */
     public consumeFileStream(fileName:string, readStream:ReadableStream, callback:ErrorCallback) {
         this.addAllParentPathsToExisting(fileName);
-        this.existingPaths.add(fileName);
+
         try {
             debug(`starting to read from remote - file ${fileName} is blocked now`);
 
@@ -264,6 +263,8 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     private addAllParentPathsToExisting(path:string) {
+        this.existingPaths.add(path);
+
         for (let i = path.length - 1; i > 0; i--) {
             if (path.charAt(i) === '/') {
                 this.existingPaths.add(path.slice(0, i - 1));

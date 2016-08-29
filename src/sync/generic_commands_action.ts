@@ -6,6 +6,8 @@ export interface CommandsFunction {
     (params:SyncActionParams, metaTuple:MetaTuple, callback:ErrorCallback):any;
 }
 
+const RETRY = 1;
+
 /**
  * Used to create actions that process the synchronization in context of one file
  * All files will be synced in parallel
@@ -41,7 +43,7 @@ function processFile(params:SyncActionParams, file:string, callback:ErrorCallbac
     return async.waterfall(
         [
             (cb)=>getMetaTupleForFile(params, file, cb),
-            (metaTuple, cb)=>commandsFunction(params, metaTuple, cb)
+            (metaTuple, cb)=>async.retry(RETRY, (innerCallback)=>commandsFunction(params, metaTuple, innerCallback), cb)
         ],
         callback
     );

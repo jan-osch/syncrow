@@ -35,6 +35,7 @@ export class TransferHelper {
     private preferConnecting:boolean;
     private container:Container;
     private callbackHelper:CallbackHelper;
+    private callbackMap:Map<string,ErrorCallback>;
 
     constructor(container:Container, private connectionHelper:ConnectionHelper, options:TransferHelperOptions) {
         const queueSize = options.transferQueueSize ? options.transferQueueSize : TRANSFER_CONCURRENCY;
@@ -43,6 +44,7 @@ export class TransferHelper {
         this.preferConnecting = options.preferConnecting;
         this.container = container;
         this.callbackHelper = new CallbackHelper();
+        this.callbackMap = new Map();
     }
 
     /**
@@ -108,8 +110,15 @@ export class TransferHelper {
      */
     public sendFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback) {
 
+        if (this.callbackMap.has(fileName)) {
+            return this.callbackMap.get(fileName).push(callback);
+        }
+
+        this.callbackMap.set(fileName, [callback]);
+        const finish = (err?:Error)=>this.finishSendingFile(fileName, err);
+
         if (this.preferConnecting) {
-            const id = this.callbackHelper.addCallback(callback);
+            const id = this.callbackHelper.addCallback(finish);
 
             const message:TransferMessage = {
                 command: TransferActions.events.listenAndDownload,
@@ -120,7 +129,15 @@ export class TransferHelper {
             return otherParty.send(TransferHelper.outerEvent, message);
         }
 
-        return this.sendFileViaListening(fileName, otherParty, {callback: callback});
+        return this.sendFileViaListening(fileName, otherParty, {callback: finish});
+    }
+
+    private finishSendingFile(fileName:string, error?:Error) {
+        const callbacks = this.callbackMap.get(fileName);
+
+        callbacks.forEach(c => c(error));
+
+        this.callbackMap.delete(fileName);
     }
 
     private sendFileViaListening(fileName:string, remote:EventMessenger, optional:{id ?:string, callback?:ErrorCallback }) {

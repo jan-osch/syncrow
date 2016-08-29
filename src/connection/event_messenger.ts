@@ -143,7 +143,7 @@ export class EventMessenger extends EventEmitter implements Closable {
             try {
                 return this.callbackHelper.getCallback(event.id)(event.body.error, event.body.payload);
             } catch (err) {
-                return this.emit(EventMessenger.events.error, {title: `unknown id: ${event.id}`, details: err});
+                return this.emit(EventMessenger.events.error, {title: `unknown id: ${event.id}`, details: err.message});
             }
         }
 

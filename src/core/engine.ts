@@ -20,13 +20,14 @@ export interface EngineOptions {
 export class Engine extends EventEmitter implements SyncActionSubject, Closable {
     //TODO add newFile support
     static events = {
-        error: 'error',
         newFile: 'newFile',
         changedFile: 'changedFile',
         deletedPath: 'deletedPath',
+        newDirectory: 'newDirectory',
+
+        error: 'error',
         synced: 'synced',
         shutdown: 'shutdown',
-        newDirectory: 'newDirectory'
     };
 
     static commands = {
@@ -171,6 +172,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
         otherParty.on(Engine.commands.deletePath, (event)=> {
             this.deletePathEmitAndBroadCast(event.body.fileName, otherParty, (err)=> {
+
                 return otherParty.sendResponse(event, null, err);
             });
         });

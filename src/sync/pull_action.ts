@@ -35,16 +35,16 @@ function issueCommands(params:SyncActionParams, metaTuple:MetaTuple, callback:Er
         }
 
         debug(`File: ${metaTuple.localMeta.name} exists locally but does not remotely - it will be ignored`);
-        return callback();
+        return setImmediate(callback);
     }
 
     if (metaTuple.remoteMeta.exists && metaTuple.localMeta.exists) {
         if (metaTuple.localMeta.isDirectory) {
-            return callback();
+            return setImmediate(callback);
         }
 
         if (metaTuple.localMeta.hashCode === metaTuple.remoteMeta.hashCode) {
-            return callback();
+            return setImmediate(callback);
         }
 
         return params.subject.requestRemoteFile(params.remoteParty, metaTuple.localMeta.name, callback);
@@ -52,5 +52,5 @@ function issueCommands(params:SyncActionParams, metaTuple:MetaTuple, callback:Er
 
     logger.warn(`File ${metaTuple.localMeta.name} - does not exist locally or remotely`);
 
-    return callback();
+    return setImmediate(callback);
 }

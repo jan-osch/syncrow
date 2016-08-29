@@ -60,15 +60,4 @@ export class CallbackHelper {
         this.addCallbackWithId(id, callback);
         return id;
     }
-
-    /**
-     * If something fails
-     * @param id
-     */
-    public deleteMapping(id) {
-        if (this.callbackMap.delete(id)) {
-            return;
-        }
-        throw new Error(`callback id: ${id} did not exist`);
-    }
 }
