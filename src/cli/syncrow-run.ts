@@ -10,6 +10,7 @@ import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
+import {PathHelper} from "../fs_helpers/path_helper";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -67,6 +68,7 @@ function createFilterFunction(filterStrings:Array<string>, baseDir:string):Filte
 
     return (s:string) => {
         const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
+        const normalized = PathHelper.normalizePath(actual);
         return anymatch(filterStrings, actual);
     };
 }
