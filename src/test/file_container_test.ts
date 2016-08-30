@@ -7,8 +7,11 @@ import * as async from "async";
 import * as sinonChai from "sinon-chai";
 import * as fs from "fs";
 import * as crypto from "crypto";
+import {EventCounter} from "../utils/event_counter";
+import {PathHelper} from "../fs_helpers/path_helper";
 
 chai.use(sinonChai);
+
 const fileContainerTimeout = 400;
 
 describe('FileContainer', ()=> {
@@ -123,7 +126,8 @@ describe('FileContainer', ()=> {
             ];
 
             function ignore(path) {
-                return [`${testDir}/ignored`, `${testDir}/dir/ignoredFile.txt`].indexOf(path) !== -1;
+                const normalized = PathHelper.normalizePath(path);
+                return [`${testDir}/ignored`, `${testDir}/dir/ignoredFile.txt`].indexOf(normalized) !== -1;
             }
 
             async.series(
@@ -195,17 +199,31 @@ describe('FileContainer', ()=> {
     describe('emitting commands', function () {
         it('will emit fileCreated event with correct path', function (done) {
             const testDir = 'emittingEvents';
+            let counter;
             async.series(
                 [
                     (cb)=>removePath(testDir, cb),
+
                     (cb)=>createPath(testDir, null, true, cb),
+
                     (cb)=> {
                         container = new FileContainer(testDir);
+
+                        counter = EventCounter.getCounter(container, 'fileCreated', 1);
+
                         sandbox.spy(container, 'emit');
                         container.beginWatching(cb);
                     },
                     (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
-                    (cb)=>setTimeout(cb, fileContainerTimeout),
+
+                    (cb)=> {
+                        if (counter.hasFinished()) {
+                            return setImmediate(cb)
+                        }
+
+                        return counter.on(EventCounter.events.done, cb);
+                    },
+
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('fileCreated', 'file.txt');
@@ -218,18 +236,33 @@ describe('FileContainer', ()=> {
         });
         it('will emit fileDeleted event with correct path', function (done) {
             const testDir = 'emittingEvents';
+            let counter;
+
             async.series(
                 [
                     (cb)=>removePath(testDir, cb),
+
                     (cb)=>createPath(testDir, null, true, cb),
+
                     (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
+
                     (cb)=> {
                         container = new FileContainer(testDir);
                         sandbox.spy(container, 'emit');
+                        counter = EventCounter.getCounter(container, 'deleted', 1);
                         container.beginWatching(cb);
                     },
+
                     (cb)=>removePath(`${testDir}/file.txt`, cb),
-                    (cb)=>setTimeout(cb, fileContainerTimeout),
+
+                    (cb)=> {
+                        if (counter.hasFinished()) {
+                            return setImmediate(cb)
+                        }
+
+                        return counter.on(EventCounter.events.done, cb);
+                    },
+
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('deleted', 'file.txt');
@@ -242,6 +275,8 @@ describe('FileContainer', ()=> {
         });
         it('will emit createdDirectory event with correct path', function (done) {
             const testDir = 'emittingEvents';
+            let counter;
+
             async.series(
                 [
                     (cb)=>removePath(testDir, cb),
@@ -249,10 +284,17 @@ describe('FileContainer', ()=> {
                     (cb)=> {
                         container = new FileContainer(testDir);
                         sandbox.spy(container, 'emit');
+                        counter = EventCounter.getCounter(container, 'createdDirectory', 1);
                         container.beginWatching(cb);
                     },
                     (cb)=>createPath(`${testDir}/dirA`, null, true, cb),
-                    (cb)=>setTimeout(cb, fileContainerTimeout),
+                    (cb)=> {
+                        if (counter.hasFinished()) {
+                            return setImmediate(cb)
+                        }
+
+                        return counter.on(EventCounter.events.done, cb);
+                    },
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('createdDirectory', 'dirA');
@@ -265,6 +307,7 @@ describe('FileContainer', ()=> {
         });
         it('will emit changed event with correct path', function (done) {
             const testDir = 'emittingEvents';
+            let counter;
             async.series(
                 [
                     (cb)=>removePath(testDir, cb),
@@ -273,10 +316,17 @@ describe('FileContainer', ()=> {
                     (cb)=> {
                         container = new FileContainer(testDir);
                         sandbox.spy(container, 'emit');
+                        counter = EventCounter.getCounter(container, 'changed', 1);
                         container.beginWatching(cb);
                     },
                     (cb)=>fs.appendFile(`${testDir}/file.txt`, 'second line', cb),
-                    (cb)=>setTimeout(cb, fileContainerTimeout),
+                    (cb)=> {
+                        if (counter.hasFinished()) {
+                            return setImmediate(cb)
+                        }
+
+                        return counter.on(EventCounter.events.done, cb);
+                    },
                     (cb)=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('changed', 'file.txt');
