@@ -68,8 +68,7 @@ function createFilterFunction(filterStrings:Array<string>, baseDir:string):Filte
 
     return (s:string) => {
         const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
-        const normalized = PathHelper.normalizePath(actual);
-        return anymatch(filterStrings, normalized);
+        return anymatch(filterStrings, actual);
     };
 }
 
