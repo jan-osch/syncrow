@@ -48,7 +48,7 @@ async.waterfall(
 
             return startListeningEngine('build/benchmark/aaa', PORT, {
                     authenticate: true,
-                    externalHost: '0.0.0.0',
+                    externalHost: '127.0.0.1',
                     initialToken: TOKEN,
                     watch: true
                 },
@@ -59,7 +59,7 @@ async.waterfall(
         (engine, cb)=> {
             listeningEngine = engine;
 
-            return startConnectingEngine('build/benchmark/bbb', PORT, '0.0.0.0', {
+            return startConnectingEngine('build/benchmark/bbb', PORT, '127.0.0.1', {
                     authenticate: true,
                     initialToken: TOKEN,
                     watch: true,
