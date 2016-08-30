@@ -1,12 +1,10 @@
 import {TransferActions} from "./transfer_actions";
 import * as async from "async";
 import * as debugFor from "debug";
-import {loggerFor} from "../utils/logger";
 import {ConnectionAddress, ConnectionHelper, ListenCallback} from "../connection/connection_helper";
 import {Container} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:trasfer_queue");
-const logger = loggerFor('TransferQueue');
 
 export class TransferQueue {
 

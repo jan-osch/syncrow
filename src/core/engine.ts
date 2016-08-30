@@ -18,7 +18,6 @@ export interface EngineOptions {
 }
 
 export class Engine extends EventEmitter implements SyncActionSubject, Closable {
-    //TODO add newFile support
     static events = {
         newFile: 'newFile',
         changedFile: 'changedFile',
@@ -70,7 +69,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         });
 
         const syncCallback = (err)=> {
-            if (err)return logger.error(err);
+            if (err)return logger.error(`Syncrhonization failed: reason - ${err}`);
 
             this.emit(Engine.events.synced);
             return logger.info(`Synced successfully on first connection`);

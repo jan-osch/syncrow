@@ -41,22 +41,6 @@ export class Logger {
         if (err) this.logInColor(`ERROR:` + err, 'red');
     }
 
-    /**
-     * Measure time of important operations
-     * @param key
-     */
-    public time(key:string) {
-        console.time(this.getFormattedMessageInColor('blue', key));
-    }
-
-    /**
-     * Finish measuring time for important operations
-     * @param key
-     */
-    public timeEnd(key:string) {
-        console.timeEnd(this.getFormattedMessageInColor('blue', key));
-    }
-
     private logInColor(message:string, color:string) {
         console.log(this.getFormattedMessageInColor(color, message));
     }

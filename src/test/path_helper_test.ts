@@ -22,15 +22,15 @@ describe('PathHelper', ()=> {
         });
     });
 
-    describe('denormalizePath', ()=>{
+    describe('localizePath', ()=>{
         it('change a path from unix like to windows like if given a windows separator', ()=>{
-            const actual = PathHelper.denormalizePath('some\\ strange/.path\\ with/spaces', '\\');
+            const actual = PathHelper.localizePath('some\\ strange/.path\\ with/spaces', '\\');
 
             expect(actual).to.equal('some strange\\.path with\\spaces');
         })
 
         it('if separator is unix will return unchanged path', ()=>{
-            const actual = PathHelper.denormalizePath('some\\ strange/.path\\ with/spaces', '/');
+            const actual = PathHelper.localizePath('some\\ strange/.path\\ with/spaces', '/');
 
             expect(actual).to.equal('some\\ strange/.path\\ with/spaces');
         })

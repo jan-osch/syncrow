@@ -14,7 +14,7 @@ const TOKEN = '121cb2897o1289nnjos';
 const PORT = 4321;
 const SAMPLE_SIZE = 20000; // 20 KB
 const FILE_NUMBER = 1000; // 1000 * 20 = 20 000 KB = 20MB
-const TIMEOUT = 10000; //10 seconds
+const TIMEOUT = 20000; //20 seconds
 
 const benchmarkName = `small_files ${FILE_NUMBER} files x ${SAMPLE_SIZE}B`;
 
@@ -25,7 +25,7 @@ let startTime;
 let endTime;
 
 setTimeout(()=> {
-    throw new Error('Timeout out')
+    throw new Error(`Benchmark timeout out after: ${TIMEOUT} miliseconds`)
 }, TIMEOUT);
 
 

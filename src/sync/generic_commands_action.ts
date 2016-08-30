@@ -29,12 +29,13 @@ export function genericCommandsAction(params:SyncActionParams, callback:ErrorCal
     )
 }
 
-
 function processFileLists(params:SyncActionParams, lists:FileLists, callback:ErrorCallback, commandsFunction:CommandsFunction) {
     const combined = _.union(lists.localList, lists.remoteList);
 
     return async.each(combined,
-        (file, cb)=>processFile(params, file, cb, commandsFunction),
+
+        (file, cb)=>async.retry(RETRY, (innerCallback)=>processFile(params, file, innerCallback, commandsFunction), cb),
+
         callback
     )
 }
@@ -42,7 +43,8 @@ function processFileLists(params:SyncActionParams, lists:FileLists, callback:Err
 function processFile(params:SyncActionParams, file:string, callback:ErrorCallback, commandsFunction:CommandsFunction) {
     return async.waterfall(
         [
-            (cb)=>getMetaTupleForFile(params, file, cb),
+            (cb)=>async.retry(RETRY, (innerCallback)=>getMetaTupleForFile(params, file, innerCallback), cb),
+
             (metaTuple, cb)=>async.retry(RETRY, (innerCallback)=>commandsFunction(params, metaTuple, innerCallback), cb)
         ],
         callback

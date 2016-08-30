@@ -17,7 +17,7 @@ export class PathHelper {
      * @param separator
      * @returns {string}
      */
-    public static denormalizePath(path:string, separator?:string):string {
+    public static localizePath(path:string, separator?:string):string {
         separator = separator ? separator : path.sep;
 
         if (separator != '\\') {
