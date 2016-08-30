@@ -21,7 +21,7 @@ describe('ConnectionHelper', function () {
             let helper;
 
             const connectToHelper = ()=> {
-                const client = net.connect(3300, '0.0.0.0', (err)=> {
+                const client = net.connect(3300, '127.0.0.1', (err)=> {
                     if (err)return done(err);
                     client.setEncoding('utf8');
 
@@ -37,7 +37,7 @@ describe('ConnectionHelper', function () {
 
             helper = new ConnectionHelper({
                 listen: true,
-                localHost: '0.0.0.0',
+                localHost: '127.0.0.1',
                 localPort: 3300,
                 listenCallback: connectToHelper
             });
@@ -50,7 +50,7 @@ describe('ConnectionHelper', function () {
 
         it('will connect with remote', function (done) {
             const helper = new ConnectionHelper({
-                remoteHost: '0.0.0.0',
+                remoteHost: '127.0.0.1',
                 remotePort: 3300,
             });
 

@@ -67,7 +67,7 @@ describe('PullAction', function () {
 
                 (cb)=> startListeningEngine('pull_test/dir_list', port, {
                     authenticate: true,
-                    externalHost: '0.0.0.0',
+                    externalHost: '127.0.0.1',
                     initialToken: token,
                     watch: true,
                     sync: pullAction
@@ -81,7 +81,7 @@ describe('PullAction', function () {
                     return setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('pull_test/dir_conn', port, '0.0.0.0', {
+                (cb)=>startConnectingEngine('pull_test/dir_conn', port, '127.0.0.1', {
                     authenticate: true,
                     initialToken: token,
                     watch: true
@@ -131,7 +131,7 @@ describe('PullAction', function () {
 
                 (cb)=> startListeningEngine('pull_test/dir_list', port, {
                     authenticate: true,
-                    externalHost: '0.0.0.0',
+                    externalHost: '127.0.0.1',
                     initialToken: token,
                     watch: true,
                     sync: setDeleteLocalFiles(pullAction)
@@ -145,7 +145,7 @@ describe('PullAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('pull_test/dir_conn', port, '0.0.0.0', {
+                (cb)=>startConnectingEngine('pull_test/dir_conn', port, '127.0.0.1', {
                     authenticate: true,
                     initialToken: token,
                     watch: true

@@ -32,7 +32,7 @@ describe('Engine', function () {
                 (cb)=> {
                     startListeningEngine('engine_test/aaa', port, {
                             authenticate: true,
-                            externalHost: '0.0.0.0',
+                            externalHost: '127.0.0.1',
                             initialToken: token,
                             watch: true
                         },
@@ -43,7 +43,7 @@ describe('Engine', function () {
                 (engine, cb)=> {
                     listeningEngine = engine;
 
-                    return startConnectingEngine('engine_test/bbb', port, '0.0.0.0', {
+                    return startConnectingEngine('engine_test/bbb', port, '127.0.0.1', {
                             authenticate: true,
                             initialToken: token,
                             watch: true

@@ -20,7 +20,7 @@ const questions = [
         name: 'remoteHost',
         message: 'Connection: remote host',
         when: (answers)=>!answers.listen,
-        default: '0.0.0.0'
+        default: '127.0.0.1'
     },
 
     {
@@ -53,7 +53,7 @@ const questions = [
         type: 'input',
         name: 'externalHost',
         message: 'What is your external IP/hostname?',
-        default: '0.0.0.0',
+        default: '127.0.0.1',
         when: (answers)=>answers.listen
     },
 

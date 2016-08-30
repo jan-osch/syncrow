@@ -62,7 +62,7 @@ describe('PushAction', function () {
 
                 (cb)=> startListeningEngine('push_test/dir_conn', port, {
                     authenticate: true,
-                    externalHost: '0.0.0.0',
+                    externalHost: '127.0.0.1',
                     initialToken: token,
                     watch: true,
                     sync: pushAction
@@ -76,7 +76,7 @@ describe('PushAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('push_test/dir_list', port, '0.0.0.0', {
+                (cb)=>startConnectingEngine('push_test/dir_list', port, '127.0.0.1', {
                     authenticate: true,
                     initialToken: token,
                     watch: true
@@ -120,7 +120,7 @@ describe('PushAction', function () {
 
                 (cb)=> startListeningEngine('push_test/dir_conn', port, {
                     authenticate: true,
-                    externalHost: '0.0.0.0',
+                    externalHost: '127.0.0.1',
                     initialToken: token,
                     watch: true,
                     sync: setDeleteRemoteFiles(pushAction)
@@ -134,7 +134,7 @@ describe('PushAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('push_test/dir_list', port, '0.0.0.0', {
+                (cb)=>startConnectingEngine('push_test/dir_list', port, '127.0.0.1', {
                     authenticate: true,
                     initialToken: token,
                     watch: true
