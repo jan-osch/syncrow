@@ -58,8 +58,8 @@ export class FileContainer extends EventEmitter implements Closable {
         this.filterFunction = options.filter ? options.filter : s => false;
         this.watchTimeout = options.timeout ? options.timeout : WATCH_TIMEOUT;
         this.directoryToWatch = directoryToWatch;
-        this.blockedFiles = new Set();
-        this.cachedSyncData = new Map();
+        this.blockedFiles = new Set<string>();
+        this.cachedSyncData = new Map<string,SyncData>();
         this.fileMetaQueue = new FileMetaComputingQueue(fileLimit, this.directoryToWatch);
         this.existingPaths = null;
     }
@@ -168,7 +168,7 @@ export class FileContainer extends EventEmitter implements Closable {
             [
                 (cb)=>this.getFileTree(cb),
                 (results, cb)=> {
-                    this.existingPaths = new Set(results);
+                    this.existingPaths = new Set<string>(results);
                     debug(`initial scan ready - watching ${results.length} paths`);
                     return setImmediate(cb);
                 },

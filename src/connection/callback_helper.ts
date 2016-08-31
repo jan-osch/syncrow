@@ -9,7 +9,7 @@ export class CallbackHelper {
      * Used to exchange commands with callbacks
      */
     constructor() {
-        this.callbackMap = new Map();
+        this.callbackMap = new Map<string,Function>();
     }
 
     /**

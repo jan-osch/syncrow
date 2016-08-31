@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as git from "git-rev-sync";
 import * as async from "async";
+import {ErrorCallback} from "../utils/logger";
 
 const RESULTS_FILE = 'housekeeping/results.json';
 

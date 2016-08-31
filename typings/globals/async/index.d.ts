@@ -5,7 +5,7 @@ interface Dictionary<T> { [key:string]:T;
 
 interface ErrorCallback { (err?:Error):void;
 }
-interface AsyncResultCallback<T> { (err:Error, result:T):void;
+interface AsyncResultCallback<T> { (err:Error, result?:T):void;
 }
 interface AsyncResultArrayCallback<T> { (err:Error, results:T[]):void;
 }

@@ -22,7 +22,7 @@ export class EventMessenger extends EventEmitter implements Closable {
     private parseHelper:ParseHelper;
     private callbackHelper:CallbackHelper;
 
-    static response:'eventMessengerResponse';
+    static response:string = 'eventMessengerResponse';
 
     static events = {
         message: 'message',

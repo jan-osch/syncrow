@@ -12,7 +12,7 @@ describe('ConnectionHelper', function () {
     });
 
     it('will throw error when it should listen and no PORT, or listen callback is specified', function () {
-        expect(()=>new ConnectionHelper({listen: true}).to.throw;
+        expect(()=>new ConnectionHelper({listen: true})).to.throw;
     });
 
     describe('getNewSocket', function () {

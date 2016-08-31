@@ -1,5 +1,4 @@
 import {EventEmitter} from "events";
-import {debugFor} from "./logger";
 
 export class EventCounter extends EventEmitter {
     static events = {
@@ -13,7 +12,7 @@ export class EventCounter extends EventEmitter {
         super();
 
         this.numberUnfinishedCounters = eventsAndCounts.length;
-        this.listenerMap = new Map();
+        this.listenerMap = new Map<string,Function>();
 
         eventsAndCounts.forEach(event=> {
             const listener = this.createCountFunction(event.count);

@@ -10,7 +10,6 @@ import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
-import {PathHelper} from "../fs_helpers/path_helper";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -110,7 +109,7 @@ function printDebugAboutConfig(finalConfig:ProgramOptions) {
     debug(`final config: ${JSON.stringify(finalConfig, null, 2)}`);
 }
 
-function ifErrorThrow(err?:Error) {
+function ifErrorThrow(err?:Error|any) {
     if (err) {
         if (err.stack) console.error(err.stack);
         throw err;

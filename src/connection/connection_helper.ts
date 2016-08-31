@@ -51,7 +51,7 @@ export class ConnectionHelper implements Closable {
      */
     constructor(params:ConnectionHelperParams) {
         this.params = this.validateAndUpdateParams(params);
-        this.oneTimeServers = new Set();
+        this.oneTimeServers = new Set<Server>();
     }
 
 

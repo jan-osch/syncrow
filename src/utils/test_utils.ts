@@ -58,7 +58,7 @@ export function createPath(path:string, content:string|Buffer, directory:boolean
 export interface CreatePathArgument {
     path:string;
     content?:string|Buffer;
-    directory:boolean;
+    directory?:boolean;
 }
 
 /**

@@ -8,6 +8,7 @@ import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pushAction} from "../sync/push_action";
 import saveResults from "./save_results";
+import {CreatePathArgument} from "../../../../../projects/syncrow/src/utils/test_utils";
 
 
 const TOKEN = '121cb2897o1289nnjos';
@@ -28,9 +29,9 @@ setTimeout(()=> {
     throw new Error('Timeout out')
 }, TIMEOUT);
 
-const paths:Array< = [
+const paths:Array<CreatePathArgument> = [
     {path: 'build/benchmark/aaa', directory: true},
-    {path: 'build/benchmark/bbb', directory: true},
+    {path: 'build/benchmark/bbb', directory: true}
 ];
 
 for (let i = 0; i < FILE_NUMBER; i++) {
