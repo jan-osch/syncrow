@@ -4,6 +4,7 @@
 /// <reference path="globals/chokidar/index.d.ts" />
 /// <reference path="globals/commander/index.d.ts" />
 /// <reference path="globals/debug/index.d.ts" />
+/// <reference path="globals/es6-collections/index.d.ts" />
 /// <reference path="globals/inquirer/index.d.ts" />
 /// <reference path="globals/lodash/index.d.ts" />
 /// <reference path="globals/mkdirp/index.d.ts" />

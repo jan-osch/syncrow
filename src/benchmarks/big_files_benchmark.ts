@@ -28,7 +28,7 @@ setTimeout(()=> {
     throw new Error('Timeout out')
 }, TIMEOUT);
 
-const paths = [
+const paths:Array< = [
     {path: 'build/benchmark/aaa', directory: true},
     {path: 'build/benchmark/bbb', directory: true},
 ];

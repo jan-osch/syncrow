@@ -68,13 +68,13 @@ function createFilterFunction(filterStrings:Array<string>, baseDir:string):Filte
 
     return (s:string) => {
         const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
+        debug(`string s: ${s} to actual: ${actual}`);
         return anymatch(filterStrings, actual);
     };
 }
 
 /**
  * @param chosenConfig
- * @returns {undefined}
  */
 function startEngine(chosenConfig:ProgramOptions) {
     if (chosenConfig.listen) {

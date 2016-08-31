@@ -54,11 +54,18 @@ export function createPath(path:string, content:string|Buffer, directory:boolean
     return fs.writeFile(path, content, doneCallback);
 }
 
+
+export interface CreatePathArgument {
+    path:string;
+    content?:string|Buffer;
+    directory:boolean;
+}
+
 /**
  * @param files
  * @param callback
  */
-export function createPathSeries(files:Array<{path:string, content?:string|Buffer, directory?:boolean}>, callback:ErrorCallback) {
+export function createPathSeries(files:Array<CreatePathArgument>, callback:ErrorCallback) {
     return async.eachSeries(files,
 
         (file, cb)=> createPath(file.path, file.content, file.directory, cb),
