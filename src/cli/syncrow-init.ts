@@ -1,6 +1,6 @@
 import * as inquirer from "inquirer";
-import {AuthorisationHelper} from "../connection/authorisation_helper";
 import * as fs from "fs";
+import * as crypto from "crypto";
 import {configurationFileName} from "./program";
 
 const noActionText = `No Action - existing files will be ignored, only new changes will be synced`;
@@ -58,6 +58,13 @@ const questions = [
     },
 
     {
+        type: 'input',
+        name: 'rawFilter',
+        message: 'Please enter comma-separated anymatch patterns for files that should be ignored',
+        default: ''
+    },
+
+    {
         type: 'list',
         name: 'rawStrategy',
         message: 'What synchronization strategy for every new connection would you like to choose?',
@@ -70,54 +77,52 @@ const questions = [
     },
 
     {
+        type: 'input',
+        name: 'initialToken',
+        message: 'Please enter password for obtaining connection',
+    },
+
+    {
+        type: 'confirm',
+        name: 'advanced',
+        message: 'Would you like to setup advanced options?',
+        default: false,
+    },
+
+    /**
+     * Advanced:
+     */
+
+    {
         type: 'confirm',
         name: 'deleteRemote',
         message: 'Would you like to delete remote files on push?',
-        default: false,
-        when: (answers)=>answers.rawStrategy === pushActionText
+        default: true,
+        when: (answers)=>answers.advanced && answers.rawStrategy === pushActionText
     },
 
     {
         type: 'confirm',
         name: 'deleteLocal',
         message: 'Would you like to delete local files on pull?',
-        default: false,
-        when: (answers)=>answers.rawStrategy=== pullActionText
-    },
-
-    {
-        type: 'input',
-        name: 'rawFilter',
-        message: 'Please enter comma-separated anymatch patterns for files that should be ignored',
-        default: ''
-    },
-
-    {
-        type: 'input',
-        name: 'initialToken',
-        message: 'Please enter token for obtaining connection (If you want to generate new token - leave blank)',
-    },
-
-    {
-        type: 'confirm',
-        name: 'generateToken',
-        message: 'Would you like to generate a new token?',
         default: true,
-        when: (answers)=> !answers.initialToken
+        when: (answers)=>answers.advanced && answers.rawStrategy === pullActionText
     },
 
     {
         type: 'confirm',
         name: 'authenticate',
         message: 'Would you like to authenticate transport sockets?',
-        default: true
+        default: true,
+        when: (answers)=>answers.advanced
     },
 
     {
         type: 'confirm',
         name: 'watch',
         message: 'Would you like to watch local file system?',
-        default: true
+        default: true,
+        when: (answers)=>answers.advanced
     },
 
     {
@@ -125,16 +130,27 @@ const questions = [
         name: 'reconnect',
         message: 'Would you like to reconnect when connection was lost?',
         default: true,
-        when: (answers)=>!answers.listen
+        when: (answers)=>answers.advanced && !answers.listen
     }
 ];
 
 inquirer.prompt(questions).then(answers=> {
-    if (answers.generateToken) {
-        const token = AuthorisationHelper.generateToken();
-        console.log(`Your new token will be: ${token}`);
-        answers.initialToken = token;
-        delete answers.generateToken;
+    const hash = crypto.createHash('sha256');
+    hash.update(answers.initialToken);
+    answers.initialToken = hash.digest().toString('hex');
+
+    if (!answers.advanced) {
+        answers.reconnct = true;
+        answers.watch = true;
+        answers.authenticate = true;
+
+        if (answers.rawStrategy === pullActionText) {
+            answers.deleteLocal = true;
+        }
+
+        if (answers.rawStrategy === pushActionText) {
+            answers.deleteRemote = true;
+        }
     }
 
     if (answers.reconnect) {

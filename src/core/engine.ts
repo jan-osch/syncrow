@@ -19,13 +19,39 @@ export interface EngineOptions {
 
 export class Engine extends EventEmitter implements SyncActionSubject, Closable {
     static events = {
+        /**
+         * @event emitted when new file created by remote has been downloaded
+         * @param {String} filePath
+         */
         newFile: 'newFile',
+        /**
+         * @event emitted when file changed by remote has been downloaded
+         * @param {String} filePath
+         */
         changedFile: 'changedFile',
+        /**
+         * @event emitted when path (file or directory) has been deleted locally
+         * @param {String} path
+         */
         deletedPath: 'deletedPath',
+        /**
+         * @event emitted when directory created by remote has been created locally
+         * @param {String] dirPath
+         */
         newDirectory: 'newDirectory',
 
+        /**
+         * @event emitted on error
+         * @param {Error} error
+         */
         error: 'error',
+        /**
+         * @event emitted when synchronization with remote has finished
+         */
         synced: 'synced',
+        /**
+         * @event emitted when engine is shutting down
+         */
         shutdown: 'shutdown',
     };
 

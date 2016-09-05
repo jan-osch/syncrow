@@ -1,5 +1,5 @@
 import * as async from "async";
-import {createPathSeries} from "../utils/test_utils_2";
+import {createPathSeries, CreatePathArgument} from "../utils/fs_test_utils";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
@@ -8,7 +8,6 @@ import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pushAction} from "../sync/push_action";
 import saveResults from "./save_results";
-import {CreatePathArgument} from "../../../../../projects/syncrow/src/utils/test_utils";
 
 
 const TOKEN = '121cb2897o1289nnjos';

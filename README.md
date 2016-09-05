@@ -1,64 +1,136 @@
 # Syncrow
 
-Real time file watching synchronization with sockets.
+Real time file synchronization using sockets.
 
 ## Installation
 
 `$ npm install -g syncrow`
 
+## Configuration
 
-## Using as a command line tool
+You need to configure syncrow in directory that you want to synchronize.
 
-First install syncrow on both machines that you want to connect.
+`$ syncrow init`
 
-Then configure syncrow on machine that will be listening for connections
+This command will run an interactive setup, 
+similar to `npm init`, it will ask questions and save your answers.
 
-`user@machine1 $ syncrow init`
+The result will be a `.syncrow.json` with your setup.
 
-Then you need to start the application on the second machine.
-In the following command you need to use the others machine IP
-(here: example 169.0.0.2).
+## Running
 
-`user@machine2 $ syncrow --host 169.0.0.2`
+`$ syncrow run` or just `$ syncrow`
 
-Once both machines connected the applications will start syncrhonization.
+This command will look for `.syncrow.json` file in current directory, 
+if the file exists it will start a *syncrow* process using it as configuration.  
 
-## Indirect connection
+## Connecting two machines
 
-If you want to connect more machines or two machines that do not have a public IP,
-you can use `syncrow-server` command.
+First install syncrow globally on both machines that you want to connect.
+Setup one machine to listen for incoming connections:
+*(Your password will be stored as a hash)*
 
-First you need to start syncrow server on a machine that is reachable from all the
-machines that you want to connect (for example you can use a public cloud virtual machine with
-public IP). One syncrow server can support multiple synchronization buckets
-(each bucket is like a shared directory).
+```
+user@server $ syncrow init
+? Do you want to listen for connection? Yes
+? On which local port would you like to listen 2510
+? What is your external IP/hostname? 192.168.0.6
+? Please enter comma-separated anymatch patterns for files that should be ignored .git,node_modules
+? What synchronization strategy for every new connection would you like to choose? No Action - existing files will be ignored, only new changes will be synced
+? Please enter password for obtaining connection my_horse_is_amazing
+? Would you like to setup advanced options? No
+```
 
-Create an empty directory for buckets and a sample bucket:
+Then configure *syncrow* on second machine that will connect:
 
-` root@server $ mkdir -p buckets/my_bucket`
+```
+user@laptop $ syncrow init
+? Do you want to listen for connection? No
+? Connection: remote host 192.168.0.6
+? Connection: remote port 2510
+? Please enter comma-separated anymatch patterns for files that should be ignored .git,.idea,node_modules
+? What synchronization strategy for every new connection would you like to choose? Push - when other party connects all remote files will be overwritten by those local
+? Please enter password for obtaining connection my_horse_is_amazing
+? Would you like to setup advanced options? No
+```
 
-Navigate to the buckets directory:
+Once configured - start *syncrow* on both machines:
 
-` root@server $ cd buckets`
+`user@server $ syncrow run`
 
-Start the server (it will detect the `my_bucket` directory you created):
+and 
 
- `root@server $ syncrow-server`
+`user@laptop $ syncrow run`
 
-Connect from `machine1` to the server. This command will connect directly to my_bucket
+After a connection is obtained - *syncrow* will sync existing files.
+This will run both *syncrow* instances as a foreground processes.
+It is possible to connect multiple connecting *syncrow* instances to single *syncrow* listener
 
-` user@machine1 $ syncrow --host 173.31.10.22 --bucket my_bucket`
+## Using as a library
+It is possible to use *syncrow* as a part of node program.
 
-Then just repeat the process on each machine you want to connect:
 
-` user@machine2 $ syncrow --host 173.31.10.22 --bucket my_bucket`
+```js
+const syncrow = require('syncrow');
 
-## TODOS:
+syncrow.listen('./path_to/watch', 2510, {externalHost: '192.168.0.6'}, (err, engine)=>{
+    if(err) return console.error(err);
+    
+    engine.on('newFile', (file)=>console.log(`remote created a new file: ${file}`));
+    
+    engine.on('changedFile', (file)=>console.log(`remote changed file: ${file}`));
+    
+    engine.on('deletedPath', (path)=>console.log(`remote deleted path (file or directory): ${path}`));
+   
+    // etc.
+});
 
-* remove express
-* remove gulp
-* make it as lightweight as possible
-* add more tests
+```
+
+Full list of events emitted by engine:
+```js
+const engineEvents = {
+    /**
+     * @event emitted when new file created by remote has been downloaded
+     * @param {String} filePath
+     */
+    newFile: 'newFile',
+    /**
+     * @event emitted when file changed by remote has been downloaded
+     * @param {String} filePath
+     */
+    changedFile: 'changedFile',
+    /**
+     * @event emitted when path (file or directory) has been deleted locally
+     * @param {String} path
+     */
+    deletedPath: 'deletedPath',
+    /**
+     * @event emitted when directory created by remote has been created locally
+     * @param {String] dirPath
+     */
+    newDirectory: 'newDirectory',
+
+    /**
+     * @event emitted on error
+     * @param {Error} error
+     */
+    error: 'error',
+    /**
+     * @event emitted when synchronization with remote has finished
+     */
+    synced: 'synced',
+    /**
+     * @event emitted when engine is shutting down
+     */
+    shutdown: 'shutdown',
+};
+```
+ 
+
+
+## Licence
+MIT
 
 
 

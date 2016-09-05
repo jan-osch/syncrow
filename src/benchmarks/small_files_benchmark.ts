@@ -1,5 +1,5 @@
 import * as async from "async";
-import {createPathSeries} from "../utils/test_utils_2";
+import {createPathSeries} from "../utils/fs_test_utils";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
