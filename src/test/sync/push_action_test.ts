@@ -20,6 +20,8 @@ describe('PushAction', function () {
     beforeEach((done)=> {
         return async.waterfall(
             [
+                (cb)=>removePath('push_test', cb),
+
                 (cb)=>createPathSeries(
                     [
                         {path: 'push_test/dir_conn', directory: true},
