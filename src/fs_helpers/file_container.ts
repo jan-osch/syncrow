@@ -5,7 +5,7 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {PathHelper} from "./path_helper";
 import {SyncData} from "../sync/sync_actions";
 import {FileMetaComputingQueue} from "./file_meta_queue";
-import {readTree} from "./read_tree";
+import {readTree} from "./read_tree_2";
 import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
 import * as async from "async";

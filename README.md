@@ -2,16 +2,18 @@
 
 Real time file watching synchronization with sockets.
 
-## Getting started - Direct connection
-
-First install the package globally on both machines
+## Installation
 
 `$ npm install -g syncrow`
 
-Then start the application on a machine that will listen for connection.
-This command will start a syncrow listening client in current directory.
 
-`user@machine1 $ syncrow  --listen`
+## Using as a command line tool
+
+First install syncrow on both machines that you want to connect.
+
+Then configure syncrow on machine that will be listening for connections
+
+`user@machine1 $ syncrow init`
 
 Then you need to start the application on the second machine.
 In the following command you need to use the others machine IP

@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {AuthorisationHelper} from "../connection/authorisation_helper";
-import {obtainTwoSockets} from "../utils/test_utils";
+import {obtainTwoSockets} from "../utils/fs_test_utils";
 
 
 describe('AuthorisationHelper', function () {

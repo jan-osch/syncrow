@@ -1,5 +1,5 @@
 import * as async from "async";
-import {createPathSeries, removePath, compareTwoFiles, getRandomString, compareDirectories} from "../utils/test_utils";
+import {createPathSeries, removePath, compareTwoFiles, getRandomString, compareDirectories} from "../utils/fs_test_utils";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";

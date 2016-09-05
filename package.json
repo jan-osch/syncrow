@@ -7,7 +7,9 @@
     "test": "mocha --recursive build/test",
     "build": "npm run clear && tsc || true",
     "clear": "rm -Rf build",
-    "benchmark": "./housekeeping/benchmarks.sh"
+    "benchmark": "./housekeeping/benchmarks.sh",
+    "lint": "tslint `find src -name '*.ts*'`",
+    "clearMaps": "rm -Rf build/**/*.js.map"
   },
   "repository": {
     "type": "git",
@@ -43,6 +45,7 @@
     "rewire": "^2.5.1",
     "sinon": "^1.17.4",
     "sinon-chai": "^2.8.0",
+    "tslint": "^3.15.1",
     "typescript": "^1.8.10"
   }
 }

@@ -1,10 +1,19 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
     "target": "ES5",
-    "outDir": "build",
+    "outDir": "./build",
     "rootDir": "./src",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitOnError": false,
     "noImplicitAny": false,
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": false,
+    "pretty": true,
     "sourceMap": true
   },
   "exclude": [
