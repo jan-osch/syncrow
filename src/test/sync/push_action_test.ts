@@ -8,24 +8,25 @@ import {pushAction} from "../../sync/push_action";
 import {setDeleteRemoteFiles} from "../../sync/sync_actions";
 import {expect} from "chai";
 
+const TEST_DIR = 'push_test';
+const TOKEN = '121cb2897o1289nnjos';
+const PORT = 4321;
 
 describe('PushAction', function () {
 
     let listeningEngine;
     let connectingEngine;
 
-    const token = '121cb2897o1289nnjos';
-    const port = 4321;
 
     beforeEach((done)=> {
         return async.waterfall(
             [
-                (cb)=>removePath('push_test', cb),
+                (cb)=>removePath(TEST_DIR, cb),
 
                 (cb)=>createPathSeries(
                     [
-                        {path: 'push_test/dir_conn', directory: true},
-                        {path: 'push_test/dir_list', directory: true}
+                        {path: `${TEST_DIR}/dir_conn`, directory: true},
+                        {path: `${TEST_DIR}/dir_list`, directory: true}
                     ],
                     cb
                 ),
@@ -39,7 +40,7 @@ describe('PushAction', function () {
         if (listeningEngine)listeningEngine.shutdown();
         if (connectingEngine)connectingEngine.shutdown();
 
-        return removePath('push_test', done);
+        return removePath(TEST_DIR, done);
     });
 
 
@@ -52,20 +53,20 @@ describe('PushAction', function () {
                     const sameContent = getRandomString(500);
                     return createPathSeries(
                         [
-                            {path: 'push_test/dir_conn/c.txt', content: getRandomString(50000)},
-                            {path: 'push_test/dir_conn/d.txt', content: getRandomString(50000)},
-                            {path: 'push_test/dir_conn/e.txt', content: getRandomString(500)},
-                            {path: 'push_test/dir_conn/same_file.txt', content: sameContent},
-                            {path: 'push_test/dir_list/same_file.txt', content: sameContent},
+                            {path: `${TEST_DIR}/dir_conn/c.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/d.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/e.txt`, content: getRandomString(500)},
+                            {path: `${TEST_DIR}/dir_conn/same_file.txt`, content: sameContent},
+                            {path: `${TEST_DIR}/dir_list/same_file.txt`, content: sameContent},
                         ],
                         cb
                     )
                 },
 
-                (cb)=> startListeningEngine('push_test/dir_conn', port, {
+                (cb)=> startListeningEngine(`${TEST_DIR}/dir_conn`, PORT, {
                     authenticate: true,
                     externalHost: '127.0.0.1',
-                    initialToken: token,
+                    initialToken: TOKEN,
                     watch: true,
                     sync: pushAction
                 }, cb),
@@ -78,9 +79,9 @@ describe('PushAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('push_test/dir_list', port, '127.0.0.1', {
+                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_list`, PORT, '127.0.0.1', {
                     authenticate: true,
-                    initialToken: token,
+                    initialToken: TOKEN,
                     watch: true
                 }, cb),
 
@@ -95,13 +96,13 @@ describe('PushAction', function () {
                     counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories('push_test/dir_list', 'push_test/dir_conn', cb)
+                (cb)=>compareDirectories(`${TEST_DIR}/dir_list`, `${TEST_DIR}/dir_conn`, cb)
             ],
             done
         );
     });
 
-    it('with delete remoteFiles will delete remote filesremote ', function (done) {
+    it('with delete remoteFiles will delete remote files remote ', function (done) {
         let counter:EventCounter;
 
         async.waterfall(
@@ -110,20 +111,20 @@ describe('PushAction', function () {
                     const contentF = getRandomString(500);
                     return createPathSeries(
                         [
-                            {path: 'push_test/dir_conn/c.txt', content: getRandomString(50000)},
-                            {path: 'push_test/dir_conn/d.txt', content: getRandomString(50000)},
-                            {path: 'push_test/dir_conn/e.txt', content: getRandomString(500)},
-                            {path: 'push_test/dir_conn/f.txt', content: contentF},
-                            {path: 'push_test/dir_list/file_to_delete.txt', content: contentF},
+                            {path: `${TEST_DIR}/dir_conn/c.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/d.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/e.txt`, content: getRandomString(500)},
+                            {path: `${TEST_DIR}/dir_conn/f.txt`, content: contentF},
+                            {path: `${TEST_DIR}/dir_list/file_to_delete.txt`, content: contentF},
                         ],
                         cb
                     )
                 },
 
-                (cb)=> startListeningEngine('push_test/dir_conn', port, {
+                (cb)=> startListeningEngine(`${TEST_DIR}/dir_conn`, PORT, {
                     authenticate: true,
                     externalHost: '127.0.0.1',
-                    initialToken: token,
+                    initialToken: TOKEN,
                     watch: true,
                     sync: setDeleteRemoteFiles(pushAction)
                 }, cb),
@@ -136,9 +137,9 @@ describe('PushAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('push_test/dir_list', port, '127.0.0.1', {
+                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_list`, PORT, '127.0.0.1', {
                     authenticate: true,
-                    initialToken: token,
+                    initialToken: TOKEN,
                     watch: true
                 }, cb),
 
@@ -153,11 +154,11 @@ describe('PushAction', function () {
                     counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories('push_test/dir_list', 'push_test/dir_conn', cb),
+                (cb)=>compareDirectories(`${TEST_DIR}/dir_list`, `${TEST_DIR}/dir_conn`, cb),
 
                 (cb)=> {
 
-                    expect(pathExists('push_test/dir_list/file_to_delete.txt')).to.equal(false);
+                    expect(pathExists(`${TEST_DIR}/dir_list/file_to_delete.txt`)).to.equal(false);
 
                     setImmediate(cb);
                 }

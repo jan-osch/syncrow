@@ -1,5 +1,11 @@
 import * as async from "async";
-import {createPathSeries, removePath, compareTwoFiles, getRandomString, compareDirectories} from "../utils/fs_test_utils";
+import {
+    createPathSeries,
+    removePath,
+    compareTwoFiles,
+    getRandomString,
+    compareDirectories
+} from "../utils/fs_test_utils";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
@@ -8,6 +14,7 @@ import * as fs from "fs";
 import {EventCounter} from "../utils/event_counter";
 
 const FS_TIMEOUT = 400;
+const TEST_DIR = 'engine_test';
 
 describe('Engine', function () {
 
@@ -21,16 +28,18 @@ describe('Engine', function () {
     beforeEach((done)=> {
         return async.waterfall(
             [
+                (cb)=>removePath(TEST_DIR, cb),
+
                 (cb)=>createPathSeries(
                     [
-                        {path: 'engine_test/aaa', directory: true},
-                        {path: 'engine_test/bbb', directory: true}
+                        {path: `${TEST_DIR}/aaa`, directory: true},
+                        {path: `${TEST_DIR}/bbb`, directory: true}
                     ],
                     cb
                 ),
 
                 (cb)=> {
-                    startListeningEngine('engine_test/aaa', port, {
+                    startListeningEngine(`${TEST_DIR}/aaa`, port, {
                             authenticate: true,
                             externalHost: '127.0.0.1',
                             initialToken: token,
@@ -43,7 +52,7 @@ describe('Engine', function () {
                 (engine, cb)=> {
                     listeningEngine = engine;
 
-                    return startConnectingEngine('engine_test/bbb', port, '127.0.0.1', {
+                    return startConnectingEngine(`${TEST_DIR}/bbb`, port, '127.0.0.1', {
                             authenticate: true,
                             initialToken: token,
                             watch: true
@@ -65,7 +74,7 @@ describe('Engine', function () {
         if (listeningEngine)listeningEngine.shutdown();
         if (connectingEngine)connectingEngine.shutdown();
 
-        return removePath('engine_test', done);
+        return removePath(`${TEST_DIR}`, done);
     });
 
 
@@ -77,9 +86,9 @@ describe('Engine', function () {
 
         async.series(
             [
-                (cb)=>mkdirp('engine_test/aaa/directory', cb),
+                (cb)=>mkdirp(`${TEST_DIR}/aaa/directory`, cb),
 
-                (cb)=>fs.writeFile('engine_test/aaa/file.txt', getRandomString(4000), cb),
+                (cb)=>fs.writeFile(`${TEST_DIR}/aaa/file.txt`, getRandomString(4000), cb),
 
                 (cb)=> {
                     if (counter.hasFinished()) return setImmediate(cb);
@@ -87,7 +96,7 @@ describe('Engine', function () {
                     return counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareTwoFiles('engine_test/aaa/file.txt', 'engine_test/bbb/file.txt', cb)
+                (cb)=>compareTwoFiles(`${TEST_DIR}/aaa/file.txt`, `${TEST_DIR}/bbb/file.txt`, cb)
             ],
 
             done
@@ -99,11 +108,11 @@ describe('Engine', function () {
 
         async.series(
             [
-                (cb)=>mkdirp('engine_test/bbb/', cb),
+                (cb)=>mkdirp(`${TEST_DIR}/bbb/`, cb),
 
-                (cb)=>fs.writeFile('engine_test/bbb/file_1.txt', '123123123', 'utf8', cb),
+                (cb)=>fs.writeFile(`${TEST_DIR}/bbb/file_1.txt`, '123123123', 'utf8', cb),
 
-                (cb)=>setTimeout(()=>removePath('engine_test/bbb/file_1.txt', cb), FS_TIMEOUT),
+                (cb)=>setTimeout(()=>removePath(`${TEST_DIR}/bbb/file_1.txt`, cb), FS_TIMEOUT),
 
                 (cb)=> {
                     if (counter.hasFinished()) return setImmediate(cb);
@@ -126,13 +135,13 @@ describe('Engine', function () {
                 (cb)=> {
                     return createPathSeries(
                         [
-                            {path: 'engine_test/aaa/a.txt', content: getRandomString(50000)},
-                            {path: 'engine_test/aaa/b.txt', content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/aaa/a.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/aaa/b.txt`, content: getRandomString(50000)},
 
-                            {path: 'engine_test/bbb/c.txt', content: getRandomString(50000)},
-                            {path: 'engine_test/bbb/d.txt', content: getRandomString(500000)},
-                            {path: 'engine_test/bbb/e.txt', content: getRandomString(500)},
-                            {path: 'engine_test/bbb/f.txt', content: getRandomString(500)},
+                            {path: `${TEST_DIR}/bbb/c.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/bbb/d.txt`, content: getRandomString(500000)},
+                            {path: `${TEST_DIR}/bbb/e.txt`, content: getRandomString(500)},
+                            {path: `${TEST_DIR}/bbb/f.txt`, content: getRandomString(500)},
                         ],
                         cb
                     )
@@ -150,7 +159,7 @@ describe('Engine', function () {
                     return connectingCounter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories('engine_test/aaa', 'engine_test/bbb', cb)
+                (cb)=>compareDirectories(`${TEST_DIR}/aaa`, `${TEST_DIR}/bbb`, cb)
             ],
 
             done

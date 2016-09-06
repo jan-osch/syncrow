@@ -27,12 +27,12 @@ describe('PathHelper', ()=> {
             const actual = PathHelper.localizePath('some\\ strange/.path\\ with/spaces', '\\');
 
             expect(actual).to.equal('some strange\\.path with\\spaces');
-        })
+        });
 
         it('if separator is unix will return unchanged path', ()=>{
             const actual = PathHelper.localizePath('some\\ strange/.path\\ with/spaces', '/');
 
             expect(actual).to.equal('some\\ strange/.path\\ with/spaces');
-        })
+        });
     })
 });
