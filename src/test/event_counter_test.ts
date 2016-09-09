@@ -2,7 +2,6 @@ import {EventEmitter} from "events";
 import {EventCounter} from "../utils/event_counter";
 import {expect} from "chai";
 
-
 describe('EventCounter', function () {
     it('will emit done event when given event was emitted count number of times', function (done) {
         let number = 5;

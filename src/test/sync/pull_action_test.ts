@@ -9,24 +9,27 @@ import {expect} from "chai";
 import {pullAction} from "../../sync/pull_action";
 import * as sinon from "sinon";
 
+const token = '12897371023o1289nnjos';
+const port = 4321;
+const TEST_DIR = 'pull_test';
+
 describe('PullAction', function () {
 
     let listeningEngine;
     let connectingEngine;
     let sandbox;
 
-    const token = '121cb2897o1289nnjos';
-    const port = 4321;
-
     beforeEach((done)=> {
         sandbox = sinon.sandbox.create();
 
         return async.waterfall(
             [
+                (cb)=>removePath(TEST_DIR, cb),
                 (cb)=>createPathSeries(
                     [
-                        {path: 'pull_test/dir_list', directory: true},
-                        {path: 'pull_test/dir_conn', directory: true}
+                        {path: TEST_DIR, directory: true},
+                        {path: `${TEST_DIR}/dir_list`, directory: true},
+                        {path: `${TEST_DIR}/dir_conn`, directory: true}
                     ],
                     cb
                 ),
@@ -41,7 +44,7 @@ describe('PullAction', function () {
         if (connectingEngine)connectingEngine.shutdown();
         sandbox.restore();
 
-        return removePath('pull_test', done);
+        return removePath(TEST_DIR, done);
     });
 
 
@@ -55,17 +58,17 @@ describe('PullAction', function () {
 
                     return createPathSeries(
                         [
-                            {path: 'pull_test/dir_conn/a.txt', content: getRandomString(50000)},
-                            {path: 'pull_test/dir_conn/b.txt', content: getRandomString(50000)},
-                            {path: 'pull_test/dir_conn/c.txt', content: getRandomString(500)},
-                            {path: 'pull_test/dir_conn/same.txt', content: sameContent},// the same file
-                            {path: 'pull_test/dir_list/same.txt', content: sameContent} // should not be synced
+                            {path: `${TEST_DIR}/dir_conn/a.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/b.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/c.txt`, content: getRandomString(500)},
+                            {path: `${TEST_DIR}/dir_conn/same.txt`, content: sameContent},// the same file
+                            {path: `${TEST_DIR}/dir_list/same.txt`, content: sameContent} // should not be synced
                         ],
                         cb
                     )
                 },
 
-                (cb)=> startListeningEngine('pull_test/dir_list', port, {
+                (cb)=> startListeningEngine(`${TEST_DIR}/dir_list`, port, {
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: token,
@@ -81,7 +84,7 @@ describe('PullAction', function () {
                     return setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('pull_test/dir_conn', port, '127.0.0.1', {
+                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_conn`, port, '127.0.0.1', {
                     authenticate: true,
                     initialToken: token,
                     watch: true
@@ -98,7 +101,7 @@ describe('PullAction', function () {
                     counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories('pull_test/dir_conn', 'pull_test/dir_list', cb),
+                (cb)=>compareDirectories(`${TEST_DIR}/dir_conn`, `${TEST_DIR}/dir_list`, cb),
 
                 (cb)=> {
                     expect(listeningEngine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt')).to.be.ok;
@@ -119,17 +122,17 @@ describe('PullAction', function () {
                     const sameContent = getRandomString(500);
                     return createPathSeries(
                         [
-                            {path: 'pull_test/dir_conn/a.txt', content: getRandomString(50000)},
-                            {path: 'pull_test/dir_conn/b.txt', content: getRandomString(50000)},
-                            {path: 'pull_test/dir_conn/same.txt', content: sameContent},
-                            {path: 'pull_test/dir_list/same.txt', content: sameContent},
-                            {path: 'pull_test/dir_list/file_to_delete.txt', content: getRandomString(500)},
+                            {path: `${TEST_DIR}/dir_conn/a.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/b.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_conn/same.txt`, content: sameContent},
+                            {path: `${TEST_DIR}/dir_list/same.txt`, content: sameContent},
+                            {path: `${TEST_DIR}/dir_list/file_to_delete.txt`, content: getRandomString(500)},
                         ],
                         cb
                     )
                 },
 
-                (cb)=> startListeningEngine('pull_test/dir_list', port, {
+                (cb)=> startListeningEngine(`${TEST_DIR}/dir_list`, port, {
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: token,
@@ -145,7 +148,7 @@ describe('PullAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine('pull_test/dir_conn', port, '127.0.0.1', {
+                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_conn`, port, '127.0.0.1', {
                     authenticate: true,
                     initialToken: token,
                     watch: true
@@ -162,11 +165,11 @@ describe('PullAction', function () {
                     counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories('pull_test/dir_conn', 'pull_test/dir_list', cb),
+                (cb)=>compareDirectories(`${TEST_DIR}/dir_conn`, `${TEST_DIR}/dir_list`, cb),
 
                 (cb)=> {
 
-                    expect(pathExists('pull_test/dir_conn/file_to_delete.txt')).to.equal(false);
+                    expect(pathExists(`${TEST_DIR}/dir_conn/file_to_delete.txt`)).to.equal(false);
                     expect(listeningEngine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt')).to.be.ok;
 
                     setImmediate(cb);

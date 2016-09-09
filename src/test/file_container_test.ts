@@ -12,15 +12,26 @@ import {PathHelper} from "../fs_helpers/path_helper";
 
 chai.use(sinonChai);
 
-const fileContainerTimeout = 400;
+const FS_TIMEOUT = 400;
+const TEST_DIR = 'testDir';
 
 describe('FileContainer', ()=> {
     let sandbox;
     let container:FileContainer;
 
-    beforeEach(function () {
+    beforeEach(function (done) {
         sandbox = sinon.sandbox.create();
         sandbox.stub(console, 'info');
+
+        return async.waterfall(
+            [
+                (cb)=>removePath(TEST_DIR, cb),
+                (cb)=>createPath(TEST_DIR, null, true, cb),
+            ],
+
+            done
+        )
+
     });
 
     afterEach(function () {
@@ -32,12 +43,11 @@ describe('FileContainer', ()=> {
 
     describe('getFileTree', ()=> {
         it('list of files from the directory', function (done) {
-            const testDir = 'testDir';
+
             const testFiles = [
-                {path: testDir, directory: true},
-                {path: `${testDir}/file1.txt`, content: `ibberish`},
-                {path: `${testDir}/file2.txt`, content: `jk123jj9casc`},
-                {path: `${testDir}/dir`, directory: true},
+                {path: `${TEST_DIR}/file1.txt`, content: `ibberish`},
+                {path: `${TEST_DIR}/file2.txt`, content: `jk123jj9casc`},
+                {path: `${TEST_DIR}/dir`, directory: true},
             ];
             const expected = [
                 'file1.txt', 'file2.txt', 'dir'
@@ -45,10 +55,9 @@ describe('FileContainer', ()=> {
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         container.beginWatching(cb);
                     },
                     (cb)=> {
@@ -58,22 +67,19 @@ describe('FileContainer', ()=> {
                             expect(files).to.have.members(expected);
                             cb();
                         });
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
         });
 
         it('list of files from the directory, including hidden files and directories, also from deeply nested directories', function (done) {
-            const testDir = 'testDir';
             const testFiles = [
-                {path: testDir, directory: true},
-                {path: `${testDir}/.file1.txt`, content: `ibberish`},
-                {path: `${testDir}/.dir`, directory: true},
-                {path: `${testDir}/.dir/.file2.txt`, content: `jk123jj9casc`},
-                {path: `${testDir}/.dir/.dir1/.dir2/.dir3`, directory: true},
-                {path: `${testDir}/.dir/.dir1/.dir2/.dir3/.file3.txt`, content: ''},
+                {path: `${TEST_DIR}/.file1.txt`, content: `ibberish`},
+                {path: `${TEST_DIR}/.dir`, directory: true},
+                {path: `${TEST_DIR}/.dir/.file2.txt`, content: `jk123jj9casc`},
+                {path: `${TEST_DIR}/.dir/.dir1/.dir2/.dir3`, directory: true},
+                {path: `${TEST_DIR}/.dir/.dir1/.dir2/.dir3/.file3.txt`, content: ''},
             ];
             const expected = [
                 '.file1.txt',
@@ -87,10 +93,9 @@ describe('FileContainer', ()=> {
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         container.beginWatching(cb);
                     },
                     (cb)=> {
@@ -102,22 +107,19 @@ describe('FileContainer', ()=> {
                             cb();
                         });
                     },
-                    (cb)=>removePath(testDir, cb)
                 ],
                 done
             );
         });
 
         it('list of files from the directory, ignoring the files from filter function', function (done) {
-            const testDir = 'testDir';
             const testFiles = [
-                {path: testDir, directory: true},
-                {path: `${testDir}/file1.txt`, content: `ibberish`},
-                {path: `${testDir}/ignored`, directory: true},
-                {path: `${testDir}/ignored/file3.txt`, content: ''},
-                {path: `${testDir}/dir`, directory: true},
-                {path: `${testDir}/dir/not_ignored.txt`, content: `jk123jj9casc`},
-                {path: `${testDir}/dir/ignoredFile.txt`, content: 'jknnkjasd'},
+                {path: `${TEST_DIR}/file1.txt`, content: `ibberish`},
+                {path: `${TEST_DIR}/ignored`, directory: true},
+                {path: `${TEST_DIR}/ignored/file3.txt`, content: ''},
+                {path: `${TEST_DIR}/dir`, directory: true},
+                {path: `${TEST_DIR}/dir/not_ignored.txt`, content: `jk123jj9casc`},
+                {path: `${TEST_DIR}/dir/ignoredFile.txt`, content: 'jknnkjasd'},
             ];
             const expected = [
                 'file1.txt',
@@ -127,15 +129,14 @@ describe('FileContainer', ()=> {
 
             function ignore(path) {
                 const normalized = PathHelper.normalizePath(path);
-                return [`${testDir}/ignored`, `${testDir}/dir/ignoredFile.txt`].indexOf(normalized) !== -1;
+                return [`${TEST_DIR}/ignored`, `${TEST_DIR}/dir/ignoredFile.txt`].indexOf(normalized) !== -1;
             }
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir, {filter: ignore});
+                        container = new FileContainer(TEST_DIR, {filter: ignore});
                         container.beginWatching(cb);
                     },
                     (cb)=> {
@@ -145,8 +146,7 @@ describe('FileContainer', ()=> {
                             expect(files).to.have.members(expected);
                             cb();
                         });
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
@@ -155,41 +155,37 @@ describe('FileContainer', ()=> {
 
     describe('deleteFile', function () {
         it('will delete a file or directory', function (done) {
-            const testDir = 'testDir';
             const testFiles = [
-                {path: testDir, directory: true},
-                {path: `${testDir}/file1.txt`, content: `xxx`},
-                {path: `${testDir}/dirA`, directory: true},
-                {path: `${testDir}/dirA/file.txt`, content: 'xxx'},
-                {path: `${testDir}/dirA/file2.txt`, content: 'xxx'},
-                {path: `${testDir}/dirB`, directory: true},
-                {path: `${testDir}/dirB/file2.txt`, content: 'xxx'},
-                {path: `${testDir}/dirB/file3.txt`, content: 'xxx'},
+                {path: `${TEST_DIR}/file1.txt`, content: `xxx`},
+                {path: `${TEST_DIR}/dirA`, directory: true},
+                {path: `${TEST_DIR}/dirA/file.txt`, content: 'xxx'},
+                {path: `${TEST_DIR}/dirA/file2.txt`, content: 'xxx'},
+                {path: `${TEST_DIR}/dirB`, directory: true},
+                {path: `${TEST_DIR}/dirB/file2.txt`, content: 'xxx'},
+                {path: `${TEST_DIR}/dirB/file3.txt`, content: 'xxx'},
             ];
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
                     (cb)=>createPathSeries(testFiles, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         container.beginWatching(cb);
                     },
                     (cb)=>container.deleteFile('file1.txt', cb),
                     (cb)=>container.deleteFile('dirA', cb),
                     (cb)=>container.deleteFile('dirB/file2.txt', cb),
                     (cb)=> {
-                        expect(pathExists(testDir)).to.be.true;
-                        expect(pathExists(`${testDir}/file1.txt`)).to.be.false;
-                        expect(pathExists(`${testDir}/dirA`)).to.be.false;
-                        expect(pathExists(`${testDir}/dirA/file.txt`)).to.be.false;
-                        expect(pathExists(`${testDir}/dirA/file2.txt`)).to.be.false;
-                        expect(pathExists(`${testDir}/dirB`)).to.be.true;
-                        expect(pathExists(`${testDir}/dirB/file2.txt`)).to.be.false;
-                        expect(pathExists(`${testDir}/dirB/file3.txt`)).to.be.true;
+                        expect(pathExists(TEST_DIR)).to.be.true;
+                        expect(pathExists(`${TEST_DIR}/file1.txt`)).to.be.false;
+                        expect(pathExists(`${TEST_DIR}/dirA`)).to.be.false;
+                        expect(pathExists(`${TEST_DIR}/dirA/file.txt`)).to.be.false;
+                        expect(pathExists(`${TEST_DIR}/dirA/file2.txt`)).to.be.false;
+                        expect(pathExists(`${TEST_DIR}/dirB`)).to.be.true;
+                        expect(pathExists(`${TEST_DIR}/dirB/file2.txt`)).to.be.false;
+                        expect(pathExists(`${TEST_DIR}/dirB/file3.txt`)).to.be.true;
                         cb();
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
@@ -198,23 +194,19 @@ describe('FileContainer', ()=> {
 
     describe('emitting commands', function () {
         it('will emit fileCreated event with correct path', function (done) {
-            const testDir = 'emittingEvents';
             let counter;
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-
-                    (cb)=>createPath(testDir, null, true, cb),
-
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
 
                         counter = EventCounter.getCounter(container, 'fileCreated', 1);
 
                         sandbox.spy(container, 'emit');
                         container.beginWatching(cb);
                     },
-                    (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
+
+                    (cb)=>createPath(`${TEST_DIR}/file.txt`, 'xxx', false, cb),
 
                     (cb)=> {
                         if (counter.hasFinished()) {
@@ -228,32 +220,26 @@ describe('FileContainer', ()=> {
                         expect(container.emit).to.have.been.calledOnce;
                         expect(container.emit).have.been.calledWith('fileCreated', 'file.txt');
                         return cb();
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
         });
         it('will emit fileDeleted event with correct path', function (done) {
-            const testDir = 'emittingEvents';
             let counter;
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-
-                    (cb)=>createPath(testDir, null, true, cb),
-
-                    (cb)=>createPath(`${testDir}/file.txt`, 'xxx', false, cb),
+                    (cb)=>createPath(`${TEST_DIR}/file.txt`, 'xxx', false, cb),
 
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         sandbox.spy(container, 'emit');
                         counter = EventCounter.getCounter(container, 'deleted', 1);
                         container.beginWatching(cb);
                     },
 
-                    (cb)=>removePath(`${testDir}/file.txt`, cb),
+                    (cb)=>removePath(`${TEST_DIR}/file.txt`, cb),
 
                     (cb)=> {
                         if (counter.hasFinished()) {
@@ -268,26 +254,23 @@ describe('FileContainer', ()=> {
                         expect(container.emit).have.been.calledWith('deleted', 'file.txt');
                         return cb();
                     },
-                    (cb)=>removePath(testDir, cb)
+                    (cb)=>removePath(TEST_DIR, cb)
                 ],
                 done
             );
         });
         it('will emit createdDirectory event with correct path', function (done) {
-            const testDir = 'emittingEvents';
             let counter;
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         sandbox.spy(container, 'emit');
                         counter = EventCounter.getCounter(container, 'createdDirectory', 1);
                         container.beginWatching(cb);
                     },
-                    (cb)=>createPath(`${testDir}/dirA`, null, true, cb),
+                    (cb)=>createPath(`${TEST_DIR}/dirA`, null, true, cb),
                     (cb)=> {
                         if (counter.hasFinished()) {
                             return setImmediate(cb)
@@ -300,26 +283,23 @@ describe('FileContainer', ()=> {
                         expect(container.emit).have.been.calledWith('createdDirectory', 'dirA');
                         return cb();
                     },
-                    (cb)=>removePath(testDir, cb)
+                    (cb)=>removePath(TEST_DIR, cb)
                 ],
                 done
             );
         });
         it('will emit changed event with correct path', function (done) {
-            const testDir = 'emittingEvents';
             let counter;
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
-                    (cb)=>createPath(`${testDir}/file.txt`, 'content\n', false, cb),
+                    (cb)=>createPath(`${TEST_DIR}/file.txt`, 'content\n', false, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         sandbox.spy(container, 'emit');
                         counter = EventCounter.getCounter(container, 'changed', 1);
                         container.beginWatching(cb);
                     },
-                    (cb)=>fs.appendFile(`${testDir}/file.txt`, 'second line', cb),
+                    (cb)=>fs.appendFile(`${TEST_DIR}/file.txt`, 'second line', cb),
                     (cb)=> {
                         if (counter.hasFinished()) {
                             return setImmediate(cb)
@@ -332,7 +312,7 @@ describe('FileContainer', ()=> {
                         expect(container.emit).have.been.calledWith('changed', 'file.txt');
                         return cb();
                     },
-                    (cb)=>removePath(testDir, cb)
+                    (cb)=>removePath(TEST_DIR, cb)
                 ],
                 done
             );
@@ -341,19 +321,16 @@ describe('FileContainer', ()=> {
 
     describe('consumeFileStream', function () {
         it('will write the file to destination without emitting changed commands', function (done) {
-            const testDir = 'consumeFileStream';
             const fileContent = getRandomString(1024);
             const fromPath = 'from.txt';
             const toPath = 'to.txt';
-            const toPathAbsolute = `${testDir}/${toPath}`;
+            const toPathAbsolute = `${TEST_DIR}/${toPath}`;
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
                     (cb)=>createPath(fromPath, fileContent, false, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         sandbox.spy(container, 'emit');
                         container.beginWatching(cb);
                     },
@@ -361,7 +338,7 @@ describe('FileContainer', ()=> {
                         const stream = fs.createReadStream(fromPath);
                         container.consumeFileStream(toPath, stream, cb);
                     },
-                    (cb)=>setTimeout(cb, fileContainerTimeout),
+                    (cb)=>setTimeout(cb, FS_TIMEOUT),
                     (cb)=> {
                         expect(container.emit).not.to.have.been.called;
                         expect(pathExists(toPathAbsolute)).to.equal(true);
@@ -369,7 +346,6 @@ describe('FileContainer', ()=> {
                         return cb();
                     },
                     (cb)=>removePath(fromPath, cb),
-                    (cb)=>removePath(testDir, cb)
                 ],
                 done
             );
@@ -378,19 +354,16 @@ describe('FileContainer', ()=> {
 
     describe('getReadStreamForFile', function () {
         it('will return a readStream, and during streaming will not emit "changed" event', function (done) {
-            const testDir = 'consumeFileStream';
             const fileContent = getRandomString(1024);
             const fromPath = 'from.txt';
             const toPath = 'to.txt';
-            const fromPathAbsolute = `${testDir}/${fromPath}`;
+            const fromPathAbsolute = `${TEST_DIR}/${fromPath}`;
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
                     (cb)=>createPath(fromPathAbsolute, fileContent, false, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         sandbox.spy(container, 'emit');
                         container.beginWatching(cb);
                     },
@@ -400,7 +373,7 @@ describe('FileContainer', ()=> {
                         stream.on('error', cb);
                         stream.pipe(fs.createWriteStream(toPath));
                     },
-                    (cb)=>setTimeout(cb, fileContainerTimeout),
+                    (cb)=>setTimeout(cb, FS_TIMEOUT),
                     (cb)=> {
                         expect(container.emit).not.to.have.been.called;
                         expect(pathExists(toPath)).to.equal(true);
@@ -408,7 +381,6 @@ describe('FileContainer', ()=> {
                         return cb();
                     },
                     (cb)=>removePath(toPath, cb),
-                    (cb)=>removePath(testDir, cb)
                 ],
                 done
             );
@@ -417,17 +389,14 @@ describe('FileContainer', ()=> {
 
     describe('getFileMeta', function () {
         it('if a file exists, will return an object with name, and exists set to true', function (done) {
-            const testDir = 'getFileMeta';
             const content = getRandomString(1000);
             const expectedHash = crypto.createHash('sha256').update(content).digest('hex');
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
-                    (cb)=>createPath(`${testDir}/file.txt`, content, false, cb),
+                    (cb)=>createPath(`${TEST_DIR}/file.txt`, content, false, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         container.beginWatching(cb);
                     },
                     (cb)=> {
@@ -438,25 +407,20 @@ describe('FileContainer', ()=> {
                             expect(data.isDirectory).to.equal(false);
                             expect(data.name).to.equal('file.txt');
                             expect(data.hashCode).to.equal(expectedHash);
-                            expect(data.modified).to.deep.equal(fs.statSync(`${testDir}/file.txt`).mtime);
+                            expect(data.modified).to.deep.equal(fs.statSync(`${TEST_DIR}/file.txt`).mtime);
                             cb();
                         })
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
-        })
+        });
 
         it('if a file does not exist, will return an object with name, and exists set to false, and hash of empty string', function (done) {
-            const testDir = 'getFileMeta';
-
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         container.beginWatching(cb);
                     },
                     (cb)=> {
@@ -470,23 +434,19 @@ describe('FileContainer', ()=> {
                             expect(data.modified).to.be.null;
                             cb();
                         })
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
-        })
+        });
 
         it('if a file exists, and is a directory, will return correct data', function (done) {
-            const testDir = 'getFileMeta';
 
             async.series(
                 [
-                    (cb)=>removePath(testDir, cb),
-                    (cb)=>createPath(testDir, null, true, cb),
-                    (cb)=>createPath(`${testDir}/dirA`, null, true, cb),
+                    (cb)=>createPath(`${TEST_DIR}/dirA`, null, true, cb),
                     (cb)=> {
-                        container = new FileContainer(testDir);
+                        container = new FileContainer(TEST_DIR);
                         container.beginWatching(cb);
                     },
                     (cb)=> {
@@ -497,11 +457,10 @@ describe('FileContainer', ()=> {
                             expect(data.isDirectory).to.equal(true);
                             expect(data.name).to.equal('dirA');
                             expect(data.hashCode).to.equal('');
-                            expect(data.modified).to.deep.equal(fs.statSync(`${testDir}/dirA`).mtime);
+                            expect(data.modified).to.deep.equal(fs.statSync(`${TEST_DIR}/dirA`).mtime);
                             cb();
                         })
-                    },
-                    (cb)=>removePath(testDir, cb)
+                    }
                 ],
                 done
             );
