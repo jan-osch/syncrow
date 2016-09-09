@@ -6,5 +6,8 @@ docs
 docker
 typings
 src
-
-
+.syncrow.json
+tsconfig.json
+typings.json
+housekeeping
+*.tgz

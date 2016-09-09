@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --recursive build/test",
-    "build": "npm run clear && tsc || true",
+    "compile": "tsc || true",
+    "build": "npm run clear && npm run compile",
     "clear": "rm -Rf build",
     "benchmark": "./housekeeping/benchmarks.sh",
     "lint": "tslint `find src -name '*.ts*'`",
-    "clearMaps": "rm -Rf build/**/*.js.map"
+    "clearmaps": "find build -name \"*.js.map\" -type f -delete",
+    "prepublish": "npm run build && npm run clearmaps"
   },
   "repository": {
     "type": "git",
