@@ -1,5 +1,6 @@
 import {PathHelper} from "../fs_helpers/path_helper";
 import {expect} from "chai";
+import * as path from "path";
 
 describe('PathHelper', ()=> {
     describe('normalizePath', ()=> {
@@ -22,17 +23,50 @@ describe('PathHelper', ()=> {
         });
     });
 
-    describe('localizePath', ()=>{
-        it('change a path from unix like to windows like if given a windows separator', ()=>{
+    describe('localizePath', ()=> {
+        it('change a path from unix like to windows like if given a windows separator', ()=> {
             const actual = PathHelper.localizePath('some\\ strange/.path\\ with/spaces', '\\');
 
             expect(actual).to.equal('some strange\\.path with\\spaces');
         });
 
-        it('if separator is unix will return unchanged path', ()=>{
+        it('if separator is unix will return unchanged path', ()=> {
             const actual = PathHelper.localizePath('some\\ strange/.path\\ with/spaces', '/');
 
             expect(actual).to.equal('some\\ strange/.path\\ with/spaces');
         });
-    })
+    });
+
+    describe('createFilterFunction', ()=> {
+        it('should work for simple files', ()=> {
+            const ignored = ['.hidden.json', 'file.txt', 'name\ with\ spaces'];
+            const func = PathHelper.createFilterFunction(ignored, '.');
+            const current = process.cwd();
+
+            expect(func(path.join(current, ignored[0]))).to.be.true;
+            expect(func(path.join(current, ignored[1]))).to.be.true;
+            expect(func(path.join(current, ignored[2]))).to.be.true;
+            expect(func(path.join(current, 'other_file.txt'))).to.be.false;
+            expect(func(path.join(current, 'with\ spaces.txt'))).to.be.false;
+            expect(func(path.join(current, '.hidden'))).to.be.false;
+        });
+
+        it('should ignore subdirectories', ()=> {
+            const ignored = ['.git', path.join('dir', 'sub'), path.join('dir\ spaces')];
+
+            const func = PathHelper.createFilterFunction(ignored, '.');
+
+            const current = process.cwd();
+
+            expect(func(path.join(current, '.git'))).to.be.true;
+            expect(func(path.join(current, '.git', 'somefile.txt'))).to.be.true;
+            expect(func(path.join(current, '.git', 'subdir', 'somefile.txt'))).to.be.true;
+
+            expect(func(path.join(current, 'dir'))).to.be.false;
+            expect(func(path.join(current, 'dir', 'file.txt'))).to.be.false;
+            expect(func(path.join(current, 'dir', 'sub'))).to.be.true;
+            expect(func(path.join(current, 'dir', 'sub', 'file.txt'))).to.be.true;
+            expect(func(path.join(current, 'dir', 'sub', 'another.txt'))).to.be.true;
+        });
+    });
 });

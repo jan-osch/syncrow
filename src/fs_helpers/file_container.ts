@@ -5,7 +5,7 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {PathHelper} from "./path_helper";
 import {SyncData} from "../sync/sync_actions";
 import {FileMetaComputingQueue} from "./file_meta_queue";
-import {readTree} from "./read_tree_2";
+import {readTree} from "./read_tree";
 import * as rimraf from "rimraf";
 import * as mkdirp from "mkdirp";
 import * as async from "async";
@@ -20,7 +20,7 @@ const WATCH_TIMEOUT = 700;
 const TRANSFER_FILE_LIMIT = 1000;
 
 export interface FilterFunction {
-    (s:string):boolean;
+    (s:string, stats?:any):boolean; //Returns true when file path should be ignored
 }
 
 export interface FileContainerOptions {

@@ -12,7 +12,7 @@ export interface EngineCallback {
 }
 
 export interface ListenOptions {
-    filterFunction?:FilterFunction;
+    filter?:FilterFunction;
     externalHost?:string;
     initialToken?:string;
     authenticate?:boolean;
@@ -27,7 +27,7 @@ export interface ListenOptions {
  * @param {EngineCallback} callback
  */
 export default function startListeningEngine(path:string, port:number, options:ListenOptions, callback:EngineCallback) {
-    const container = new FileContainer(path, {filter: options.filterFunction});
+    const container = new FileContainer(path, {filter: options.filter});
 
     const connectionHelperEntry = new ConnectionHelper({
         localPort: port,

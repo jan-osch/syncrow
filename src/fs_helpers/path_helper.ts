@@ -1,5 +1,10 @@
 import *  as upath from "upath";
-import * as path from "path"
+import * as path from "path";
+import * as ignore from "ignore";
+import {FilterFunction} from "./file_container";
+import {debugFor} from "../utils/logger";
+const debug = debugFor('syncrow:path_helper');
+
 
 export class PathHelper {
 
@@ -28,5 +33,27 @@ export class PathHelper {
         return suspect
             .replace(/\\( {1,})/g, '$1')
             .replace(/\//g, "\\");
+    }
+
+    /**
+     * @param filterStrings
+     * @param baseDir
+     */
+    public static createFilterFunction(filterStrings:Array<string>, baseDir:string):FilterFunction {
+        const absolute = path.resolve(baseDir);
+
+        debug(`creating a filter function with paths: ${filterStrings} and absolute path: ${absolute}`);
+
+        const filter = ignore().add(filterStrings).createFilter();
+
+        return (s:string, stats?:any) => {
+            const relative = path.relative(absolute, s);
+
+            const result = !filter(relative);
+
+            debug(`path: ${relative} will be ignored: ${result}`);
+
+            return result;
+        };
     }
 }

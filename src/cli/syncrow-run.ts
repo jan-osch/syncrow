@@ -2,14 +2,13 @@ import {debugFor, loggerFor} from "../utils/logger";
 import {Engine} from "../core/engine";
 import * as fs from "fs";
 import {SyncAction} from "../sync/sync_actions";
-import * as anymatch from "anymatch";
 import {pullAction} from "../sync/pull_action";
-import {FilterFunction} from "../fs_helpers/file_container";
 import {ProgramOptions, configurationFileName} from "./program";
 import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
+import {PathHelper} from "../fs_helpers/path_helper";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -38,7 +37,7 @@ function loadConfigFromFile(path:string):ProgramOptions {
 
         return result;
     } catch (e) {
-        throw new Error('Configuration file not found or invalid')
+        throw new Error('Configuration file not found or invalid - run "syncrow init" to initialize')
     }
 }
 
@@ -47,29 +46,13 @@ function loadConfigFromFile(path:string):ProgramOptions {
  * @returns {ProgramOptions}
  */
 function buildConfig(savedConfig:ProgramOptions):ProgramOptions {
-    if (savedConfig.rawFilter) {
-        savedConfig.filter = createFilterFunction(savedConfig.rawFilter.concat([configurationFileName]), '.');
-    }
+    const filterStrings = savedConfig.rawFilter.concat([configurationFileName]);
+
+    savedConfig.filter = PathHelper.createFilterFunction(filterStrings, '.');
 
     savedConfig.sync = chooseStrategy(savedConfig.rawStrategy);
 
     return savedConfig;
-}
-
-/**
- * @param filterStrings
- * @param baseDir
- */
-function createFilterFunction(filterStrings:Array<string>, baseDir:string):FilterFunction {
-    const baseLength = baseDir.length + 1;
-
-    filterStrings.push(configurationFileName);
-
-    return (s:string) => {
-        const actual = s.indexOf(baseDir) !== -1 ? s.substring(baseLength) : s;
-        debug(`string s: ${s} to actual: ${actual}`);
-        return anymatch(filterStrings, actual);
-    };
 }
 
 /**

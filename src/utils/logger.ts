@@ -1,7 +1,5 @@
 import * as chalk from "chalk";
-import * as moment from "moment";
 import * as debug from "debug";
-
 
 //TODO implement logger to file system
 export class Logger {
@@ -48,7 +46,7 @@ export class Logger {
     }
 
     private formatMessage(message:string) {
-        return `[${moment().format('H:m:s')}] ${this.context} ${message}`;
+        return `[${new Date()}] ${this.context} ${message}`;
     }
 }
 

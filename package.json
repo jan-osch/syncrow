@@ -10,8 +10,8 @@
     "clear": "rm -Rf build",
     "benchmark": "./housekeeping/benchmarks.sh",
     "lint": "tslint `find src -name '*.ts*'`",
-    "clearmaps": "find build -name \"*.js.map\" -type f -delete",
-    "prepublish": "npm run build && npm run clearmaps"
+    "clear-maps": "find build -name \"*.js.map\" -type f -delete",
+    "prepublish": "npm run build && npm run clear-maps && npm run test"
   },
   "repository": {
     "type": "git",
@@ -27,12 +27,12 @@
   },
   "homepage": "https://github.com/jan-osch/syncrow#readme",
   "dependencies": {
-    "anymatch": "^1.3.0",
     "async": "^2.0.0-rc.3",
     "chalk": "^1.1.3",
     "chokidar": "^1.5.2",
     "commander": "^2.9.0",
     "debug": "^2.2.0",
+    "ignore": "^3.1.5",
     "inquirer": "^1.1.2",
     "lodash": "^4.13.1",
     "mkdirp": "^0.5.1",

@@ -60,7 +60,7 @@ const questions = [
     {
         type: 'input',
         name: 'rawFilter',
-        message: 'Please enter comma-separated anymatch patterns for files that should be ignored',
+        message: 'Please enter comma-separated gitignore like patterns for files that should be ignored',
         default: ''
     },
 
@@ -173,9 +173,7 @@ inquirer.prompt(questions).then(answers=> {
         delete answers.externalHost;
     }
 
-    if (answers.rawFilter) {
-        answers.rawFilter = answers.rawFilter.split(',');
-    }
+    answers.rawFilter = answers.rawFilter ? answers.rawFilter.split(',') : [];
 
     fs.writeFileSync(configurationFileName, JSON.stringify(answers, null, 2));
 });

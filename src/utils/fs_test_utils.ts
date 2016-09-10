@@ -4,7 +4,7 @@ import * as async from "async";
 import * as fs from "fs";
 import * as rimraf from "rimraf";
 import * as path from "path";
-import {readTree} from "../fs_helpers/read_tree_2";
+import {readTree} from "../fs_helpers/read_tree";
 
 /**
  * @returns {Function} a cleanup function that will close the server and paired sockets
