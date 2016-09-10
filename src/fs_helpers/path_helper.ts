@@ -14,7 +14,9 @@ export class PathHelper {
      * @returns {string}
      */
     public static normalizePath(suspect:string):string {
-        return upath.normalize(suspect).replace(/(\ {1,})/g, "\\$1");
+        // suspect = suspect.replace(/\/\ /g, " ");
+    // .replace(/(\ {1,})/g, "\\$1")
+        return upath.normalize(suspect);
     }
 
     /**
@@ -47,6 +49,10 @@ export class PathHelper {
         const filter = ignore().add(filterStrings).createFilter();
 
         return (s:string, stats?:any) => {
+            if (s === absolute) {
+                return false;
+            }
+
             const relative = path.relative(absolute, s);
 
             const result = !filter(relative);

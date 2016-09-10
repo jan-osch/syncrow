@@ -1,13 +1,20 @@
 import {PathHelper} from "../fs_helpers/path_helper";
 import {expect} from "chai";
 import * as path from "path";
+import * as assert from "assert";
 
 describe('PathHelper', ()=> {
-    describe('normalizePath', ()=> {
+    xdescribe('normalizePath', ()=> {
         it('will return a unix version of windows path', ()=> {
             const actual = PathHelper.normalizePath('some\\test\\dir');
 
             expect(actual).to.equal('some/test/dir');
+        });
+
+        it('will normalize chokidar paths', ()=> {
+            const actual = PathHelper.normalizePath('di/\ rec/\ to/\ ry');
+
+            assert.equal(actual, 'di\\ rec\\ to\\ ry')
         });
 
         it('will return a unix version of windows path, also with spaces inside', ()=> {

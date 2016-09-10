@@ -48,7 +48,7 @@ function loadConfigFromFile(path:string):ProgramOptions {
 function buildConfig(savedConfig:ProgramOptions):ProgramOptions {
     const filterStrings = savedConfig.rawFilter.concat([configurationFileName]);
 
-    savedConfig.filter = PathHelper.createFilterFunction(filterStrings, '.');
+    savedConfig.filter = PathHelper.createFilterFunction(filterStrings, process.cwd());
 
     savedConfig.sync = chooseStrategy(savedConfig.rawStrategy);
 
@@ -60,14 +60,14 @@ function buildConfig(savedConfig:ProgramOptions):ProgramOptions {
  */
 function startEngine(chosenConfig:ProgramOptions) {
     if (chosenConfig.listen) {
-        return startListeningEngine('.', chosenConfig.localPort, chosenConfig, (err, engine)=> {
+        return startListeningEngine(process.cwd(), chosenConfig.localPort, chosenConfig, (err, engine)=> {
             debug(`listening engine started`);
             ifErrorThrow(err);
             engine.on(Engine.events.error, ifErrorThrow);
         })
     }
 
-    return startConnectingEngine('.', chosenConfig.remotePort, chosenConfig.remoteHost, chosenConfig, (err, engine)=> {
+    return startConnectingEngine(process.cwd(), chosenConfig.remotePort, chosenConfig.remoteHost, chosenConfig, (err, engine)=> {
         ifErrorThrow(err);
         debug(`engine connected`);
         engine.on(Engine.events.error, ifErrorThrow);

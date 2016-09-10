@@ -1,6 +1,9 @@
 import {SyncActionParams, MetaTuple, getFileLists, FileLists, getMetaTupleForFile} from "./sync_actions";
 import * as async from "async";
 import * as _ from "lodash";
+import {debugFor} from "../utils/logger";
+
+const debug = debugFor('syncrow:sync');
 
 export interface CommandsFunction {
     (params:SyncActionParams, metaTuple:MetaTuple, callback:ErrorCallback):any;
@@ -30,6 +33,7 @@ export function genericCommandsAction(params:SyncActionParams, callback:ErrorCal
 }
 
 function processFileLists(params:SyncActionParams, lists:FileLists, callback:ErrorCallback, commandsFunction:CommandsFunction) {
+    debug(`local files: ${lists.localList} remote: ${lists.remoteList}`);
     const combined = _.union(lists.localList, lists.remoteList);
 
     return async.each(combined,
