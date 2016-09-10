@@ -134,7 +134,10 @@ export class FileContainer extends EventEmitter implements Closable {
             this.blockFile(fileName);
             const writeStream = fs.createWriteStream(this.createAbsolutePath(fileName));
 
-            writeStream.on('finish', ()=> this.unBlockFileWithTimeout(fileName));
+            writeStream.on('finish', ()=> {
+                debug(`done and will unblock the file ${fileName}`);
+                this.unBlockFileWithTimeout(fileName)
+            });
             writeStream.on('finish', callback);
 
             readStream.pipe(writeStream).on('error', callback);
@@ -242,6 +245,7 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     private blockFile(fileName:string) {
+        debug(`blocking file: ${fileName}`);
         this.blockedFiles.add(fileName);
     }
 
