@@ -42,7 +42,6 @@ export class FileContainer extends EventEmitter implements Closable {
         createdDirectory: 'createdDirectory',
     };
 
-    private directoryToWatch:string;
     private blockedFiles:Set<string>;
     private cachedSyncData:Map<string,SyncData>;
     private fileMetaQueue:FileMetaComputingQueue;
@@ -56,17 +55,17 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param directoryToWatch - localized path
      * @param options
      */
-    constructor(directoryToWatch:string, options:FileContainerOptions = {}) {
+    constructor(private directoryToWatch:string, options:FileContainerOptions = {}) {
         super();
 
         const fileLimit = options.fileLimit ? options.fileLimit : TRANSFER_FILE_LIMIT;
         this.filterFunction = options.filter ? options.filter : s => false;
         this.watchTimeout = options.timeout ? options.timeout : WATCH_TIMEOUT;
-        this.directoryToWatch = directoryToWatch;
+
         this.blockedFiles = new Set<string>();
         this.cachedSyncData = new Map<string,SyncData>();
         this.fileMetaQueue = new FileMetaComputingQueue(fileLimit, this.directoryToWatch);
-        this.existingPaths = null;
+        this.existingPaths = new Set<string>(); //required for containers that do not watch
     }
 
     /**
