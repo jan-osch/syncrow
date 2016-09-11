@@ -18,24 +18,6 @@ export class PathHelper {
     }
 
     /**
-     * Returns path that is localized - e.g. windows specific
-     * @param suspect
-     * @param separator
-     * @returns {string}
-     */
-    public static localizePath(suspect:string, separator?:string):string {
-        separator = separator ? separator : path.sep;
-
-        if (separator != '\\') {
-            return suspect;
-        }
-
-        return suspect
-            .replace(/\\( {1,})/g, '$1')
-            .replace(/\//g, "\\");
-    }
-
-    /**
      * @param filterStrings
      * @param baseDir
      */
@@ -44,7 +26,7 @@ export class PathHelper {
 
         debug(`creating a filter function with paths: ${filterStrings} and absolute path: ${absolute}`);
 
-        const filter = ignore().add(filterStrings).createFilter();
+        const filter = ignore().add(filterStrings.map(p=>PathHelper.normalizePath(p))).createFilter();
 
         return (s:string, stats?:any) => {
             if (s === absolute) {

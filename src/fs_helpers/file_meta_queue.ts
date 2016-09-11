@@ -77,7 +77,7 @@ export class FileMetaComputingQueue {
 
 
     private computeHashForFile(syncData:SyncData, callback:(error, syncData?:SyncData)=>any) {
-        if (!this.shouldComputeHash(syncData)) {
+        if (!FileMetaComputingQueue.shouldComputeHash(syncData)) {
             return callback(null, syncData);
         }
 
@@ -94,7 +94,7 @@ export class FileMetaComputingQueue {
         });
     }
 
-    private shouldComputeHash(syncData:SyncData) {
+    private static shouldComputeHash(syncData:SyncData) {
         return (syncData.exists && !syncData.isDirectory)
     }
 }

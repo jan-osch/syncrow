@@ -19,6 +19,7 @@ const logger = loggerFor('FileContainer');
 const WATCH_TIMEOUT = 700;
 const TRANSFER_FILE_LIMIT = 1000;
 
+
 export interface FilterFunction {
     (s:string, stats?:any):boolean; //Returns true when file path should be ignored
 }
@@ -134,18 +135,21 @@ export class FileContainer extends EventEmitter implements Closable {
         this.addAllParentPathsToExisting(fileName);
 
         try {
-            debug(`starting to read from remote - file ${fileName} is blocked now`);
+            debug(`starting to read from remote - file ${fileName}`);
 
             this.blockFile(fileName);
+
             const writeStream = fs.createWriteStream(this.createAbsolutePath(fileName));
+
+            readStream.pipe(writeStream);
+
+            writeStream.on('error', callback);
 
             writeStream.on('finish', ()=> {
                 debug(`done and will unblock the file ${fileName}`);
-                this.unBlockFileWithTimeout(fileName)
+                this.unBlockFileWithTimeout(fileName);
+                callback();
             });
-            writeStream.on('finish', callback);
-
-            readStream.pipe(writeStream).on('error', callback);
 
         } catch (error) {
             callback(error);
@@ -159,11 +163,10 @@ export class FileContainer extends EventEmitter implements Closable {
     public getReadStreamForFile(fileName:string):ReadableStream {
         try {
             return fs.createReadStream(this.createAbsolutePath(fileName)).on('error', (error)=> {
-                logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+                logger.error(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
             });
-
         } catch (error) {
-            logger.warn(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+            logger.error(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
         }
     }
 
