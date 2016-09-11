@@ -151,6 +151,8 @@ inquirer.prompt(questions).then(answers=> {
         if (answers.rawStrategy === pushActionText) {
             answers.deleteRemote = true;
         }
+
+        answers.reconnect = true;
     }
 
     if (answers.reconnect) {
