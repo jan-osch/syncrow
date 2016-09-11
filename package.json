@@ -9,6 +9,7 @@
     "build": "npm run clear && npm run compile",
     "clear": "rm -Rf build",
     "benchmark": "./housekeeping/benchmarks.sh",
+    "benchmark-short": "./housekeeping/benchmark-short.sh",
     "lint": "tslint `find src -name '*.ts*'`",
     "clear-maps": "find build -name \"*.js.map\" -type f -delete",
     "prepublish": "npm run build && npm run clear-maps && npm run test"
