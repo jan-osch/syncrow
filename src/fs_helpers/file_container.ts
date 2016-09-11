@@ -30,6 +30,10 @@ export interface FileContainerOptions {
 }
 
 export class FileContainer extends EventEmitter implements Closable {
+
+    /**
+     * @dsc All fileNames emitted by FileContainer are normalized and relative to directoryToWatch
+     */
     static events = {
         changed: 'changed',
         deleted: 'deleted',

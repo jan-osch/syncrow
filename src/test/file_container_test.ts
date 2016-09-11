@@ -9,6 +9,7 @@ import * as fs from "fs";
 import * as crypto from "crypto";
 import {EventCounter} from "../utils/event_counter";
 import {PathHelper} from "../fs_helpers/path_helper";
+import * as assert from "assert";
 
 chai.use(sinonChai);
 
@@ -62,7 +63,7 @@ describe('FileContainer', ()=> {
                     },
                     (cb)=> {
                         container.getFileTree((err, files)=> {
-                            expect(err).not.to.be.defined;
+                            assert.ifError(err);
                             expect(files).to.have.lengthOf(expected.length);
                             expect(files).to.have.members(expected);
                             cb();
@@ -101,7 +102,7 @@ describe('FileContainer', ()=> {
                     (cb)=> {
 
                         container.getFileTree((err, files)=> {
-                            expect(err).not.to.be.defined;
+                            assert.ifError(err);
                             expect(files).to.have.lengthOf(expected.length);
                             expect(files).to.have.members(expected);
                             cb();
@@ -141,7 +142,7 @@ describe('FileContainer', ()=> {
                     },
                     (cb)=> {
                         container.getFileTree((err, files)=> {
-                            expect(err).not.to.be.defined;
+
                             expect(files).to.have.lengthOf(expected.length);
                             expect(files).to.have.members(expected);
                             cb();
