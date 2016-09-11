@@ -1,10 +1,12 @@
 import {TransferActions} from "./transfer_actions";
 import * as async from "async";
-import * as debugFor from "debug";
 import {ConnectionAddress, ConnectionHelper, ListenCallback} from "../connection/connection_helper";
 import {Container} from "../utils/interfaces";
+import {loggerFor, ErrorCallback, debugFor} from "../utils/logger";
 
 const debug = debugFor("syncrow:trasfer_queue");
+
+const logger = loggerFor('TransferQueue');
 
 export class TransferQueue {
 
@@ -32,11 +34,11 @@ export class TransferQueue {
         debug(`adding job: connectAndUploadFile: ${fileName}`);
         const job = (uploadingDoneCallback) => {
 
-            console.time(timingMessage);
+            logger.time(timingMessage);
 
             return TransferActions.connectAndUploadFile(fileName, address, sourceContainer, connectionHelper,
                 (err)=> {
-                    console.timeEnd(timingMessage);
+                    logger.timeEnd(timingMessage);
 
                     return uploadingDoneCallback(err)
                 }
@@ -66,11 +68,11 @@ export class TransferQueue {
 
         const job = (downloadingDoneCallback)=> {
 
-            console.time(timingMessage);
+            logger.time(timingMessage);
 
             return TransferActions.connectAndDownloadFile(fileName, address, destinationContainer, connectionHelper,
                 (err)=> {
-                    console.timeEnd(timingMessage);
+                    logger.timeEnd(timingMessage);
 
                     return downloadingDoneCallback(err);
                 }
@@ -99,11 +101,11 @@ export class TransferQueue {
 
         const job = (uploadingDoneCallback)=> {
 
-            console.time(timingMessage);
+            logger.time(timingMessage);
 
             return TransferActions.listenAndUploadFile(fileName, sourceContainer, connectionHelper,
                 (err)=> {
-                    console.timeEnd(timingMessage);
+                    logger.timeEnd(timingMessage);
 
                     return uploadingDoneCallback(err)
                 },
@@ -135,12 +137,12 @@ export class TransferQueue {
 
         const job = (downloadingDoneCallback)=> {
 
-            console.time(timingMessage);
+            logger.time(timingMessage);
 
             return TransferActions.listenAndDownloadFile(fileName, destinationContainer, connectionHelper,
 
                 (err)=> {
-                    console.timeEnd(timingMessage);
+                    logger.timeEnd(timingMessage);
                     return downloadingDoneCallback(err)
                 },
 

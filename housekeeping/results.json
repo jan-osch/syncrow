@@ -55,7 +55,14 @@
       5153,
       5142
     ],
-    "036f4e8dd6fa3b68bbbd8c48959a4804cbd53fad-average": 5187.5
+    "036f4e8dd6fa3b68bbbd8c48959a4804cbd53fad-average": 5187.5,
+    "8a76e8a059147490d6102994c6328e66d26c47af": [
+      22088,
+      23094,
+      23337,
+      21259
+    ],
+    "8a76e8a059147490d6102994c6328e66d26c47af-average": 22444.5
   },
   "small_files 1000 files x 20000B": {
     "b407b712ee48cc4bb21076fcbddb38ceafec30d1": [
@@ -105,6 +112,12 @@
       3377,
       3345
     ],
-    "036f4e8dd6fa3b68bbbd8c48959a4804cbd53fad-average": 3063.75
+    "036f4e8dd6fa3b68bbbd8c48959a4804cbd53fad-average": 3063.75,
+    "8a76e8a059147490d6102994c6328e66d26c47af": [
+      4360,
+      4166,
+      4614
+    ],
+    "8a76e8a059147490d6102994c6328e66d26c47af-average": 4380
   }
 }

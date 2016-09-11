@@ -1,9 +1,9 @@
 import * as chalk from "chalk";
 import * as debug from "debug";
 
-//TODO implement logger to file system
 export class Logger {
     private context:string;
+    private timers:Map<string,Date>;
 
     /**
      * Wrapper for console - can be later used to store logs to file
@@ -11,6 +11,22 @@ export class Logger {
      */
     constructor(context:string) {
         this.context = context;
+        this.timers = new Map<string,Date>();
+    }
+
+    public time(key:string) {
+        this.timers.set(key, new Date());
+    }
+
+    public timeEnd(key:string) {
+        const time = this.timers.get(key);
+
+        if (!this.timers.delete(key)) {
+
+            throw new Error('Key does not exist');
+        }
+
+        this.logInColor(`${key} - ${new Date().getTime() - time.getTime()} ms`, 'green');
     }
 
     /**
@@ -46,7 +62,7 @@ export class Logger {
     }
 
     private formatMessage(message:string) {
-        return `[${new Date()}] ${this.context} ${message}`;
+        return `[unix: ${new Date().getTime()}] ${this.context} - ${message}`;
     }
 }
 
@@ -66,9 +82,4 @@ export function loggerFor(context:string):Logger {
  */
 export function debugFor(routingKey:string) {
     return debug(routingKey);
-}
-
-
-export interface ErrorCallback {
-    (err:Error):any
 }

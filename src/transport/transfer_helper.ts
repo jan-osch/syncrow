@@ -4,7 +4,7 @@ import {TransferActions} from "./transfer_actions";
 import {loggerFor} from "../utils/logger";
 import {EventMessenger} from "../connection/event_messenger";
 import {ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
-import {Container} from "../utils/interfaces";
+import {Container, ErrorCallback} from "../utils/interfaces";
 
 const TRANSFER_CONCURRENCY = 500;
 
@@ -44,7 +44,7 @@ export class TransferHelper {
         this.preferConnecting = options.preferConnecting;
         this.container = container;
         this.callbackHelper = new CallbackHelper();
-        this.callbackMap = new Map();
+        this.callbackMap = new Map <string,ErrorCallback >();
     }
 
     /**

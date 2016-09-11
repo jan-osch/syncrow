@@ -3,7 +3,7 @@ import * as path from "path";
 import * as ignore from "ignore";
 import {FilterFunction} from "./file_container";
 import {debugFor} from "../utils/logger";
-const debug = debugFor('syncrow:path_helper');
+const debug = debugFor('syncrow:fs:path_helper');
 
 
 export class PathHelper {
@@ -36,9 +36,6 @@ export class PathHelper {
             const relative = path.relative(absolute, s);
 
             const result = !filter(relative);
-
-            debug(`path: ${relative} will be ignored: ${result}`);
-
             return result;
         };
     }

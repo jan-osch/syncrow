@@ -8,7 +8,7 @@ import {EventMessenger} from "../connection/event_messenger";
 import * as async from "async";
 import {debugFor} from "../utils/logger";
 
-const debug = debugFor('syncrow:connect');
+const debug = debugFor('syncrow:cr:connect');
 
 export interface ConnectOptions {
     filter?:FilterFunction;

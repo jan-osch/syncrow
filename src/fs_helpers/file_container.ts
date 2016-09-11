@@ -13,7 +13,7 @@ import * as chokidar from "chokidar";
 import {Closable} from "../utils/interfaces";
 import ReadableStream = NodeJS.ReadableStream;
 
-const debug = debugFor("syncrow:file_container");
+const debug = debugFor("syncrow:fs:file_container");
 const logger = loggerFor('FileContainer');
 
 const WATCH_TIMEOUT = 700;
@@ -139,6 +139,11 @@ export class FileContainer extends EventEmitter implements Closable {
             this.blockFile(fileName);
 
             const writeStream = fs.createWriteStream(this.createAbsolutePath(fileName));
+
+            readStream.on('data', (d)=> {
+                debug(`incoming data - fileName: ${fileName} chars: ${d.toString('utf8').length}`);
+            });
+
 
             readStream.pipe(writeStream);
 

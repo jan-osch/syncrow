@@ -8,3 +8,7 @@ export interface Container {
     consumeFileStream(fileName:string, readStream:ReadableStream, callback:ErrorCallback)
     getReadStreamForFile(fileName:string):ReadableStream
 }
+
+export interface ErrorCallback {
+    (err:Error):any
+}
