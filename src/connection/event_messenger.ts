@@ -5,7 +5,7 @@ import {Closable} from "../utils/interfaces";
 import {EventEmitter} from "events";
 import {CallbackHelper} from "./callback_helper";
 
-const debug = debugFor('syncrow:evented_messenger');
+const debug = debugFor('syncrow:con:evented_messenger');
 const logger = loggerFor('Messenger');
 
 export interface Event {

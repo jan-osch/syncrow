@@ -138,18 +138,22 @@ export class FileContainer extends EventEmitter implements Closable {
 
             this.blockFile(fileName);
 
+            const initialRead = readStream.bytesRead;
+
             const writeStream = fs.createWriteStream(this.createAbsolutePath(fileName));
 
-            readStream.on('data', (d)=> {
-                debug(`incoming data - fileName: ${fileName} chars: ${d.toString('utf8').length}`);
-            });
-
-
             readStream.pipe(writeStream);
-
             writeStream.on('error', callback);
 
             writeStream.on('finish', ()=> {
+                const read = readStream.bytesRead - initialRead;
+
+                debug(`file: ${fileName} bytes read: ${read} vs bytes written: ${writeStream.bytesWritten}`);
+
+                if (read !== writeStream.bytesWritten || read === 0) {
+                    logger.warn(`file: ${fileName} written ${writeStream.bytesWritten} bytes should: ${read} initial: ${initialRead}`)
+                }
+
                 debug(`done and will unblock the file ${fileName}`);
                 this.unBlockFileWithTimeout(fileName);
                 callback();

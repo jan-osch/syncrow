@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {AuthorisationHelper} from "../connection/authorisation_helper";
 import {obtainTwoSockets} from "../utils/fs_test_utils";
+import * as assert from "assert";
 
 
 describe('AuthorisationHelper', function () {
@@ -16,23 +17,13 @@ describe('AuthorisationHelper', function () {
 
             const token = '92cu1is9810sajk';
 
-            let otherFinished = false;
-
             AuthorisationHelper.authorizeAsServer(result.server, token, {timeout: 100}, (err)=> {
-                if (err)return finished(err);
-
-                if (otherFinished)return finished();
-
-                otherFinished = true;
+                assert.equal(result.server.listenerCount('data'), 0, 'all server "data" listeners have been removed');
+                assert.equal(result.client.listenerCount('data'), 0, 'no client "data" listener have been created');
+                finished(err);
             });
 
-            AuthorisationHelper.authorizeAsClient(result.client, token, {timeout: 100}, (err)=> {
-                if (err)return finished(err);
-
-                if (otherFinished)return finished();
-
-                otherFinished = true;
-            });
+            AuthorisationHelper.authorizeAsClient(result.client, token);
         })
     });
 
@@ -45,23 +36,14 @@ describe('AuthorisationHelper', function () {
         const pairedSocketsShutdown = obtainTwoSockets((err, result)=> {
             if (err)return finished(err);
 
-            let otherFinished = false;
-
             AuthorisationHelper.authorizeAsServer(result.server, 'AAA', {timeout: 100}, (err)=> {
-                expect(err).to.be.defined;
-
-                if (otherFinished)return finished();
-
-                otherFinished = true;
+                assert(err, 'authorization failed due to not matching token');
+                assert.equal(result.server.listenerCount('data'), 0, 'all server "data" listeners have been removed');
+                assert.equal(result.client.listenerCount('data'), 0, 'no client "data" listener have been created');
+                finished();
             });
 
-            AuthorisationHelper.authorizeAsClient(result.client, 'BBB', {timeout: 100}, (err)=> {
-                expect(err).to.be.defined;
-
-                if (otherFinished)return finished();
-
-                otherFinished = true;
-            });
+            AuthorisationHelper.authorizeAsClient(result.client, 'BBB');
         })
     });
 
@@ -75,26 +57,15 @@ describe('AuthorisationHelper', function () {
         const pairedSocketsShutdown = obtainTwoSockets((err, result)=> {
             if (err)return finished(err);
 
-            let otherFinished = false;
-
             AuthorisationHelper.authorizeAsServer(result.server, token, {timeout: 20}, (err)=> {
-                expect(err).to.be.defined;
-
-                if (otherFinished)return finished();
-
-                otherFinished = true;
+                assert(err, 'authorization failed due to timeout');
+                assert.equal(result.server.listenerCount('data'), 0, 'all server "data" listeners have been removed');
+                assert.equal(result.client.listenerCount('data'), 0, 'no client "data" listener have been created');
+                finished();
             });
-
             setTimeout(()=> {
-
-                AuthorisationHelper.authorizeAsClient(result.client, token, {timeout: 100}, (err)=> {
-                    expect(err).to.be.defined;
-
-                    if (otherFinished)return finished();
-
-                    otherFinished = true;
-                });
-            }, 30)
+                AuthorisationHelper.authorizeAsClient(result.client, token);
+            }, 30);
         })
     });
 });

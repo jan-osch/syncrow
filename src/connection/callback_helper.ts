@@ -1,6 +1,6 @@
 import {debugFor} from "../utils/logger";
 
-const debug = debugFor('syncrow:transport:callback_helper');
+const debug = debugFor('syncrow:con:callback_helper');
 
 export class CallbackHelper {
     private callbackMap:Map<string,Function>;

@@ -5,10 +5,11 @@ import * as async from "async";
 import * as _ from "lodash";
 import {Closable} from "../utils/interfaces";
 
-const debug = debugFor("syncrow:connection:helper");
+const debug = debugFor("syncrow:con:connection_helper");
 const logger = loggerFor('ConnectionHelper');
 
 const DEFAULT_TIMEOUT = 5000;
+const AUTH_TIMEOUT = 5;
 
 export interface ConnectionAddress {
     remotePort:number;
@@ -173,13 +174,9 @@ export class ConnectionHelper implements Closable {
                 if (err)return callback(err);
 
                 if (params.token) {
-                    return AuthorisationHelper.authorizeAsClient(socket, params.token, {timeout: params.timeout},
-                        (err)=> {
-                            if (err) return callback(err);
+                    AuthorisationHelper.authorizeAsClient(socket, params.token);
 
-                            return callback(null, socket);
-                        }
-                    );
+                    return setTimeout(()=>callback(null, socket), AUTH_TIMEOUT)
                 }
 
                 return callback(null, socket);
@@ -280,7 +277,10 @@ export class ConnectionHelper implements Closable {
         if (params.token) {
             return AuthorisationHelper.authorizeAsServer(socket, params.token, {timeout: params.timeout},
                 (err)=> {
-                    if (err) return connectedCallback(err);
+                    if (err) {
+                        socket.destroy();
+                        return connectedCallback(err);
+                    }
 
                     return connectedCallback(null, socket);
                 }

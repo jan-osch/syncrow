@@ -1,10 +1,10 @@
 import {EventEmitter} from "events";
 import {Socket} from "net";
-import {debugFor} from "../utils/logger";
+import {debugFor, loggerFor} from "../utils/logger";
 import {Closable} from "../utils/interfaces";
 
-const debug = debugFor('syncrow:connection:parse_helper');
-
+const debug = debugFor('syncrow:con:parse_helper');
+const logger = loggerFor('ParseHelper');
 
 export class ParseHelper extends EventEmitter implements Closable {
     private messageBuffer:string;
@@ -42,7 +42,14 @@ export class ParseHelper extends EventEmitter implements Closable {
      */
     public shutdown() {
         debug(`${this.id} removing listeners`);
+        const previous = this.socket.listenerCount('data');
+
         this.socket.removeListener('data', this.listener);
+
+        if (this.socket.listenerCount('data') >= previous) {
+            logger.warn('shutdown failed - listener not removed - transfer data leak risk')
+        }
+
     }
 
     private parseData(data:Buffer) {
