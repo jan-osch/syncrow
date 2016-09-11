@@ -14,8 +14,6 @@ export class PathHelper {
      * @returns {string}
      */
     public static normalizePath(suspect:string):string {
-        // suspect = suspect.replace(/\/\ /g, " ");
-    // .replace(/(\ {1,})/g, "\\$1")
         return upath.normalize(suspect);
     }
 

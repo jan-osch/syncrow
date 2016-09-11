@@ -1,6 +1,7 @@
 import * as async from "async";
 import * as fs from "fs";
 import * as crypto from "crypto";
+import * as path from "path";
 import {SyncData} from "../sync/sync_actions";
 import {debugFor} from "../utils/logger";
 
@@ -58,7 +59,7 @@ export class FileMetaComputingQueue {
     }
 
     private checkIfExistsAndIsDirectory(syncData:SyncData, callback:(error, syncData?:SyncData)=>any) {
-        fs.stat(`${this.basePath}/${syncData.name}`, (err, stats:fs.Stats)=> {
+        fs.stat(path.join(this.basePath, syncData.name), (err, stats:fs.Stats)=> {
             if (err) {
                 syncData.exists = false;
                 return callback(null, syncData);
@@ -81,7 +82,7 @@ export class FileMetaComputingQueue {
         }
 
         const hash = crypto.createHash('sha256');
-        const stream = fs.createReadStream(`${this.basePath}/${syncData.name}`).pipe(hash);
+        const stream = fs.createReadStream(path.join(this.basePath, syncData.name)).pipe(hash);
 
         hash.on('error', (err)=> {
             callback(err);

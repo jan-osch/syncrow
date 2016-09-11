@@ -48,7 +48,7 @@ export class FileContainer extends EventEmitter implements Closable {
 
     /**
      * Wrapper over filesystem
-     * @param directoryToWatch
+     * @param directoryToWatch - localized path
      * @param options
      */
     constructor(directoryToWatch:string, options:FileContainerOptions = {}) {
@@ -73,7 +73,7 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     /**
-     * @param directoryName
+     * @param directoryName - normalized path relative to this.directoryToWatch
      * @param callback
      */
     public createDirectory(directoryName:string, callback?:Function) {
@@ -90,7 +90,7 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     /**
-     * @param callback
+     * passes to callback an array of normalized path relative to this.directoryToWatch
      */
     public  getFileTree(callback:(err:Error, files?:Array<string>)=>void) {
         debug(`obtaining file tree`);
@@ -106,12 +106,13 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     /**
-     * @param fileName
+     * @param fileName - normalized path relative to this.directoryToWatch
      * @param callback
      */
     public deleteFile(fileName:string, callback?:(err?:Error)=>any) {
         logger.info(`deleting file: ${fileName}`);
         this.blockFile(fileName);
+
         rimraf(this.createAbsolutePath(fileName), (error)=> {
             this.unBlockFileWithTimeout(fileName);
 
@@ -121,7 +122,7 @@ export class FileContainer extends EventEmitter implements Closable {
 
     /**
      *
-     * @param fileName
+     * @param fileName - normalized path relative to this.directoryToWatch
      * @param readStream
      * @param callback
      */
@@ -148,7 +149,7 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     /**
-     * @param fileName
+     * @param fileName - normalized path relative to this.directoryToWatch
      * @returns {ReadStream}
      */
     public getReadStreamForFile(fileName:string):ReadableStream {
@@ -183,7 +184,7 @@ export class FileContainer extends EventEmitter implements Closable {
 
 
     /**
-     * @param fileName
+     * @param fileName - normalized path relative to this.directoryToWatch
      * @param callback
      */
     public getFileMeta(fileName:string, callback:(err:Error, syncData?:SyncData)=>any) {
@@ -210,23 +211,31 @@ export class FileContainer extends EventEmitter implements Closable {
         debug(`beginning to watch a directory: ${this.directoryToWatch}`);
 
         this.watcher.on('add', path => {
+            path = PathHelper.normalizePath(path);
+
             if (!this.existingPaths.has(path)) {
                 this.existingPaths.add(path);
                 this.emitEventIfFileNotBlocked(FileContainer.events.fileCreated, path)
             }
         });
-        this.watcher.on('change', path => this.emitEventIfFileNotBlocked(FileContainer.events.changed, path));
+        this.watcher.on('change', path => {
+            path = PathHelper.normalizePath(path);
+            this.emitEventIfFileNotBlocked(FileContainer.events.changed, path)
+        });
         this.watcher.on('unlink', path=> {
+            path = PathHelper.normalizePath(path);
             this.existingPaths.delete(path);
             this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path)
         });
         this.watcher.on('addDir', path=> {
+            path = PathHelper.normalizePath(path);
             if (!this.existingPaths.has(path)) {
                 this.existingPaths.add(path);
                 this.emitEventIfFileNotBlocked(FileContainer.events.createdDirectory, path)
             }
         });
         this.watcher.on('unlinkDir', path=> {
+            path = PathHelper.normalizePath(path);
             this.existingPaths.delete(path);
             this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path)
         });
@@ -240,17 +249,25 @@ export class FileContainer extends EventEmitter implements Closable {
         });
     }
 
-    private createAbsolutePath(file):string {
-        return PathHelper.normalizePath(path.join(this.directoryToWatch, file));
+    private createAbsolutePath(fileName:string) {
+        return path.join(this.directoryToWatch, fileName);
     }
 
+    /**
+     * @param fileName - normalized path relative to this.directoryToWatch
+     */
     private blockFile(fileName:string) {
         debug(`blocking file: ${fileName}`);
         this.blockedFiles.add(fileName);
     }
 
+    /**
+     * @param fileName - normalized path relative to this.directoryToWatch
+     */
     private unBlockFileWithTimeout(fileName:string) {
         if (!this.blockedFiles.has(fileName)) return logger.error(`Attempting to unblock a file that is not blocked: ${fileName}`);
+
+        debug(`setting an unblock for file: ${fileName} in ${this.watchTimeout}`);
 
         setTimeout(()=> {
             debug(`unblocking file: ${fileName}`);
@@ -258,20 +275,27 @@ export class FileContainer extends EventEmitter implements Closable {
         }, this.watchTimeout);
     }
 
-    private emitEventIfFileNotBlocked(event:string, fullFileName:string) {
-        debug(`could emit ${event} for ${fullFileName}`);
-        if (!this.blockedFiles.has(fullFileName)) {
-            debug(`emitting ${event} for file: ${fullFileName}`);
-            this.emit(event, fullFileName);
+    /**
+     * @param event
+     * @param fileName - normalized path relative to this.directoryToWatch
+     */
+    private emitEventIfFileNotBlocked(event:string, fileName:string) {
+        debug(`could emit ${event} for ${fileName}`);
+        if (!this.blockedFiles.has(fileName)) {
+            debug(`emitting ${event} for file: ${fileName}`);
+            this.emit(event, fileName);
         }
     }
 
-    private addAllParentPathsToExisting(path:string) {
-        this.existingPaths.add(path);
+    /**
+     * @param fileName - normalized path relative to this.directoryToWatch
+     */
+    private addAllParentPathsToExisting(fileName:string) {
+        this.existingPaths.add(fileName);
 
-        for (let i = path.length - 1; i > 0; i--) {
-            if (path.charAt(i) === '/') {
-                this.existingPaths.add(path.slice(0, i - 1));
+        for (let i = fileName.length - 1; i > 0; i--) {
+            if (fileName.charAt(i) === '/') {
+                this.existingPaths.add(fileName.slice(0, i - 1));
             }
         }
     }
