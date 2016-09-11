@@ -8,6 +8,8 @@ const debug = debugFor('syncrow:con:authorisation_helper');
 
 export class AuthorisationHelper {
 
+
+    //TODO implement proper timeout
     /**
      * @param socket
      * @param token

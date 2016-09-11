@@ -258,6 +258,8 @@ export class FileContainer extends EventEmitter implements Closable {
         this.watcher.on('ready', ()=> {
             callback();
         });
+
+        //TODO this callback is called two times when errored - change it  
         this.watcher.on('error', (err)=> {
             logger.error(`watcher emitted: ${err}`);
             callback(err);
