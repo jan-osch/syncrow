@@ -1,7 +1,7 @@
 import {TransferQueue} from "./transfer_queue";
 import {CallbackHelper} from "../connection/callback_helper";
 import {TransferActions} from "./transfer_actions";
-import {loggerFor} from "../utils/logger";
+import {loggerFor, debugFor} from "../utils/logger";
 import {EventMessenger} from "../connection/event_messenger";
 import {ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 import {Container, ErrorCallback} from "../utils/interfaces";
@@ -15,6 +15,7 @@ export interface TransferHelperOptions {
 
 }
 
+const debug = debugFor('syncrow:trans:helper');
 const logger = loggerFor('TransferHelper');
 
 /**
@@ -35,7 +36,7 @@ export class TransferHelper {
     private preferConnecting:boolean;
     private container:Container;
     private callbackHelper:CallbackHelper;
-    private callbackMap:Map<string,ErrorCallback>;
+    private callbackMap:Map<string,Array<ErrorCallback>>;
 
     constructor(container:Container, private connectionHelper:ConnectionHelper, options:TransferHelperOptions) {
         const queueSize = options.transferQueueSize ? options.transferQueueSize : TRANSFER_CONCURRENCY;
@@ -44,7 +45,7 @@ export class TransferHelper {
         this.preferConnecting = options.preferConnecting;
         this.container = container;
         this.callbackHelper = new CallbackHelper();
-        this.callbackMap = new Map <string,ErrorCallback >();
+        this.callbackMap = new Map <string,Array<ErrorCallback>>();
     }
 
     /**
@@ -111,10 +112,12 @@ export class TransferHelper {
     public sendFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback) {
 
         if (this.callbackMap.has(fileName)) {
+            debug(`sendFileToRemote - file: ${fileName} already being sent`);
             return this.callbackMap.get(fileName).push(callback);
         }
 
         this.callbackMap.set(fileName, [callback]);
+
         const finish = (err?:Error)=>this.finishSendingFile(fileName, err);
 
         if (this.preferConnecting) {

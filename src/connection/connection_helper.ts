@@ -93,6 +93,7 @@ export class ConnectionHelper implements Closable {
         if (this.server) {
             if (this.serverCallback) logger.error('Overwriting an existing callback');
 
+
             return this.serverCallback = this.createServerCallback(callback, params);
         }
 
@@ -116,10 +117,6 @@ export class ConnectionHelper implements Closable {
 
         if (!params.override) {
             params = _.extend(this.params, params);
-        }
-
-        if (params.authenticate && !params.token) {
-            params.token = AuthorisationHelper.generateToken();
         }
 
         if (params.token && !params.timeout) {
@@ -173,10 +170,16 @@ export class ConnectionHelper implements Closable {
             (err)=> {
                 if (err)return callback(err);
 
-                if (params.token) {
-                    AuthorisationHelper.authorizeAsClient(socket, params.token);
+                if (params.authenticate || params.token) {
+                    const token = params.token ? params.token : AuthorisationHelper.generateToken();
 
-                    return setTimeout(()=>callback(null, socket), AUTH_TIMEOUT)
+                    return AuthorisationHelper.authorizeAsClient(socket, token, {timeout: AUTH_TIMEOUT},
+                        (err)=> {
+                            if (err)return callback(err);
+
+                            return callback(null, socket);
+                        }
+                    );
                 }
 
                 return callback(null, socket);
@@ -194,14 +197,19 @@ export class ConnectionHelper implements Closable {
 
                 this.oneTimeServers.add(server);
 
+                let token;
+                if (params.token || params.authenticate) {
+                    token = params.token ? params.token : AuthorisationHelper.generateToken();
+                }
+
                 listenCallback({
                     remotePort: server.address().port,
                     remoteHost: params.localHost,
-                    token: params.token
+                    token: token
                 });
 
                 server.on('connection',
-                    (socket)=> this.handleIncomingSocket(socket, params,
+                    (socket)=> this.handleIncomingSocket(socket, {token: token}, params,
                         (err, socket)=> {
                             if (err)return connectedCallback(err);
 
@@ -273,9 +281,9 @@ export class ConnectionHelper implements Closable {
 
     }
 
-    private handleIncomingSocket(socket:Socket, params:ConnectionHelperParams, connectedCallback:SocketCallback) {
-        if (params.token) {
-            return AuthorisationHelper.authorizeAsServer(socket, params.token, {timeout: params.timeout},
+    private handleIncomingSocket(socket:Socket, auth:{token?:string}, params:ConnectionHelperParams, connectedCallback:SocketCallback) {
+        if (auth.token) {
+            return AuthorisationHelper.authorizeAsServer(socket, auth.token, {timeout: params.timeout},
                 (err)=> {
                     if (err) {
                         socket.destroy();

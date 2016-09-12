@@ -74,7 +74,7 @@ describe('Engine', function () {
         if (listeningEngine)listeningEngine.shutdown();
         if (connectingEngine)connectingEngine.shutdown();
 
-        return removePath(`${TEST_DIR}`, done);
+        return removePath(TEST_DIR, done);
     });
 
 

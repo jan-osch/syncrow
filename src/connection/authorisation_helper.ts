@@ -9,15 +9,31 @@ const debug = debugFor('syncrow:con:authorisation_helper');
 export class AuthorisationHelper {
 
 
-    //TODO implement proper timeout
     /**
      * @param socket
      * @param token
+     * @param options
+     * @param callback
      */
-    public static authorizeAsClient(socket:Socket, token:string) {
+    public static authorizeAsClient(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         debug(`authorizeAsClient with token: ${token} called`);
 
-        socket.write(token);
+        try {
+            socket.write(token);
+        } catch (e) {
+            return callback(e);
+        }
+
+        return setTimeout(
+            ()=> {
+                if (socket.destroyed) {
+                    return callback(new Error('Socket has been destroyed - authorization failed'));
+                }
+
+                return callback();
+            },
+            options.timeout
+        )
     }
 
     /**
@@ -28,14 +44,19 @@ export class AuthorisationHelper {
      */
     public static authorizeAsServer(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
 
-        debug(`authorizeSocket with token: ${token} called`);
+        debug(`#authorizeAsServer with token: ${token} called`);
 
         const wrapped = async.timeout(
             (cb)=> {
                 socket.once('data',
-                    (expectedToken)=> {
-                        if (expectedToken.toString() !== token) {
-                            return cb(new Error(`token: ${expectedToken} does not match: ${token}`));
+                    (data)=> {
+                        debug(`#authorizeAsServer - got data: ${data}`);
+
+                        const expectedToken = data.toString();
+
+                        if (expectedToken !== token) {
+                            debug(`#authorizeAsServer - token does not match: ${expectedToken} vs ${token}`);
+                            return cb(new Error(`token: ${data} does not match: ${token}`));
                         }
 
                         return cb();

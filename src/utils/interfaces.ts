@@ -10,5 +10,5 @@ export interface Container {
 }
 
 export interface ErrorCallback {
-    (err:Error):any
+    (err?:Error):any
 }

@@ -197,7 +197,18 @@ function compareFileTrees(pathA:string, filesA:Array<string>, pathB:string, file
 function compareFileContents(pathA:string, contentA:string|Buffer, pathB:string, contentB:string|Buffer, callback) {
     if (Buffer.isBuffer(contentA) && Buffer.isBuffer(contentB)) {
         const buffersAreEqual = (contentA.compare(contentB) === 0);
-        if (!buffersAreEqual) return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
+        if (!buffersAreEqual) {
+            console.log('FIR')
+            console.log('FIR')
+            console.log('FIR')
+            console.log('FIR')
+            console.log(contentA.toString());
+            console.log('SEC')
+            console.log('SEC')
+            console.log('SEC')
+            console.log(contentB.toString());
+            return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
+        }
 
     } else {
         const stringsAreEqual = contentA === contentB;

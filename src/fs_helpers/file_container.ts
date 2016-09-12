@@ -72,7 +72,7 @@ export class FileContainer extends EventEmitter implements Closable {
      * Stops watching the directory
      */
     public shutdown() {
-        debug('closing file container watcher');
+        debug('#shutdown - closing file container watcher');
         this.watcher.close();
     }
 
@@ -81,7 +81,7 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param callback
      */
     public createDirectory(directoryName:string, callback?:Function) {
-        logger.info(`creating directory: ${directoryName}`);
+        logger.info(`#getFileTree - creating directory: ${directoryName}`);
 
         this.addAllParentPathsToExisting(directoryName);
         this.blockFile(directoryName);
@@ -97,13 +97,13 @@ export class FileContainer extends EventEmitter implements Closable {
      * passes to callback an array of normalized path relative to this.directoryToWatch
      */
     public  getFileTree(callback:(err:Error, files?:Array<string>)=>void) {
-        debug(`obtaining file tree`);
+        debug(`#getFileTree - obtaining file tree`);
 
         readTree(this.directoryToWatch, {filter: this.filterFunction}, (err, results:Array<string>)=> {
             if (err) return callback(err);
 
             const fileTree = results.map(PathHelper.normalizePath);
-            debug(`detected files: ${fileTree.length}`);
+            debug(`#getFileTree - detected files: ${fileTree.length}`);
 
             callback(null, fileTree)
         });
@@ -114,7 +114,7 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param callback
      */
     public deleteFile(fileName:string, callback?:(err?:Error)=>any) {
-        logger.info(`deleting file: ${fileName}`);
+        logger.info(`#deleteFile - ${fileName}`);
         this.blockFile(fileName);
 
         rimraf(this.createAbsolutePath(fileName), (error)=> {
@@ -134,27 +134,23 @@ export class FileContainer extends EventEmitter implements Closable {
         this.addAllParentPathsToExisting(fileName);
 
         try {
-            debug(`starting to read from remote - file ${fileName}`);
+            debug(`#consumeFileStream - starting to read from remote - file ${fileName}`);
 
             this.blockFile(fileName);
-
-            const initialRead = readStream.bytesRead;
-
             const writeStream = fs.createWriteStream(this.createAbsolutePath(fileName));
 
             readStream.pipe(writeStream);
             writeStream.on('error', callback);
 
             writeStream.on('finish', ()=> {
-                const read = readStream.bytesRead - initialRead;
 
-                debug(`file: ${fileName} bytes read: ${read} vs bytes written: ${writeStream.bytesWritten}`);
-
-                if (read !== writeStream.bytesWritten || read === 0) {
-                    logger.warn(`file: ${fileName} written ${writeStream.bytesWritten} bytes should: ${read} initial: ${initialRead}`)
+                if (writeStream.bytesWritten === 0) {
+                    logger.warn(`#consumeFileStream - file: ${fileName} written: ${writeStream.bytesWritten} bytes`);
+                } else {
+                    debug(`#consumeFileStream - file: ${fileName} bytes wrote: ${writeStream.bytesWritten} bytes`);
                 }
 
-                debug(`done and will unblock the file ${fileName}`);
+                debug(`#consumeFileStream - done and will unblock the file ${fileName}`);
                 this.unBlockFileWithTimeout(fileName);
                 callback();
             });
@@ -171,10 +167,10 @@ export class FileContainer extends EventEmitter implements Closable {
     public getReadStreamForFile(fileName:string):ReadableStream {
         try {
             return fs.createReadStream(this.createAbsolutePath(fileName)).on('error', (error)=> {
-                logger.error(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+                logger.error(`#getReadStreamForFile - could not open a read stream, reason: ${error}`);
             });
         } catch (error) {
-            logger.error(`/getReadStreamForFile - could not open a read stream, reason: ${error}`);
+            logger.error(`#getReadStreamForFile - could not open a read stream, reason: ${error}`);
         }
     }
 
@@ -188,7 +184,7 @@ export class FileContainer extends EventEmitter implements Closable {
                 (cb)=>this.getFileTree(cb),
                 (results, cb)=> {
                     this.existingPaths = new Set<string>(results);
-                    debug(`initial scan ready - watching ${results.length} paths`);
+                    debug(`#beginWatching - initial scan ready - watching ${results.length} paths`);
                     return setImmediate(cb);
                 },
                 (cb)=>this.startWatcher(cb)
@@ -204,7 +200,7 @@ export class FileContainer extends EventEmitter implements Closable {
      */
     public getFileMeta(fileName:string, callback:(err:Error, syncData?:SyncData)=>any) {
         if (this.cachedSyncData.has(fileName)) {
-            debug(`found cached sync data for file ${fileName}`);
+            debug(`#getFileMeta - found cached sync data for file ${fileName}`);
             return callback(null, this.cachedSyncData.get(fileName));
         }
         this.fileMetaQueue.computeFileMeta(fileName, (err, syncData)=> {
@@ -223,7 +219,7 @@ export class FileContainer extends EventEmitter implements Closable {
             ignored: this.filterFunction
         });
 
-        debug(`beginning to watch a directory: ${this.directoryToWatch}`);
+        debug(`#startWatcher - beginning to watch a directory: ${this.directoryToWatch}`);
 
         this.watcher.on('add', path => {
             path = PathHelper.normalizePath(path);
@@ -255,14 +251,24 @@ export class FileContainer extends EventEmitter implements Closable {
             this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path)
         });
 
+
+        let called = false;
+
         this.watcher.on('ready', ()=> {
-            callback();
+            if (!called) {
+                callback();
+                called = true;
+            }
         });
 
-        //TODO this callback is called two times when errored - change it  
         this.watcher.on('error', (err)=> {
-            logger.error(`watcher emitted: ${err}`);
-            callback(err);
+            if (!called) {
+                callback(err);
+                called = true;
+                return;
+            }
+
+            return logger.error(`#startWatcher - watcher emitted: ${err}`);
         });
     }
 
@@ -274,7 +280,7 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param fileName - normalized path relative to this.directoryToWatch
      */
     private blockFile(fileName:string) {
-        debug(`blocking file: ${fileName}`);
+        debug(`#blockFile - blocking file: ${fileName}`);
         this.blockedFiles.add(fileName);
     }
 
@@ -282,12 +288,12 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param fileName - normalized path relative to this.directoryToWatch
      */
     private unBlockFileWithTimeout(fileName:string) {
-        if (!this.blockedFiles.has(fileName)) return logger.error(`Attempting to unblock a file that is not blocked: ${fileName}`);
+        if (!this.blockedFiles.has(fileName)) return logger.error(`#unBlockFileWithTimeout - file is not blocked: ${fileName}`);
 
-        debug(`setting an unblock for file: ${fileName} in ${this.watchTimeout}`);
+        debug(`#unBlockFileWithTimeout - setting an unblock for file: ${fileName} in ${this.watchTimeout}`);
 
         setTimeout(()=> {
-            debug(`unblocking file: ${fileName}`);
+            debug(`#unBlockFileWithTimeout - unblocking file: ${fileName}`);
             this.blockedFiles.delete(fileName);
         }, this.watchTimeout);
     }
@@ -297,9 +303,9 @@ export class FileContainer extends EventEmitter implements Closable {
      * @param fileName - normalized path relative to this.directoryToWatch
      */
     private emitEventIfFileNotBlocked(event:string, fileName:string) {
-        debug(`could emit ${event} for ${fileName}`);
+        debug(`#emitEventIfFileNotBlocked - could emit ${event} for ${fileName}`);
         if (!this.blockedFiles.has(fileName)) {
-            debug(`emitting ${event} for file: ${fileName}`);
+            debug(`#emitEventIfFileNotBlocked - emitting ${event} for file: ${fileName}`);
             this.emit(event, fileName);
         }
     }
