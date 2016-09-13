@@ -2,9 +2,10 @@ import * as async from "async";
 import {
     createPathSeries,
     removePath,
-    compareTwoFiles,
     getRandomString,
-    compareDirectories
+    compareDirectories,
+    createPath,
+    pathExists
 } from "../utils/fs_test_utils";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
@@ -12,6 +13,7 @@ import {Engine} from "../core/engine";
 import * as mkdirp from "mkdirp";
 import * as fs from "fs";
 import {EventCounter} from "../utils/event_counter";
+import * as assert from "assert";
 
 const FS_TIMEOUT = 400;
 const TEST_DIR = 'engine_test';
@@ -88,18 +90,19 @@ describe('Engine', function () {
             [
                 (cb)=>mkdirp(`${TEST_DIR}/aaa/directory`, cb),
 
-                (cb)=>fs.writeFile(`${TEST_DIR}/aaa/file.txt`, getRandomString(4000), cb),
+                (cb)=>createPath(`${TEST_DIR}/aaa/file.txt`, getRandomString(4000), false, cb),
 
                 (cb)=> {
                     if (counter.hasFinished()) return setImmediate(cb);
 
                     return counter.on(EventCounter.events.done, cb);
-                },
-
-                (cb)=>compareTwoFiles(`${TEST_DIR}/aaa/file.txt`, `${TEST_DIR}/bbb/file.txt`, cb)
+                }
             ],
 
-            done
+            (err)=> {
+                assert(pathExists(`${TEST_DIR}/bbb/file.txt`), 'Path on reflected directory must exist');
+                done(err);
+            }
         )
     });
 

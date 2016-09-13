@@ -5,7 +5,8 @@ import {Engine} from "./engine";
 import {SyncAction} from "../sync/sync_actions";
 import {EventMessenger} from "../connection/event_messenger";
 import * as async from "async";
-import * as _ from "lodash";
+import ConstantServer from "../connection/constant_server";
+import DynamicServer from "../connection/dynamic_server";
 
 export interface EngineCallback {
     (err:Error, engine?:Engine):any
@@ -20,6 +21,8 @@ export interface ListenOptions {
     watch?:boolean;
 }
 
+const AUTHORISATION_TIMEOUT = 40;
+
 /**
  * @param path
  * @param {Number} port
@@ -29,20 +32,19 @@ export interface ListenOptions {
 export default function startListeningEngine(path:string, port:number, options:ListenOptions, callback:EngineCallback) {
     const container = new FileContainer(path, {filter: options.filter});
 
-    const connectionHelperEntry = new ConnectionHelper({
-        localPort: port,
-        localHost: options.externalHost,
-        listen: true,
-        listenCallback: _.noop,
-        token: options.initialToken
-    });
+    const connectionHelperEntry = new ConstantServer(port,
+        {
+            authorisationTimeout: AUTHORISATION_TIMEOUT,
+            constantToken: options.initialToken
+        }
+    );
 
-    const connectionHelperForTransfer = new ConnectionHelper({
-        localHost: options.externalHost,
-        listen: true,
-        listenCallback: _.noop,
-        authenticate: options.authenticate
-    });
+    const connectionHelperForTransfer = new DynamicServer({
+            authorisationTimeout: AUTHORISATION_TIMEOUT,
+            generateToken: options.authenticate
+        },
+        options.externalHost
+    );
 
     const transferHelper = new TransferHelper(
         container,
@@ -67,7 +69,7 @@ export default function startListeningEngine(path:string, port:number, options:L
                 return cb();
             },
 
-            (cb)=>connectionHelperEntry.setupServer(cb)
+            (cb)=>connectionHelperEntry.listen(cb)
         ],
 
         (err:Error)=> {
@@ -84,7 +86,7 @@ function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper) {
         ()=>true,
 
         (cb)=> {
-            return helper.getNewSocket((err, socket)=> {
+            return helper.getNewSocket({}, (err, socket)=> {
                 if (err) {
                     engine.emit(Engine.events.error, err);
                     return cb();

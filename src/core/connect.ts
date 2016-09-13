@@ -7,6 +7,8 @@ import {SyncAction} from "../sync/sync_actions";
 import {EventMessenger} from "../connection/event_messenger";
 import * as async from "async";
 import {debugFor} from "../utils/logger";
+import ConstantConnector from "../connection/constant_connector";
+import DynamicConnector from "../connection/dynamic_connector";
 
 const debug = debugFor('syncrow:cr:connect');
 
@@ -15,10 +17,15 @@ export interface ConnectOptions {
     initialToken?:string;
     authenticate?:boolean;
     sync?:SyncAction;
-    times?:number;
-    interval?:number;
+    retry?:{
+        times:number,
+        interval:number
+    },
     watch?:boolean;
 }
+
+const AUTHORISATION_TIMEOUT = 30;
+
 
 /**
  * @param {String} path
@@ -30,21 +37,9 @@ export interface ConnectOptions {
 export default function startConnectingEngine(path:string, remotePort:number, remoteHost:string, options:ConnectOptions, callback:EngineCallback) {
     const container = new FileContainer(path, {filter: options.filter});
 
-    const connectionHelperEntry = new ConnectionHelper({
-        remotePort: remotePort,
-        remoteHost: remoteHost,
-        listen: false,
-        token: options.initialToken,
-        interval: options.interval,
-        times: options.times,
-    });
+    const connectionHelperEntry = new ConstantConnector(AUTHORISATION_TIMEOUT, remoteHost, remotePort, options.initialToken);
 
-    const connectionHelperForTransfer = new ConnectionHelper({
-        remotePort: remotePort,
-        remoteHost: remoteHost,
-        listen: false,
-        authenticate: options.authenticate
-    });
+    const connectionHelperForTransfer = new DynamicConnector(AUTHORISATION_TIMEOUT);
 
     const transferHelper = new TransferHelper(container, connectionHelperForTransfer, {
         name: 'ConnectingEngine',
@@ -62,15 +57,25 @@ export default function startConnectingEngine(path:string, remotePort:number, re
         [
             (cb)=> {
                 if (options.watch) return container.beginWatching(cb);
-                cb();
+                setImmediate(cb);
             },
 
-            (cb)=>connectionHelperEntry.getNewSocket(cb),
+            (cb)=> {
+                if (options.retry) {
+                    return async.retry(options.retry,
+                        (retryCallback)=>connectionHelperEntry.getNewSocket({}, retryCallback),
+                        cb
+                    );
+                }
+
+                return connectionHelperEntry.getNewSocket({}, cb)
+            },
+
 
             (socket, cb)=> {
                 const eventMessenger = new EventMessenger(socket);
                 engine.addOtherPartyMessenger(eventMessenger);
-                if (options.interval && options.times) {
+                if (options.retry) {
                     connectAgainAfterPreviousDied(eventMessenger, engine, connectionHelperEntry);
                 }
                 return cb(null, engine);
@@ -81,11 +86,11 @@ export default function startConnectingEngine(path:string, remotePort:number, re
 }
 
 function connectAgainAfterPreviousDied(previousMessenger:EventMessenger, engine:Engine, connectionHelper:ConnectionHelper) {
-    previousMessenger.on(EventMessenger.events.died, ()=> {
+    return previousMessenger.once(EventMessenger.events.died, ()=> {
 
             debug(`obtaining new socket`);
 
-            connectionHelper.getNewSocket((err, socket)=> {
+            return connectionHelper.getNewSocket({}, (err, socket)=> {
                     if (err) {
                         return engine.emit(Engine.events.error, err);
                     }

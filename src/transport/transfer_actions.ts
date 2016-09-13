@@ -1,7 +1,7 @@
 import {Socket} from "net";
 import {loggerFor, debugFor} from "../utils/logger";
 import {ListenCallback, ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
-import {Container} from "../utils/interfaces";
+import {Container, ErrorCallback} from "../utils/interfaces";
 
 const debug = debugFor("syncrow:trasfer_actions");
 const logger = loggerFor('TransferActions');
@@ -35,12 +35,12 @@ export class TransferActions {
         debug(`executing: listenAndDownloadFile - fileName: ${fileName}`);
 
         return connectionHelper.getNewSocket(
+            {listenCallback: listeningCallback},
             (err, socket)=> {
                 if (err)return doneCallback(err);
 
                 return TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback)
-            },
-            {listen: true, listenCallback: listeningCallback}
+            }
         );
     }
 
@@ -62,14 +62,14 @@ export class TransferActions {
         debug(`executing: listenAndUploadFile - fileName: ${fileName}`);
 
         return connectionHelper.getNewSocket(
+            {listenCallback: listenCallback},
             (err, fileTransferSocket)=> {
                 if (err)return doneCallback(err);
 
                 fileTransferSocket.on('end', doneCallback);
                 fileTransferSocket.on('error', doneCallback);
                 sourceContainer.getReadStreamForFile(fileName).pipe(fileTransferSocket);
-            },
-            {listenCallback: listenCallback, listen: true}
+            }
         );
     }
 
@@ -90,14 +90,14 @@ export class TransferActions {
         debug(`connectAndUploadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
 
         connectionHelper.getNewSocket(
+            address,
             (err, socket)=> {
                 if (err) return doneCallback(err);
                 socket.on('end', doneCallback);
                 socket.on('error', doneCallback);
 
                 return sourceContainer.getReadStreamForFile(fileName).pipe(socket);
-            },
-            address
+            }
         );
 
     }
@@ -119,8 +119,8 @@ export class TransferActions {
         debug(`connectAndDownloadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
 
         connectionHelper.getNewSocket(
-            (err, socket)=>TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback),
-            address
+            address,
+            (err, socket)=>TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback)
         )
     }
 
