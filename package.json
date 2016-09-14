@@ -12,7 +12,7 @@
     "benchmark:short": "./housekeeping/benchmark-short.sh",
     "lint": "tslint `find src -name '*.ts*'`",
     "clear-maps": "find build -name \"*.js.map\" -type f -delete",
-    "prepublish": "npm run build && npm run clear-maps && npm run test"
+    "prepare": "npm run build && npm run clear-maps && npm run test"
   },
   "repository": {
     "type": "git",

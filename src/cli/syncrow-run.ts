@@ -28,7 +28,6 @@ startEngine(savedConfig);
 
 /**
  * @param path
- * @returns {any}
  */
 function loadConfigFromFile(path:string):ProgramOptions {
     try {
