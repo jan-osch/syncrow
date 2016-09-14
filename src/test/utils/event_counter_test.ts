@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {EventCounter} from "../utils/event_counter";
+import {EventCounter} from "../../utils/event_counter";
 import {expect} from "chai";
 
 describe('EventCounter', function () {

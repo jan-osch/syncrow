@@ -1,4 +1,4 @@
-import {PathHelper} from "../fs_helpers/path_helper";
+import {PathHelper} from "../../fs_helpers/path_helper";
 import * as path from "path";
 import * as assert from "assert";
 

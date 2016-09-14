@@ -1,7 +1,7 @@
 import * as async from "async";
-import {createPathSeries, removePath} from "../utils/fs_test_utils";
+import {createPathSeries, removePath} from "../../utils/fs_test_utils";
 import * as path from "path";
-import {readTree} from "../fs_helpers/read_tree";
+import {readTree} from "../../fs_helpers/read_tree";
 import * as assert from "assert";
 
 const TEST_DIR = 'read_tree_test';
