@@ -15,7 +15,7 @@ export interface TransferHelperOptions {
 
 }
 
-const debug = debugFor('syncrow:trans:helper');
+const debug = debugFor('syncrow:transfer:helper');
 const logger = loggerFor('TransferHelper');
 
 /**

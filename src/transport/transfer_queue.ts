@@ -4,7 +4,7 @@ import {ConnectionAddress, ConnectionHelper, ListenCallback} from "../connection
 import {Container} from "../utils/interfaces";
 import {loggerFor, ErrorCallback, debugFor} from "../utils/logger";
 
-const debug = debugFor("syncrow:trasfer_queue");
+const debug = debugFor("syncrow:transfer:queue");
 
 const logger = loggerFor('TransferQueue');
 

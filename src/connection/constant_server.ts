@@ -66,7 +66,11 @@ export default class ConstantServer implements ConnectionHelper {
             this.params.constantToken,
             {timeout: this.params.authorisationTimeout},
             (err)=> {
-                if (err)return serverCallback(err);
+                if (err) {
+                    debug(`#handleConnection - destroying connection`);
+                    socket.destroy();
+                    return serverCallback(err);
+                }
 
                 debug(`#handleConnection - finished authorisation with ${this.params.constantToken}`);
                 return serverCallback(null, socket);

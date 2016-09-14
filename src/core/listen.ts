@@ -21,7 +21,7 @@ export interface ListenOptions {
     watch?:boolean;
 }
 
-const AUTHORISATION_TIMEOUT = 40;
+const AUTHORISATION_TIMEOUT = 300;
 
 /**
  * @param path

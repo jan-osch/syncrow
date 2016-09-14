@@ -50,7 +50,7 @@ export class Logger {
      * @param err
      */
     public error(err?:any) {
-        if (err) this.logInColor(`ERROR:` + err, 'red');
+        if (err) this.logInColor(`ERROR: ${err.stack ? err.stack : err}`, 'red');
     }
 
     private logInColor(message:string, color:string) {

@@ -16,21 +16,38 @@ export class AuthorisationHelper {
      * @param callback
      */
     public static authorizeAsClient(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
-        debug(`authorizeAsClient with token: ${token} called`);
+        debug(`#authorizeAsClient with token: ${token} called port: ${socket.remotePort}`);
 
         try {
             socket.write(token);
         } catch (e) {
+            debug(`#authorizeAsClient - failed reason: ${e}`);
             return callback(e);
         }
 
+        let callbackNotYetCalled = true;
+
+        socket.on('close', ()=> {
+            if (callbackNotYetCalled) {
+                callbackNotYetCalled = false;
+
+                if (socket.bytesRead === 0) return callback(new Error(`Socket has been destroyed - authorization failed - remotePort: ${socket.remotePort}`));
+
+                debug(`#authorizeAsClient - success - token: ${token} remotePort: ${socket.remotePort}`);
+                return callback();
+            }
+        });
+
         return setTimeout(
             ()=> {
-                if (socket.destroyed) {
-                    return callback(new Error('Socket has been destroyed - authorization failed'));
-                }
+                if (callbackNotYetCalled) {
+                    callbackNotYetCalled = false;
 
-                return callback();
+                    if (socket.destroyed && socket.bytesRead === 0) return callback(new Error(`Socket has been destroyed - authorization failed - remotePort: ${socket.remotePort}`));
+
+                    debug(`#authorizeAsClient - success - token: ${token} remotePort: ${socket.remotePort}`);
+                    return callback();
+                }
             },
             options.timeout
         )
@@ -44,19 +61,19 @@ export class AuthorisationHelper {
      */
     public static authorizeAsServer(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
 
-        debug(`#authorizeAsServer with token: ${token} called`);
+        debug(`#authorizeAsServer with token: ${token} port: ${socket.localPort} called`);
 
         const wrapped = async.timeout(
             (cb)=> {
                 socket.once('data',
                     (data)=> {
-                        debug(`#authorizeAsServer - got data: ${data}`);
+                        debug(`#authorizeAsServer - got data: ${data} port: ${socket.localPort}`);
 
                         const expectedToken = data.toString();
 
                         if (expectedToken !== token) {
-                            debug(`#authorizeAsServer - token does not match: ${expectedToken} vs ${token}`);
-                            return cb(new Error(`token: ${data} does not match: ${token}`));
+                            debug(`#authorizeAsServer - token does not match: ${expectedToken} vs ${token} port: ${socket.localPort}`);
+                            return cb(new Error(`token: ${data} does not match: ${token} port: ${socket.localPort}`));
                         }
 
                         return cb();
@@ -64,7 +81,7 @@ export class AuthorisationHelper {
                 );
             },
             options.timeout,
-            new Error('Authorisation timeout')
+            new Error(`Authorisation timeout - port: ${socket.localPort}`)
         );
 
         wrapped((err)=> {

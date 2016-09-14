@@ -24,7 +24,7 @@ export interface ConnectOptions {
     watch?:boolean;
 }
 
-const AUTHORISATION_TIMEOUT = 30;
+const AUTHORISATION_TIMEOUT = 10;
 
 
 /**

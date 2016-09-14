@@ -6,7 +6,7 @@ chai.use(sinonChai);
 
 const expect = chai.expect;
 
-describe('ConnectionHelper', function () {
+xdescribe('ConnectionHelper', function () {
     it('can be instantiated, with minimal connection setup', function () {
         new ConnectionHelper({remotePort: 10, remoteHost: '123'});
     });

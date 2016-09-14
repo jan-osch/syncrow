@@ -1,6 +1,6 @@
 import {ConnectionHelper, SocketCallback, ListenCallback} from "./connection_helper";
 import * as net from "net";
-import {loggerFor, debugFor} from "../utils/logger";
+import {debugFor} from "../utils/logger";
 import {AuthorisationHelper} from "./authorisation_helper";
 
 const debug = debugFor('syncrow:con:dynamic_server');
@@ -62,6 +62,7 @@ export default class DynamicServer implements ConnectionHelper {
             (err)=> {
 
                 if (err) {
+                    debug(`#handleConnection -destroying socket`);
                     socket.destroy();
                     return callback(err);
                 }

@@ -3,7 +3,7 @@ import {loggerFor, debugFor} from "../utils/logger";
 import {ListenCallback, ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 import {Container, ErrorCallback} from "../utils/interfaces";
 
-const debug = debugFor("syncrow:trasfer_actions");
+const debug = debugFor("syncrow:transfer:actions");
 const logger = loggerFor('TransferActions');
 
 
@@ -59,12 +59,15 @@ export class TransferActions {
                                       listenCallback:ListenCallback) {
 
 
-        debug(`executing: listenAndUploadFile - fileName: ${fileName}`);
+        debug(`#listenAndUploadFile - started fileName: ${fileName}`);
 
         return connectionHelper.getNewSocket(
             {listenCallback: listenCallback},
             (err, fileTransferSocket)=> {
-                if (err)return doneCallback(err);
+                if (err) {
+                    debug(`#listenAndUploadFile - failed fileName: ${fileName} - reason: ${err}`);
+                    return doneCallback(err);
+                }
 
                 fileTransferSocket.on('end', doneCallback);
                 fileTransferSocket.on('error', doneCallback);
@@ -93,6 +96,7 @@ export class TransferActions {
             address,
             (err, socket)=> {
                 if (err) return doneCallback(err);
+
                 socket.on('end', doneCallback);
                 socket.on('error', doneCallback);
 
@@ -116,11 +120,18 @@ export class TransferActions {
                                          connectionHelper:ConnectionHelper,
                                          doneCallback:ErrorCallback) {
 
-        debug(`connectAndDownloadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
+        debug(`#connectAndDownloadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
 
         connectionHelper.getNewSocket(
             address,
-            (err, socket)=>TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback)
+            (err, socket)=> {
+                if (err) {
+                    debug(`#connectAndDownloadFile: connecting to ${address.remoteHost}:${address.remotePort} failed: ${err}`);
+                    return doneCallback(err);
+                }
+
+                TransferActions.consumeFileFromSocket(socket, fileName, destinationContainer, doneCallback)
+            }
         )
     }
 
