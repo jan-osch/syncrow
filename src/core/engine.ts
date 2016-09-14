@@ -8,7 +8,7 @@ import {Closable} from "../utils/interfaces";
 import {EventEmitter} from "events";
 import {noAction} from "../sync/no_action";
 
-const debug = debugFor("syncrow:cr:engine");
+const debug = debugFor("syncrow:core:engine");
 const logger = loggerFor('Engine');
 
 const INITIAL_TIMEOUT = 10;

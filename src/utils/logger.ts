@@ -14,10 +14,12 @@ export class Logger {
         this.timers = new Map<string,Date>();
     }
 
+    //TODO ensure that calls to this do not overwrite each other
     public time(key:string) {
         this.timers.set(key, new Date());
     }
 
+    //TODO add a hash or something
     public timeEnd(key:string) {
         const time = this.timers.get(key);
 

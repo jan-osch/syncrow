@@ -10,7 +10,9 @@ import {debugFor} from "../utils/logger";
 import ConstantConnector from "../connection/constant_connector";
 import DynamicConnector from "../connection/dynamic_connector";
 
-const debug = debugFor('syncrow:cr:connect');
+const debug = debugFor('syncrow:core:connect');
+
+//TODO add better retry after connection lost
 
 export interface ConnectOptions {
     filter?:FilterFunction;
