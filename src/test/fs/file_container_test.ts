@@ -5,7 +5,7 @@ import * as sinon from "sinon";
 import {FileContainer} from "../../fs_helpers/file_container";
 import * as async from "async";
 import * as sinonChai from "sinon-chai";
-import * as fs from "";
+import * as fs from "fs";
 import * as crypto from "crypto";
 import {EventCounter} from "../../utils/event_counter";
 import {PathHelper} from "../../fs_helpers/path_helper";

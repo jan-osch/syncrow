@@ -1,5 +1,5 @@
 import * as async from "async";
-import {createPathSeries, CreatePathArgument} from "../utils/fs_test_utils";
+import {createPathSeries, CreatePathArgument, compareDirectories} from "../utils/fs_test_utils";
 import startListeningEngine from "../core/listen";
 import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
@@ -94,8 +94,10 @@ async.waterfall(
         (cb)=> {
             listeningEngine.shutdown();
             connectingEngine.shutdown();
-            return rimraf('build/benchmark', cb)
+            return compareDirectories('build/benchmark/aaa', 'build/benchmark/bbb', cb)
         },
+
+        (cb)=>rimraf('build/benchmark', cb),
 
         (cb)=> {
             const difference = endTime.getTime() - startTime.getTime();
