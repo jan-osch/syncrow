@@ -13,6 +13,7 @@ const token = '12897371023o1289nnjos';
 const port = 4321;
 const TEST_DIR = 'pull_test';
 
+
 describe('PullAction', function () {
 
     let listeningEngine;
@@ -68,7 +69,8 @@ describe('PullAction', function () {
                     )
                 },
 
-                (cb)=> startListeningEngine(`${TEST_DIR}/dir_list`, port, {
+                (cb)=> startListeningEngine({
+                    path: `${TEST_DIR}/dir_list`, localPort: port,
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: token,
@@ -84,7 +86,10 @@ describe('PullAction', function () {
                     return setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_conn`, port, '127.0.0.1', {
+                (cb)=>startConnectingEngine({
+                    path: `${TEST_DIR}/dir_conn`,
+                    remotePort: port,
+                    remoteHost: '127.0.0.1',
                     authenticate: true,
                     initialToken: token,
                     watch: true
@@ -132,7 +137,8 @@ describe('PullAction', function () {
                     )
                 },
 
-                (cb)=> startListeningEngine(`${TEST_DIR}/dir_list`, port, {
+                (cb)=> startListeningEngine({
+                    path: `${TEST_DIR}/dir_list`, localPort: port,
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: token,
@@ -148,11 +154,15 @@ describe('PullAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_conn`, port, '127.0.0.1', {
+                (cb)=>startConnectingEngine({
+                    path: `${TEST_DIR}/dir_conn`,
+                    remotePort: port,
+                    remoteHost: '127.0.0.1',
                     authenticate: true,
                     initialToken: token,
                     watch: true
                 }, cb),
+
 
                 (engine, cb)=> {
                     connectingEngine = engine;

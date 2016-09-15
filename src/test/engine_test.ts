@@ -1,3 +1,5 @@
+Error.stackTraceLimit = Infinity;
+
 import * as async from "async";
 import {
     createPathSeries,
@@ -41,7 +43,9 @@ describe('Engine', function () {
                 ),
 
                 (cb)=> {
-                    startListeningEngine(`${TEST_DIR}/aaa`, port, {
+                    startListeningEngine({
+                            path: `${TEST_DIR}/aaa`,
+                            localPort: port,
                             authenticate: true,
                             externalHost: '127.0.0.1',
                             initialToken: token,
@@ -54,10 +58,13 @@ describe('Engine', function () {
                 (engine, cb)=> {
                     listeningEngine = engine;
 
-                    return startConnectingEngine(`${TEST_DIR}/bbb`, port, '127.0.0.1', {
+                    return startConnectingEngine({
+                            path: `${TEST_DIR}/bbb`,
+                            remotePort: port,
+                            remoteHost: '127.0.0.1',
                             authenticate: true,
                             initialToken: token,
-                            watch: true
+                            watch: true,
                         },
                         cb
                     )

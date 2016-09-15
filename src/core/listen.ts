@@ -7,43 +7,48 @@ import {EventMessenger} from "../connection/event_messenger";
 import * as async from "async";
 import ConstantServer from "../connection/constant_server";
 import DynamicServer from "../connection/dynamic_server";
+import {debugFor} from "../utils/logger";
 
 export interface EngineCallback {
     (err:Error, engine?:Engine):any
 }
 
-export interface ListenOptions {
-    filter?:FilterFunction;
-    externalHost?:string;
-    initialToken?:string;
-    authenticate?:boolean;
-    sync?:SyncAction;
-    watch?:boolean;
-}
-
-const AUTHORISATION_TIMEOUT = 300;
+const debug = debugFor('syncrow:core:listen');
+const AUTH_TIMEOUT = 100;
 
 /**
- * @param path
- * @param {Number} port
- * @param {ListenOptions} options
+ * @param params
  * @param {EngineCallback} callback
  */
-export default function startListeningEngine(path:string, port:number, options:ListenOptions, callback:EngineCallback) {
-    const container = new FileContainer(path, {filter: options.filter});
+export default function startListeningEngine(params:{
+    path:string,
+    localPort:number,
+    externalHost:string,
 
-    const connectionHelperEntry = new ConstantServer(port,
+    authTimeout?:number,
+    filter?:FilterFunction
+    initialToken?:string,
+    authenticate?:boolean,
+    sync?:SyncAction,
+    watch?:boolean
+}, callback:EngineCallback) {
+
+    const authTimeout = params.authTimeout ? params.authTimeout : AUTH_TIMEOUT;
+
+    const container = new FileContainer(params.path, {filter: params.filter});
+
+    const connectionHelperEntry = new ConstantServer(params.localPort,
         {
-            authorisationTimeout: AUTHORISATION_TIMEOUT,
-            constantToken: options.initialToken
+            authTimeout: authTimeout,
+            constantToken: params.initialToken
         }
     );
 
     const connectionHelperForTransfer = new DynamicServer({
-            authorisationTimeout: AUTHORISATION_TIMEOUT,
-            generateToken: options.authenticate
+            authTimeout: authTimeout,
+            generateToken: params.authenticate
         },
-        options.externalHost
+        params.externalHost
     );
 
     const transferHelper = new TransferHelper(
@@ -55,7 +60,7 @@ export default function startListeningEngine(path:string, port:number, options:L
         }
     );
 
-    const engine = new Engine(container, transferHelper, {sync: options.sync});
+    const engine = new Engine(container, transferHelper, {sync: params.sync});
 
     engine.on(Engine.events.shutdown, ()=> {
         connectionHelperForTransfer.shutdown();
@@ -65,7 +70,7 @@ export default function startListeningEngine(path:string, port:number, options:L
     return async.waterfall(
         [
             (cb)=> {
-                if (options.watch)return container.beginWatching(cb);
+                if (params.watch)return container.beginWatching(cb);
                 return cb();
             },
 
@@ -98,6 +103,7 @@ function listenForMultipleConnections(engine:Engine, helper:ConnectionHelper) {
         },
 
         (err)=> {
+            console.log('HHHHHHERER')
             if (err) engine.emit(Engine.events.error, err);
         }
     )

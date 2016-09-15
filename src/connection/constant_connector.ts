@@ -8,7 +8,7 @@ const debug = debugFor('syncrow:con:constant_connector');
 
 export default class ConstantConnector implements ConnectionHelper {
 
-    constructor(private authorisationTimeout:number, private remoteHost:string, private remotePort:number, private constantToken:string) {
+    constructor(private authTimeout:number, private remoteHost:string, private remotePort:number, private constantToken:string) {
     }
 
     public shutdown() {
@@ -36,7 +36,7 @@ export default class ConstantConnector implements ConnectionHelper {
                 debug(`#getNewSocket - starting connecting with token: ${this.constantToken}`);
                 return AuthorisationHelper.authorizeAsClient(socket,
                     this.constantToken,
-                    {timeout: this.authorisationTimeout},
+                    {timeout: this.authTimeout},
 
                     (err)=> {
                         if (err)return callback(err);
@@ -46,7 +46,7 @@ export default class ConstantConnector implements ConnectionHelper {
                     }
                 )
             }
-        );
+        ).on('error',callback);
     }
 
 }

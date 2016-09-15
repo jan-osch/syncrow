@@ -9,7 +9,7 @@ export default class DynamicServer implements ConnectionHelper {
 
     private oneTimeServers:Set<net.Server>;
 
-    constructor(private params:{constantToken?:string, authorisationTimeout?:number, generateToken?:boolean},
+    constructor(private params:{constantToken?:string, authTimeout?:number, generateToken?:boolean},
                 private externalHost:string) {
         this.oneTimeServers = new Set<net.Server>();
     }
@@ -58,7 +58,7 @@ export default class DynamicServer implements ConnectionHelper {
         debug(`#handleConnection - starting authorisation with ${actualToken}`);
         return AuthorisationHelper.authorizeAsServer(socket,
             actualToken,
-            {timeout: this.params.authorisationTimeout},
+            {timeout: this.params.authTimeout},
             (err)=> {
 
                 if (err) {

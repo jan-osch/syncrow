@@ -7,10 +7,8 @@ import {EventMessenger} from "../connection/event_messenger";
 import {Closable} from "../utils/interfaces";
 import {EventEmitter} from "events";
 import {noAction} from "../sync/no_action";
-
 const debug = debugFor("syncrow:core:engine");
 const logger = loggerFor('Engine');
-
 const INITIAL_TIMEOUT = 10;
 
 export interface EngineOptions {
@@ -71,7 +69,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
 
     constructor(private fileContainer:FileContainer, private transferHelper:TransferHelper, private options:EngineOptions) {
         super();
-
+        debugger
         this.options.sync = this.options.sync ? this.options.sync : noAction;
 
         this.callbackHelper = new CallbackHelper();

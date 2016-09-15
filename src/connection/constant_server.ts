@@ -12,7 +12,7 @@ export default class ConstantServer implements ConnectionHelper {
     private server:net.Server;
     private awaitingCallback:SocketCallback;
 
-    constructor(private port:number, private params:{constantToken?:string, authorisationTimeout:number}) {
+    constructor(private port:number, private params:{constantToken?:string, authTimeout:number}) {
         this.server = net.createServer();
         this.server.on('connection',
             (socket:net.Socket)=>this.handleConnection(socket)
@@ -64,7 +64,7 @@ export default class ConstantServer implements ConnectionHelper {
 
         return AuthorisationHelper.authorizeAsServer(socket,
             this.params.constantToken,
-            {timeout: this.params.authorisationTimeout},
+            {timeout: this.params.authTimeout},
             (err)=> {
                 if (err) {
                     debug(`#handleConnection - destroying connection`);

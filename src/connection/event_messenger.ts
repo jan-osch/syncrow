@@ -74,7 +74,8 @@ export class EventMessenger extends EventEmitter implements Closable {
      */
     public send(type:string, body?:any, id?:string) {
         if (!this.isAlive) {
-            throw new Error('Socket connection is closed will not write data')
+            const err = new Error('Socket connection is closed will not write data');
+            return logger.error(`${err.stack}`);
         }
 
         const event:Event = {

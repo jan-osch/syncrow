@@ -12,59 +12,64 @@ import DynamicConnector from "../connection/dynamic_connector";
 
 const debug = debugFor('syncrow:core:connect');
 
-//TODO add better retry after connection lost
+const AUTH_TIMEOUT = 40;
 
-export interface ConnectOptions {
-    filter?:FilterFunction;
-    initialToken?:string;
-    authenticate?:boolean;
-    sync?:SyncAction;
+/**
+ * @param params
+ * @param callback
+ */
+export default function startConnectingEngine(params:{
+    path:string,
+    remotePort:number,
+    remoteHost:string,
+
+    authTimeout?:number,
+    filter?:FilterFunction,
+    initialToken?:string,
+    authenticate?:boolean,
+    sync?:SyncAction,
     retry?:{
         times:number,
         interval:number
     },
-    watch?:boolean;
-}
+    watch?:boolean}, callback:EngineCallback) {
 
-const AUTHORISATION_TIMEOUT = 10;
+    const authTimeout = params.authTimeout ? params.authTimeout : AUTH_TIMEOUT;
 
+    const container = new FileContainer(params.path, {filter: params.filter});
 
-/**
- * @param {String} path
- * @param {Number} remotePort
- * @param {String} remoteHost
- * @param {ConnectOptions} options
- * @param {EngineCallback} callback
- */
-export default function startConnectingEngine(path:string, remotePort:number, remoteHost:string, options:ConnectOptions, callback:EngineCallback) {
-    const container = new FileContainer(path, {filter: options.filter});
+    const connectionHelperEntry = new ConstantConnector(authTimeout,
+        params.remoteHost,
+        params.remotePort,
+        params.initialToken);
 
-    const connectionHelperEntry = new ConstantConnector(AUTHORISATION_TIMEOUT, remoteHost, remotePort, options.initialToken);
-
-    const connectionHelperForTransfer = new DynamicConnector(AUTHORISATION_TIMEOUT);
+    const connectionHelperForTransfer = new DynamicConnector(authTimeout);
 
     const transferHelper = new TransferHelper(container, connectionHelperForTransfer, {
         name: 'ConnectingEngine',
         preferConnecting: true
     });
 
-    const engine = new Engine(container, transferHelper, {sync: options.sync});
+    const engine = new Engine(container, transferHelper, {sync: params.sync});
 
     engine.on(Engine.events.shutdown, ()=> {
         connectionHelperForTransfer.shutdown();
         connectionHelperEntry.shutdown();
     });
 
+    debug(`starting the connect flow`);
+
     return async.waterfall(
         [
             (cb)=> {
-                if (options.watch) return container.beginWatching(cb);
-                setImmediate(cb);
+                if (params.watch) return container.beginWatching(cb);
+
+                return setImmediate(cb);
             },
 
             (cb)=> {
-                if (options.retry) {
-                    return async.retry(options.retry,
+                if (params.retry) {
+                    return async.retry(params.retry,
                         (retryCallback)=>connectionHelperEntry.getNewSocket({}, retryCallback),
                         cb
                     );
@@ -75,12 +80,16 @@ export default function startConnectingEngine(path:string, remotePort:number, re
 
 
             (socket, cb)=> {
+                debug(`initial connection obtained`);
+
                 const eventMessenger = new EventMessenger(socket);
                 engine.addOtherPartyMessenger(eventMessenger);
-                if (options.retry) {
+
+                if (params.retry) {
                     connectAgainAfterPreviousDied(eventMessenger, engine, connectionHelperEntry);
                 }
-                return cb(null, engine);
+
+                return setImmediate(cb, null, engine);
             }
         ],
         callback

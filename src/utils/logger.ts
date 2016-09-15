@@ -4,6 +4,7 @@ import * as debug from "debug";
 export class Logger {
     private context:string;
     private timers:Map<string,Date>;
+    private keys:Map<string,string>;
 
     /**
      * Wrapper for console - can be later used to store logs to file
@@ -12,20 +13,32 @@ export class Logger {
     constructor(context:string) {
         this.context = context;
         this.timers = new Map<string,Date>();
+        this.keys = new Map<string,string>();
     }
 
-    //TODO ensure that calls to this do not overwrite each other
+    /**
+     * Returns an id to use later
+     * @param key
+     * @returns {string}
+     */
     public time(key:string) {
-        this.timers.set(key, new Date());
+        const id = Logger.generateId();
+
+        this.keys.set(id, key);
+        this.timers.set(id, new Date());
+
+        return id;
     }
 
-    //TODO add a hash or something
-    public timeEnd(key:string) {
-        const time = this.timers.get(key);
+    /**
+     * @param id - must be id returned by time
+     */
+    public timeEnd(id:string) {
+        const time = this.timers.get(id);
+        const key = this.keys.get(id);
 
-        if (!this.timers.delete(key)) {
-
-            throw new Error('Key does not exist');
+        if (!this.timers.delete(id) || !this.keys.delete(id)) {
+            return this.error('Id does not exist');
         }
 
         this.logInColor(`${key} - ${new Date().getTime() - time.getTime()} ms`, 'green');
@@ -53,6 +66,10 @@ export class Logger {
      */
     public error(err?:any) {
         if (err) this.logInColor(`ERROR: ${err.stack ? err.stack : err}`, 'red');
+    }
+
+    private static generateId() {
+        return Math.random().toString();
     }
 
     private logInColor(message:string, color:string) {

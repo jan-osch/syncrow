@@ -8,7 +8,7 @@ const debug = debugFor('syncrow:con:dynamic_connector');
 
 export default class DynamicConnector implements ConnectionHelper {
 
-    constructor(private authorisationTimeout:number) {
+    constructor(private authTimeout:number) {
     }
 
     public shutdown() {
@@ -43,7 +43,7 @@ export default class DynamicConnector implements ConnectionHelper {
                 debug(`#getNewSocket - starting authorisation during connecting to: ${params.remoteHost}:${params.remotePort} with token ${params.token}`);
                 return AuthorisationHelper.authorizeAsClient(socket,
                     params.token,
-                    {timeout: this.authorisationTimeout},
+                    {timeout: this.authTimeout},
                     (err)=> {
                         if (err)return callback(err);
 
@@ -52,7 +52,7 @@ export default class DynamicConnector implements ConnectionHelper {
                     }
                 )
             }
-        );
+        ).on('error', callback);
     }
 
     private static validateParams(params:{remoteHost:string, remotePort:number, token?:string}) {

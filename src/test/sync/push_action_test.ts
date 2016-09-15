@@ -25,8 +25,8 @@ describe('PushAction', function () {
 
                 (cb)=>createPathSeries(
                     [
-                        {path: `${TEST_DIR}/dir_conn`, directory: true},
-                        {path: `${TEST_DIR}/dir_list`, directory: true}
+                        {path: `${TEST_DIR}/dir_list`, directory: true},
+                        {path: `${TEST_DIR}/dir_conn`, directory: true}
                     ],
                     cb
                 ),
@@ -53,17 +53,18 @@ describe('PushAction', function () {
                     const sameContent = getRandomString(500);
                     return createPathSeries(
                         [
-                            {path: `${TEST_DIR}/dir_conn/c.txt`, content: getRandomString(50000)},
-                            {path: `${TEST_DIR}/dir_conn/d.txt`, content: getRandomString(50000)},
-                            {path: `${TEST_DIR}/dir_conn/e.txt`, content: getRandomString(500)},
-                            {path: `${TEST_DIR}/dir_conn/same_file.txt`, content: sameContent},
+                            {path: `${TEST_DIR}/dir_list/c.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_list/d.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_list/e.txt`, content: getRandomString(500)},
                             {path: `${TEST_DIR}/dir_list/same_file.txt`, content: sameContent},
+                            {path: `${TEST_DIR}/dir_conn/same_file.txt`, content: sameContent},
                         ],
                         cb
                     )
                 },
 
-                (cb)=> startListeningEngine(`${TEST_DIR}/dir_conn`, PORT, {
+                (cb)=> startListeningEngine({
+                    path: `${TEST_DIR}/dir_list`, localPort: PORT,
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: TOKEN,
@@ -79,7 +80,10 @@ describe('PushAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_list`, PORT, '127.0.0.1', {
+                (cb)=>startConnectingEngine({
+                    path: `${TEST_DIR}/dir_conn`,
+                    remotePort: PORT,
+                    remoteHost: '127.0.0.1',
                     authenticate: true,
                     initialToken: TOKEN,
                     watch: true
@@ -96,7 +100,7 @@ describe('PushAction', function () {
                     counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories(`${TEST_DIR}/dir_list`, `${TEST_DIR}/dir_conn`, cb)
+                (cb)=>compareDirectories(`${TEST_DIR}/dir_conn`, `${TEST_DIR}/dir_list`, cb)
             ],
             done
         );
@@ -111,23 +115,26 @@ describe('PushAction', function () {
                     const contentF = getRandomString(500);
                     return createPathSeries(
                         [
-                            {path: `${TEST_DIR}/dir_conn/c.txt`, content: getRandomString(50000)},
-                            {path: `${TEST_DIR}/dir_conn/d.txt`, content: getRandomString(50000)},
-                            {path: `${TEST_DIR}/dir_conn/e.txt`, content: getRandomString(500)},
-                            {path: `${TEST_DIR}/dir_conn/f.txt`, content: contentF},
-                            {path: `${TEST_DIR}/dir_list/file_to_delete.txt`, content: contentF},
+                            {path: `${TEST_DIR}/dir_list/c.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_list/d.txt`, content: getRandomString(50000)},
+                            {path: `${TEST_DIR}/dir_list/e.txt`, content: getRandomString(500)},
+                            {path: `${TEST_DIR}/dir_list/f.txt`, content: contentF},
+                            {path: `${TEST_DIR}/dir_conn/file_to_delete.txt`, content: contentF},
                         ],
                         cb
                     )
                 },
 
-                (cb)=> startListeningEngine(`${TEST_DIR}/dir_conn`, PORT, {
+                (cb)=> startListeningEngine({
+                    path: `${TEST_DIR}/dir_list`,
+                    localPort: PORT,
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: TOKEN,
                     watch: true,
                     sync: setDeleteRemoteFiles(pushAction)
                 }, cb),
+
 
                 (engine, cb)=> {
                     listeningEngine = engine;
@@ -137,7 +144,10 @@ describe('PushAction', function () {
                     setImmediate(cb);
                 },
 
-                (cb)=>startConnectingEngine(`${TEST_DIR}/dir_list`, PORT, '127.0.0.1', {
+                (cb)=>startConnectingEngine({
+                    path: `${TEST_DIR}/dir_conn`,
+                    remotePort: PORT,
+                    remoteHost: '127.0.0.1',
                     authenticate: true,
                     initialToken: TOKEN,
                     watch: true
@@ -154,11 +164,11 @@ describe('PushAction', function () {
                     counter.on(EventCounter.events.done, cb);
                 },
 
-                (cb)=>compareDirectories(`${TEST_DIR}/dir_list`, `${TEST_DIR}/dir_conn`, cb),
+                (cb)=>compareDirectories(`${TEST_DIR}/dir_conn`, `${TEST_DIR}/dir_list`, cb),
 
                 (cb)=> {
 
-                    expect(pathExists(`${TEST_DIR}/dir_list/file_to_delete.txt`)).to.equal(false);
+                    expect(pathExists(`${TEST_DIR}/dir_conn/file_to_delete.txt`)).to.equal(false);
 
                     setImmediate(cb);
                 }
