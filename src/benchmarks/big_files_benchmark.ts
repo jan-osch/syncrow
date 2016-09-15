@@ -46,7 +46,8 @@ async.waterfall(
         (cb)=> {
             startTime = new Date();
 
-            return startListeningEngine('build/benchmark/aaa', PORT, {
+            return startListeningEngine({path:'build/benchmark/aaa',
+                    localPort:PORT,
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: TOKEN,
@@ -59,7 +60,9 @@ async.waterfall(
         (engine, cb)=> {
             listeningEngine = engine;
 
-            return startConnectingEngine('build/benchmark/bbb', PORT, '127.0.0.1', {
+            return startConnectingEngine({path:'build/benchmark/bbb',
+                    remotePort:PORT,
+                    remoteHost:'127.0.0.1',
                     authenticate: true,
                     initialToken: TOKEN,
                     watch: true,
