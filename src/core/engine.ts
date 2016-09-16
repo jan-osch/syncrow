@@ -4,7 +4,7 @@ import {SyncData, SyncAction, SyncActionSubject, SyncActionParams} from "../sync
 import {CallbackHelper} from "../connection/callback_helper";
 import {TransferHelper} from "../transport/transfer_helper";
 import {EventMessenger} from "../connection/event_messenger";
-import {Closable} from "../utils/interfaces";
+import {Closable, ErrorCallback} from "../utils/interfaces";
 import {EventEmitter} from "events";
 import {noAction} from "../sync/no_action";
 const debug = debugFor("syncrow:core:engine");
@@ -52,7 +52,6 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
          */
         shutdown: 'shutdown',
     };
-
     static commands = {
         createDirectory: 'createDirectory',
         deletePath: 'deletePath',
@@ -64,18 +63,18 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
     };
 
     private otherParties:Array<EventMessenger>;
-    private callbackHelper:CallbackHelper;
 
+    private callbackHelper:CallbackHelper;
 
     constructor(private fileContainer:FileContainer, private transferHelper:TransferHelper, private options:EngineOptions) {
         super();
-        debugger
         this.options.sync = this.options.sync ? this.options.sync : noAction;
 
         this.callbackHelper = new CallbackHelper();
         this.otherParties = [];
         this.addListenersToFileContainer(this.fileContainer);
     }
+
 
     /**
      * @param otherParty
@@ -120,6 +119,13 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         otherParty.shutdown();
         const index = this.otherParties.indexOf(otherParty);
         this.otherParties.splice(index, 1);
+    }
+
+    /**
+     * @returns {Array<EventMessenger>}
+     */
+    public getRemoteParties():Array<EventMessenger> {
+        return this.otherParties;
     }
 
     /**

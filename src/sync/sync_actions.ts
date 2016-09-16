@@ -20,6 +20,7 @@ export interface SyncActionSubject {
     pushFileToRemote(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
     deleteRemoteFile(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
     createRemoteDirectory(otherParty:EventMessenger, fileName:string, callback:ErrorCallback):any;
+    getRemoteParties():Array<EventMessenger>;
 }
 
 export interface SyncActionParams {

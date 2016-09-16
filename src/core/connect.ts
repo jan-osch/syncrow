@@ -12,7 +12,7 @@ import DynamicConnector from "../connection/dynamic_connector";
 
 const debug = debugFor('syncrow:core:connect');
 
-const AUTH_TIMEOUT = 40;
+const AUTH_TIMEOUT = 10;
 
 /**
  * @param params

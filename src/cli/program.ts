@@ -2,6 +2,7 @@ import {SyncAction} from "../sync/sync_actions";
 import {FilterFunction} from "../fs_helpers/file_container";
 
 export interface ProgramOptions {
+    path:string; //path to watch
     listen?:boolean; //Listen or connect
 
     /**

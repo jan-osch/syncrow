@@ -58,15 +58,36 @@ function buildConfig(savedConfig:ProgramOptions):ProgramOptions {
  * @param chosenConfig
  */
 function startEngine(chosenConfig:ProgramOptions) {
+    chosenConfig.path = process.cwd();
     if (chosenConfig.listen) {
-        return startListeningEngine(process.cwd(), chosenConfig.localPort, chosenConfig, (err, engine)=> {
-            debug(`listening engine started`);
-            ifErrorThrow(err);
-            engine.on(Engine.events.error, ifErrorThrow);
-        })
+
+        return startListeningEngine(
+            {
+                path: process.cwd(),
+                localPort: chosenConfig.localPort,
+                externalHost: chosenConfig.externalHost,
+                sync: chosenConfig.sync,
+                watch: chosenConfig.watch,
+                filter: chosenConfig.filter,
+                initialToken: chosenConfig.initialToken,
+                authenticate: chosenConfig.authenticate
+            }, (err, engine)=> {
+                debug(`listening engine started`);
+                ifErrorThrow(err);
+                engine.on(Engine.events.error, ifErrorThrow);
+            })
     }
 
-    return startConnectingEngine(process.cwd(), chosenConfig.remotePort, chosenConfig.remoteHost, chosenConfig, (err, engine)=> {
+    return startConnectingEngine({
+        path: process.cwd(),
+        remotePort: chosenConfig.remotePort,
+        remoteHost: chosenConfig.remoteHost,
+        sync: chosenConfig.sync,
+        watch: chosenConfig.watch,
+        filter: chosenConfig.filter,
+        initialToken: chosenConfig.initialToken,
+        authenticate: chosenConfig.authenticate
+    }, (err, engine)=> {
         ifErrorThrow(err);
         debug(`engine connected`);
         engine.on(Engine.events.error, ifErrorThrow);
