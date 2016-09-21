@@ -2,6 +2,7 @@ import {Socket} from "net";
 import {loggerFor, debugFor} from "../utils/logger";
 import {ListenCallback, ConnectionHelper, ConnectionAddress} from "../connection/connection_helper";
 import {Container, ErrorCallback} from "../utils/interfaces";
+import * as _ from "lodash";
 
 const debug = debugFor("syncrow:transfer:actions");
 const logger = loggerFor('TransferActions');
@@ -58,6 +59,7 @@ export class TransferActions {
                                       doneCallback:ErrorCallback,
                                       listenCallback:ListenCallback) {
 
+        doneCallback = _.once(doneCallback);
 
         debug(`#listenAndUploadFile - started fileName: ${fileName}`);
 
@@ -91,6 +93,8 @@ export class TransferActions {
                                        doneCallback:ErrorCallback) {
 
         debug(`connectAndUploadFile: connecting to ${address.remoteHost}:${address.remotePort}`);
+
+        doneCallback = _.once(doneCallback);
 
         connectionHelper.getNewSocket(
             address,

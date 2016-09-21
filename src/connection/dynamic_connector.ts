@@ -11,8 +11,7 @@ export default class DynamicConnector implements ConnectionHelper {
     constructor(private authTimeout:number) {
     }
 
-    public shutdown() {
-    }
+    public shutdown() {}
 
     /**
      * @param params

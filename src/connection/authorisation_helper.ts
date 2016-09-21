@@ -3,6 +3,7 @@ import * as async from "async";
 import {debugFor} from "../utils/logger";
 import {ErrorCallback} from "../utils/interfaces";
 import * as crypto from "crypto";
+import * as _ from "lodash";
 
 const debug = debugFor('syncrow:con:authorisation_helper');
 
@@ -18,6 +19,8 @@ export class AuthorisationHelper {
     public static authorizeAsClient(socket:Socket, token:string, options:{timeout:number}, callback:ErrorCallback) {
         debug(`#authorizeAsClient with token: ${token} called port: ${socket.remotePort}`);
 
+        callback = _.once(callback);
+
         try {
             socket.write(token);
         } catch (e) {
@@ -25,29 +28,20 @@ export class AuthorisationHelper {
             return callback(e);
         }
 
-        let callbackNotYetCalled = true;
 
         socket.on('close', ()=> {
-            if (callbackNotYetCalled) {
-                callbackNotYetCalled = false;
+            if (socket.bytesRead === 0) return callback(new Error(`Socket has been destroyed - authorization failed - remotePort: ${socket.remotePort}`));
 
-                if (socket.bytesRead === 0) return callback(new Error(`Socket has been destroyed - authorization failed - remotePort: ${socket.remotePort}`));
-
-                debug(`#authorizeAsClient - success - token: ${token} remotePort: ${socket.remotePort}`);
-                return callback();
-            }
+            debug(`#authorizeAsClient - success - token: ${token} remotePort: ${socket.remotePort}`);
+            return callback();
         });
 
         return setTimeout(
             ()=> {
-                if (callbackNotYetCalled) {
-                    callbackNotYetCalled = false;
+                if (socket.destroyed && socket.bytesRead === 0) return callback(new Error(`Socket has been destroyed - authorization failed - remotePort: ${socket.remotePort}`));
 
-                    if (socket.destroyed && socket.bytesRead === 0) return callback(new Error(`Socket has been destroyed - authorization failed - remotePort: ${socket.remotePort}`));
-
-                    debug(`#authorizeAsClient - success - token: ${token} remotePort: ${socket.remotePort}`);
-                    return callback();
-                }
+                debug(`#authorizeAsClient - success - token: ${token} remotePort: ${socket.remotePort}`);
+                return callback();
             },
             options.timeout
         )

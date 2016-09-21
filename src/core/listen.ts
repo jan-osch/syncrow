@@ -1,7 +1,7 @@
 import {FilterFunction} from "../fs_helpers/file_container";
-import {Engine} from "./engine";
 import {SyncAction} from "../sync/sync_actions";
 import SListen from "../facade/listen";
+import {EngineCallback} from "../utils/interfaces";
 
 
 /**
