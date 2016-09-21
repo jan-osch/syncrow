@@ -1,6 +1,4 @@
-Error.stackTraceLimit = Infinity;
-
-import * as async from "async";
+gimport * as async from "async";
 import {
     createPathSeries,
     removePath,

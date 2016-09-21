@@ -181,7 +181,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
         this.transferHelper.getFileFromRemote(otherParty, fileName, callback);
     }
 
-    emit(event:string, ...args:Array<any>):boolean {
+    public emit(event:string, ...args:Array<any>):boolean {
         debug(`emitting: ${event} with body: ${args}`);
         return super.emit(event, args);
     }
