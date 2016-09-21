@@ -1,5 +1,6 @@
 import * as async from "async";
 import * as fs from "fs";
+import * as _ from "lodash";
 import * as crypto from "crypto";
 import * as path from "path";
 import {SyncData} from "../sync/sync_actions";
@@ -77,6 +78,8 @@ export class FileMetaComputingQueue {
 
 
     private computeHashForFile(syncData:SyncData, callback:(error, syncData?:SyncData)=>any) {
+        callback = _.once(callback);
+
         if (!FileMetaComputingQueue.shouldComputeHash(syncData)) {
             return callback(null, syncData);
         }
@@ -84,9 +87,7 @@ export class FileMetaComputingQueue {
         const hash = crypto.createHash('sha256');
         const stream = fs.createReadStream(path.join(this.basePath, syncData.name)).pipe(hash);
 
-        hash.on('error', (err)=> {
-            callback(err);
-        });
+        hash.on('error', callback);
 
         hash.on('finish', ()=> {
             syncData.hashCode = hash.read().toString('hex');

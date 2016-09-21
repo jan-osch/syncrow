@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as _ from "lodash";
 import * as path from "path";
 import {EventEmitter} from "events";
 import {loggerFor, debugFor} from "../utils/logger";
@@ -133,6 +134,8 @@ export class FileContainer extends EventEmitter implements Closable {
     public consumeFileStream(fileName:string, readStream:ReadableStream, callback:ErrorCallback) {
         this.addAllParentPathsToExisting(fileName);
 
+        callback = _.once(callback);
+
         try {
             debug(`#consumeFileStream - starting to read from remote - file ${fileName}`);
 
@@ -211,6 +214,8 @@ export class FileContainer extends EventEmitter implements Closable {
     }
 
     private startWatcher(callback?:ErrorCallback) {
+        callback = _.once(callback);
+
         this.watcher = chokidar.watch(path.resolve(this.directoryToWatch), {
             persistent: true,
             ignoreInitial: true,
@@ -251,25 +256,9 @@ export class FileContainer extends EventEmitter implements Closable {
             this.emitEventIfFileNotBlocked(FileContainer.events.deleted, path)
         });
 
+        this.watcher.on('ready', callback);
 
-        let called = false;
-
-        this.watcher.on('ready', ()=> {
-            if (!called) {
-                callback();
-                called = true;
-            }
-        });
-
-        this.watcher.on('error', (err)=> {
-            if (!called) {
-                callback(err);
-                called = true;
-                return;
-            }
-
-            return logger.error(`#startWatcher - watcher emitted: ${err}`);
-        });
+        this.watcher.on('error', callback);
     }
 
     private createAbsolutePath(fileName:string) {
