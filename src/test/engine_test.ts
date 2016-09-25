@@ -1,4 +1,4 @@
-gimport * as async from "async";
+import * as async from "async";
 import {
     createPathSeries,
     removePath,

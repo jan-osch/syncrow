@@ -62,7 +62,7 @@ export default class DynamicServer implements ConnectionHelper {
             (err)=> {
 
                 if (err) {
-                    debug(`#handleConnection -destroying socket`);
+                    debug(`#handleConnection -destroying socket - reason: ${err}`);
                     socket.destroy();
                     return callback(err);
                 }
