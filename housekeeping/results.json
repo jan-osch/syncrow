@@ -79,7 +79,16 @@
     "1af8535fdcd3835e049d57b3cb53d0e2f654395d": [
       8647
     ],
-    "1af8535fdcd3835e049d57b3cb53d0e2f654395d-average": 8647
+    "1af8535fdcd3835e049d57b3cb53d0e2f654395d-average": 8647,
+    "ce1a39e3fbda5d969c08afd704d705e1b7e17cc0": [
+      6946,
+      8268,
+      10300,
+      13130,
+      13578,
+      12890
+    ],
+    "ce1a39e3fbda5d969c08afd704d705e1b7e17cc0-average": 10852
   },
   "small_files 1000 files x 20000B": {
     "b407b712ee48cc4bb21076fcbddb38ceafec30d1": [
@@ -148,6 +157,11 @@
       2851,
       2746
     ],
-    "e9b173df3c0aaa5acda9d41ec4bdfdb940a63b82-average": 2850.3333333333335
+    "e9b173df3c0aaa5acda9d41ec4bdfdb940a63b82-average": 2850.3333333333335,
+    "ce1a39e3fbda5d969c08afd704d705e1b7e17cc0": [
+      6856,
+      7300
+    ],
+    "ce1a39e3fbda5d969c08afd704d705e1b7e17cc0-average": 7078
   }
 }

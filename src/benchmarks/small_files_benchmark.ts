@@ -1,13 +1,13 @@
 import * as async from "async";
 import {createPathSeries, compareDirectories} from "../utils/fs_test_utils";
-import startListeningEngine from "../core/listen";
-import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
 import * as crypto from "crypto";
 import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pushAction} from "../sync/push_action";
 import saveResults from "./save_results";
+import SListen from "../facade/listen";
+import SConnect from "../facade/connect";
 
 
 const TOKEN = '121cb2897o1289nnjos';
@@ -15,6 +15,7 @@ const PORT = 4321;
 const SAMPLE_SIZE = 20000; // 20 KB
 const FILE_NUMBER = 1000; // 1000 * 20 = 20 000 KB = 20MB
 const TIMEOUT = 30000; //30 seconds
+const AUTH_TIMEOUT = 5000; //5 seconds
 
 const benchmarkName = `small_files ${FILE_NUMBER} files x ${SAMPLE_SIZE}B`;
 
@@ -49,22 +50,23 @@ async.waterfall(
         (cb)=> {
             startTime = new Date();
 
-            return startListeningEngine({
-                    path: 'build/benchmark/aaa',
-                    localPort: PORT,
-                    authenticate: true,
-                    externalHost: '127.0.0.1',
-                    initialToken: TOKEN,
-                    watch: true
-                },
-                cb
-            );
+            listeningEngine = new SListen({
+                path: 'build/benchmark/aaa',
+                localPort: PORT,
+                authenticate: true,
+                externalHost: '127.0.0.1',
+                authTimeout: AUTH_TIMEOUT,
+                initialToken: TOKEN,
+                watch: true
+            });
+
+            return listeningEngine.start(cb);
         },
 
-        (engine, cb)=> {
-            listeningEngine = engine;
+        (cb)=> {
 
-            return startConnectingEngine({
+
+            connectingEngine = new SConnect({
                     path: 'build/benchmark/bbb',
                     remotePort: PORT,
                     remoteHost: '127.0.0.1',
@@ -72,17 +74,10 @@ async.waterfall(
                     initialToken: TOKEN,
                     watch: true,
                     sync: pushAction
-                },
-                cb
-            )
-        },
-
-        (engine, cb)=> {
-            connectingEngine = engine;
-
-            eventCounter = EventCounter.getCounter(connectingEngine, Engine.events.synced, 1);
-
-            return setImmediate(cb);
+                }
+            );
+            eventCounter = EventCounter.getCounter(connectingEngine.engine, Engine.events.synced, 1);
+            return connectingEngine.start(cb);
         },
 
         (cb)=> {

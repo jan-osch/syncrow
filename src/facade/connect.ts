@@ -43,12 +43,12 @@ export default class SConnect implements Closable {
         }}) {
 
         this.authTimeout = params.authTimeout ? params.authTimeout : AUTH_TIMEOUT;
+        this.initializeHelpers();
     }
 
     public start(callback) {
         debug(`starting the connect flow`);
 
-        this.initializeHelpers();
         return async.waterfall(
             [
                 (cb)=> {
