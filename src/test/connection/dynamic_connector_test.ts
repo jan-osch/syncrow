@@ -47,7 +47,6 @@ describe('DynamicConnector', function () {
                     assert.equal(data, token, 'sent token should match');
                     done(err);
                 });
-
             }
         )
     });

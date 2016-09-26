@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {EventCounter} from "../../utils/event_counter";
-import {expect} from "chai";
+import * as assert from "assert";
 
 describe('EventCounter', function () {
     it('will emit done event when given event was emitted count number of times', function (done) {
@@ -26,6 +26,6 @@ describe('EventCounter', function () {
             emitter.emit('mock');
         }
 
-        expect(eventCounter.hasFinished()).to.be.ok;
+        assert(eventCounter.hasFinished())
     });
 });

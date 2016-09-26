@@ -1,13 +1,13 @@
 import * as async from "async";
 import {createPathSeries, CreatePathArgument, compareDirectories} from "../utils/fs_test_utils";
-import startListeningEngine from "../core/listen";
-import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
 import * as crypto from "crypto";
 import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pushAction} from "../sync/push_action";
 import saveResults from "./save_results";
+import SListen from "../facade/listen";
+import SConnect from "../facade/connect";
 
 
 const TOKEN = '121cb2897o1289nnjos';
@@ -46,36 +46,35 @@ async.waterfall(
         (cb)=> {
             startTime = new Date();
 
-            return startListeningEngine({path:'build/benchmark/aaa',
-                    localPort:PORT,
+            listeningEngine = new SListen({
+                    path: 'build/benchmark/aaa',
+                    localPort: PORT,
                     authenticate: true,
                     externalHost: '127.0.0.1',
                     initialToken: TOKEN,
                     watch: true
-                },
-                cb
+                }
             );
+
+            return listeningEngine.start(cb)
         },
 
-        (engine, cb)=> {
-            listeningEngine = engine;
+        (cb)=> {
+            connectingEngine = new SConnect({
+                path: 'build/benchmark/bbb',
+                remotePort: PORT,
+                remoteHost: '127.0.0.1',
+                authenticate: true,
+                initialToken: TOKEN,
+                watch: true,
+                sync: pushAction
+            });
 
-            return startConnectingEngine({path:'build/benchmark/bbb',
-                    remotePort:PORT,
-                    remoteHost:'127.0.0.1',
-                    authenticate: true,
-                    initialToken: TOKEN,
-                    watch: true,
-                    sync: pushAction
-                },
-                cb
-            )
+            return connectingEngine.start(cb);
         },
 
-        (engine, cb)=> {
-            connectingEngine = engine;
-
-            eventCounter = EventCounter.getCounter(connectingEngine, Engine.events.synced, 1);
+        (cb)=> {
+            eventCounter = EventCounter.getCounter(connectingEngine.engine, Engine.events.synced, 1);
 
             return setImmediate(cb);
         },

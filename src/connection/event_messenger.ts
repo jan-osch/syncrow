@@ -14,7 +14,6 @@ export interface Event {
     id?:string;
 }
 
-
 export class EventMessenger extends EventEmitter implements Closable {
 
     private socket:Socket;
@@ -49,13 +48,6 @@ export class EventMessenger extends EventEmitter implements Closable {
         this.callbackHelper = new CallbackHelper();
 
         this.isAlive = true;
-    }
-
-    /**
-     * @returns {boolean}
-     */
-    public isMessengerAlive() {
-        return this.isAlive;
     }
 
     /**
