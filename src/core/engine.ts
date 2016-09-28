@@ -98,7 +98,7 @@ export class Engine extends EventEmitter implements SyncActionSubject, Closable 
             return logger.info(`Synced successfully on first connection`);
         };
 
-        setTimeout(()=>this.options.sync(syncParams, syncCallback), INITIAL_TIMEOUT);
+        setTimeout(()=>this.options.sync(syncParams, syncCallback), INITIAL_TIMEOUT); //TODO move sync outside
 
         this.addEngineListenersToOtherParty(otherParty);
     }

@@ -8,11 +8,11 @@ import * as sinon from "sinon";
 import SConnect from "../../facade/connect";
 import SListen from "../../facade/listen";
 import {setDeleteLocalFiles} from "../../sync/sync_actions";
+import * as path from "path";
 
 const token = '12897371023o1289nnjos';
 const port = 4321;
-const TEST_DIR = 'pull_test';
-
+const TEST_DIR = path.join(__dirname, 'pull_test');
 
 describe('PullAction', function () {
 
@@ -166,7 +166,7 @@ describe('PullAction', function () {
                 (cb)=> {
                     if (counter.hasFinished()) return setImmediate(cb);
 
-                    counter.on(EventCounter.events.done, cb);
+                    return counter.on(EventCounter.events.done, cb);
                 },
 
                 (cb)=>compareDirectories(`${TEST_DIR}/dir_conn`, `${TEST_DIR}/dir_list`, cb),
@@ -176,7 +176,7 @@ describe('PullAction', function () {
                     assert.equal(pathExists(`${TEST_DIR}/dir_conn/file_to_delete.txt`), false);
                     assert(listeningEngine.engine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt'));
 
-                    setImmediate(cb);
+                    return setImmediate(cb);
                 }
             ],
             done

@@ -8,6 +8,7 @@ export interface ReadTreeOptions {
     onlyFiles?:boolean
 }
 
+//TODO add docs
 export function readTree(root:string, options:ReadTreeOptions,
                          callback:(err:Error, result:Array<string>)=>any) {
     const filter = options.filter ? options.filter : s=> false;

@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as git from "git-rev-sync";
 import * as async from "async";
-import {ErrorCallback} from "../utils/logger";
+import {ErrorCallback} from "../utils/interfaces";
 
 const RESULTS_FILE = 'housekeeping/results.json';
 
-export default function saveResults(benchmarkName:string, value:Number, callback:ErrorCallback) {
+export default function saveResults(benchmarkName:string, value:number, callback:ErrorCallback) {
     return async.waterfall(
         [
             (cb)=>fs.readFile(RESULTS_FILE, cb),

@@ -7,8 +7,9 @@ import {setDeleteRemoteFiles} from "../../sync/sync_actions";
 import {expect} from "chai";
 import SListen from "../../facade/listen";
 import SConnect from "../../facade/connect";
+import * as path from "path";
 
-const TEST_DIR = 'push_test';
+const TEST_DIR = path.join(__dirname, 'push_test');
 const TOKEN = '121cb2897o1289nnjos';
 const PORT = 4321;
 

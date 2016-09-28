@@ -85,7 +85,7 @@ describe('Engine', function () {
 
         async.series(
             [
-                (cb)=>mkdirp(`${TEST_DIR}/aaa/directory`, cb),
+                (cb)=> mkdirp(`${TEST_DIR}/aaa/directory`, cb), //TODO cleanup
 
                 (cb)=>createPath(`${TEST_DIR}/aaa/file.txt`, getRandomString(4000), false, cb),
 

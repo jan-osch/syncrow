@@ -1,6 +1,8 @@
 import * as chalk from "chalk";
 import * as debug from "debug";
 
+let silent;
+
 export class Logger {
     private context:string;
     private timers:Map<string,Date>;

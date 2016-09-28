@@ -13,6 +13,8 @@ import {Engine} from "../core/engine";
 const debug = debugFor('syncrow:facade:listen');
 const AUTH_TIMEOUT = 100;
 
+
+//TODO fix the lib section in README
 /**
  * @param params
  * @param {EngineCallback} callback
@@ -20,7 +22,7 @@ const AUTH_TIMEOUT = 100;
 export default class SListen implements Closable {
     public engine:Engine;
 
-    private authTimeout:Number;
+    private authTimeout:number;
     private container:FileContainer;
     private connectionHelperEntry:ConstantServer;
     private transferHelper:TransferHelper;
@@ -98,8 +100,6 @@ export default class SListen implements Closable {
         );
 
         this.engine = new Engine(this.container, this.transferHelper, {sync: this.params.sync});
-
-        this.engine.once(Engine.events.shutdown, ()=>this.shutdown()); //TODO remove - left for backwards comp.
     }
 
     private listenForMultipleConnections(engine:Engine, helper:ConnectionHelper) {

@@ -111,8 +111,6 @@ export default class SConnect implements Closable {
         });
 
         this.engine = new Engine(this.container, this.transferHelper, {sync: this.params.sync});
-
-        this.engine.once(Engine.events.shutdown, ()=>this.shutdown()); //TODO remove - left for backwards comp.
     }
 
     private connectAgainAfterPreviousDied(previousMessenger:EventMessenger, engine:Engine, connectionHelper:ConnectionHelper) {

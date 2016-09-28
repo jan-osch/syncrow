@@ -69,7 +69,6 @@ It is possible to connect multiple connecting *syncrow* instances to single *syn
 ## Using as a library
 It is possible to use *syncrow* as a part of node program.
 
-
 ```js
 const syncrow = require('syncrow');
 
