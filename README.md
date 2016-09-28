@@ -69,72 +69,97 @@ It is possible to connect multiple connecting *syncrow* instances to single *syn
 ## Using as a library
 It is possible to use *syncrow* as a part of node program.
 
+### Class: Server
+Listens for incoming connections.
+
+#### new Server(params)
 ```js
 const syncrow = require('syncrow');
 
-syncrow.listen('./path_to/watch', 2510, {externalHost: '192.168.0.6'}, (err, engine)=>{
+const server = new syncrow.Server({path: './path/to_watch', localPort: 2510, externalHost: '192.168.0.2'});
+                                      
+```
+params:
+* `path`  **String** path to watch
+* `localPort` **Number** port to listen on
+* `externalHost` **String** external domain/IP  
+* `[initalToken]` **String** optional token that will be used for authentication
+* `[watch]` **Boolean** optional, defaults to `true`, if set to `false` server will not watch local files
+
+#### server.engine
+An instance of `syncrow.Engine`
+#### server.start(callback)
+starts the server watching the FS and listening for connections.
+#### server.shutdown()
+Completely stops the server. 
+
+### Class: Client
+Connects to remote server.
+#### new Client(params)
+```js
+const syncrow = require('syncrow');
+
+const client = new syncrow.Client({path: './path/to_watch', remotePort: 2510, remoteHost: '127.0.0.1'});                                      
+```
+params:
+* `path`  **String** path to watch
+* `remotePort` **Number** port for connection
+* `remoteHost` **String** host for connection
+* `[initalToken]` **String** optional token that will be used for authentication
+* `[watch]` **Boolean** optional, defaults to `true`, if set to `false` server will not watch local files
+#### client.engine
+An instance of `syncrow.Engine`
+#### client.start(callback)
+starts the watching the path and connects to remote server.
+#### client.shutdown()
+Disconnects and stops the client.
+
+### Class: Engine
+Watches local file system and handles messages from remote parties.
+It should not be created directly.
+
+```js
+const server = new syncrow.Server({path: './path/to_watch', localPort: 2510, externalHost: '192.168.0.2'});
+
+server.start((err)=>{
     if(err) return console.error(err);
     
-    engine.on('newFile', (file)=>console.log(`remote created a new file: ${file}`));
+    server.engine.on('newFile', (file)=>console.log(`remote created a new file: ${file}`));
     
-    engine.on('changedFile', (file)=>console.log(`remote changed file: ${file}`));
+    server.engine.on('changedFile', (file)=>console.log(`remote changed file: ${file}`));
     
-    engine.on('deletedPath', (path)=>console.log(`remote deleted path (file or directory): ${path}`));
-   
-    // etc.
+    server.engine.on('deletedPath', (path)=>console.log(`remote deleted path (file or directory): ${path}`));
 });
-
 ```
 
-Full list of events emitted by engine:
-```js
-const engineEvents = {
-    /**
-     * @event emitted when new file created by remote has been downloaded
-     * @param {String} filePath
-     */
-    newFile: 'newFile',
-    /**
-     * @event emitted when file changed by remote has been downloaded
-     * @param {String} filePath
-     */
-    changedFile: 'changedFile',
-    /**
-     * @event emitted when path (file or directory) has been deleted locally
-     * @param {String} path
-     */
-    deletedPath: 'deletedPath',
-    /**
-     * @event emitted when directory created by remote has been created locally
-     * @param {String] dirPath
-     */
-    newDirectory: 'newDirectory',
+#### event: newFile
+emitted when file changed by remote has been downloaded. Params:
+* `filePath` **String**  
+    
+#### event: changedFile
+emitted when file changed by remote has been downloaded. Params:
+* `filePath` **String** path of the file that changed
+   
+#### event: deletedPath
+emitted when path (file or directory) has been deleted locally. Params:
+* `filePath` **String** path of the file/directory deleted
 
-    /**
-     * @event emitted on error
-     * @param {Error} error
-     */
-    error: 'error',
-    /**
-     * @event emitted when synchronization with remote has finished
-     */
-    synced: 'synced',
-    /**
-     * @event emitted when engine is shutting down
-     */
-    shutdown: 'shutdown',
-};
-```
+#### event: newDirectory
+emitted when directory created by remote has been created locally. Params:
+* `dirPath` **String** path of the directory created 
+
+#### event: error
+emitted on error. Params:
+* `error` **Error**
+
+#### event: synced
+emitted when synchronization with remote has finished
  
+## Roadmap
 
+* Add interval synchronization
+* Separate into several repositories
+* Integrate with Atom
 
 ## Licence
 MIT
-
-
-
-
-
-
-
-

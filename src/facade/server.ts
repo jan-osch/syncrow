@@ -19,7 +19,7 @@ const AUTH_TIMEOUT = 100;
  * @param params
  * @param {EngineCallback} callback
  */
-export default class SListen implements Closable {
+export default class Server implements Closable {
     public engine:Engine;
 
     private authTimeout:number;

@@ -12,8 +12,8 @@ import * as mkdirp from "mkdirp";
 import * as fs from "fs";
 import {EventCounter} from "../utils/event_counter";
 import * as assert from "assert";
-import SListen from "../facade/listen";
-import SConnect from "../facade/connect";
+import SListen from "../facade/server";
+import SConnect from "../facade/client";
 import * as path from "path";
 
 const FS_TIMEOUT = 400;

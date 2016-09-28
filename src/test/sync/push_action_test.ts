@@ -5,8 +5,8 @@ import {EventCounter} from "../../utils/event_counter";
 import {pushAction} from "../../sync/push_action";
 import {setDeleteRemoteFiles} from "../../sync/sync_actions";
 import {expect} from "chai";
-import SListen from "../../facade/listen";
-import SConnect from "../../facade/connect";
+import SListen from "../../facade/server";
+import SConnect from "../../facade/client";
 import * as path from "path";
 
 const TEST_DIR = path.join(__dirname, 'push_test');

@@ -24,7 +24,7 @@
     "url": "https://github.com/jan-osch/syncrow/issues"
   },
   "bin": {
-    "syncrow": "bin/syncrow.js"
+    "syncrow": "bin/syncrow"
   },
   "homepage": "https://github.com/jan-osch/syncrow#readme",
   "dependencies": {

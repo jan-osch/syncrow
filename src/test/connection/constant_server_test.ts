@@ -66,7 +66,6 @@ describe('ConstantServer', function () {
                     done(err);
                 }
             )
-        })
-        :
+        });
     });
 });

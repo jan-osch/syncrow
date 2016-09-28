@@ -5,8 +5,8 @@ import {EventCounter} from "../../utils/event_counter";
 import * as assert from "assert";
 import {pullAction} from "../../sync/pull_action";
 import * as sinon from "sinon";
-import SConnect from "../../facade/connect";
-import SListen from "../../facade/listen";
+import SConnect from "../../facade/client";
+import SListen from "../../facade/server";
 import {setDeleteLocalFiles} from "../../sync/sync_actions";
 import * as path from "path";
 

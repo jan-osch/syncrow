@@ -7,8 +7,8 @@ import {ProgramOptions, configurationFileName} from "./program";
 import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
 import {PathHelper} from "../fs_helpers/path_helper";
-import SListen from "../facade/listen";
-import SConnect from "../facade/connect";
+import SListen from "../facade/server";
+import SConnect from "../facade/client";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");

@@ -6,8 +6,8 @@ import {EventCounter} from "../utils/event_counter";
 import * as rimraf from "rimraf";
 import {pushAction} from "../sync/push_action";
 import saveResults from "./save_results";
-import SListen from "../facade/listen";
-import SConnect from "../facade/connect";
+import SListen from "../facade/server";
+import SConnect from "../facade/client";
 
 
 const TOKEN = '121cb2897o1289nnjos';

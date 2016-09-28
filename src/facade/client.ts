@@ -18,7 +18,7 @@ const AUTH_TIMEOUT = 10;
  * @param params
  * @param callback
  */
-export default class SConnect implements Closable {
+export default class Client implements Closable {
     private authTimeout:number;
     private container:FileContainer;
     private connectionHelperEntry:ConnectionHelper;
