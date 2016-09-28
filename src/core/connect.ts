@@ -2,12 +2,13 @@ import {EngineCallback} from "./listen";
 import {FilterFunction} from "../fs_helpers/file_container";
 import {SyncAction} from "../sync/sync_actions";
 import SConnect from "../facade/connect";
+import * as util from "util";
 
 /**
  * @param params
  * @param callback
  */
-export default function startConnectingEngine(params:{
+export default util.deprecate(function startConnectingEngine(params:{
     path:string,
     remotePort:number,
     remoteHost:string,
@@ -23,7 +24,6 @@ export default function startConnectingEngine(params:{
     },
     watch?:boolean}, callback:EngineCallback) {
 
-    console.warn('This API is deprecated please use one from facade');
 
     const sConnect = new SConnect(params);
 
@@ -32,4 +32,4 @@ export default function startConnectingEngine(params:{
 
         return callback(null, sConnect.engine);
     })
-}
+}, 'This API is deprecated please connect.js from facade');

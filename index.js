@@ -1,5 +1,5 @@
 module.exports = {
-    listen: require('./build/utils/listen'),
-    connect: require('./build/utils/connect'),
+    SListen: require('./build/facade/listen'),
+    SConnect: require('./build/facade/connect'),
     Engine: require('./build/client/engine')
 };

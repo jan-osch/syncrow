@@ -7,16 +7,17 @@ import {
     createPath,
     pathExists
 } from "../utils/fs_test_utils";
-import startListeningEngine from "../core/listen";
-import startConnectingEngine from "../core/connect";
 import {Engine} from "../core/engine";
 import * as mkdirp from "mkdirp";
 import * as fs from "fs";
 import {EventCounter} from "../utils/event_counter";
 import * as assert from "assert";
+import SListen from "../facade/listen";
+import SConnect from "../facade/connect";
+import * as path from "path";
 
 const FS_TIMEOUT = 400;
-const TEST_DIR = 'engine_test';
+const TEST_DIR = path.join(__dirname, 'engine_test');
 
 describe('Engine', function () {
 
@@ -41,37 +42,28 @@ describe('Engine', function () {
                 ),
 
                 (cb)=> {
-                    startListeningEngine({
-                            path: `${TEST_DIR}/aaa`,
-                            localPort: port,
-                            authenticate: true,
-                            externalHost: '127.0.0.1',
-                            initialToken: token,
-                            watch: true
-                        },
-                        cb
-                    );
+                    listeningEngine = new SListen({
+                        path: `${TEST_DIR}/aaa`,
+                        localPort: port,
+                        authenticate: true,
+                        externalHost: '127.0.0.1',
+                        initialToken: token,
+                        watch: true
+                    });
+                    return listeningEngine.start(cb)
                 },
 
-                (engine, cb)=> {
-                    listeningEngine = engine;
-
-                    return startConnectingEngine({
-                            path: `${TEST_DIR}/bbb`,
-                            remotePort: port,
-                            remoteHost: '127.0.0.1',
-                            authenticate: true,
-                            initialToken: token,
-                            watch: true,
-                        },
-                        cb
-                    )
+                (cb)=> {
+                    connectingEngine = new SConnect({
+                        path: `${TEST_DIR}/bbb`,
+                        remotePort: port,
+                        remoteHost: '127.0.0.1',
+                        authenticate: true,
+                        initialToken: token,
+                        watch: true,
+                    });
+                    return connectingEngine.start(cb);
                 },
-
-                (engine, cb)=> {
-                    connectingEngine = engine;
-                    return setImmediate(cb);
-                }
             ],
             done
         )
@@ -86,7 +78,7 @@ describe('Engine', function () {
 
 
     it('two engines will transfer new file and and create new directory when needed', function (done) {
-        counter = new EventCounter(connectingEngine, [
+        counter = new EventCounter(connectingEngine.engine, [
             {name: Engine.events.newDirectory, count: 1},
             {name: Engine.events.newFile, count: 1}
         ]);
@@ -112,7 +104,7 @@ describe('Engine', function () {
     });
 
     it('two engines will transfer handle deleting files', function (done) {
-        counter = EventCounter.getCounter(listeningEngine, Engine.events.deletedPath, 1);
+        counter = EventCounter.getCounter(listeningEngine.engine, Engine.events.deletedPath, 1);
 
         async.series(
             [
@@ -135,8 +127,8 @@ describe('Engine', function () {
 
 
     it('two engines will synchronize multiple files both ways', function (done) {
-        const listenerCounter = EventCounter.getCounter(listeningEngine, Engine.events.newFile, 4);
-        const connectingCounter = EventCounter.getCounter(connectingEngine, Engine.events.newFile, 2);
+        const listenerCounter = EventCounter.getCounter(listeningEngine.engine, Engine.events.newFile, 4);
+        const connectingCounter = EventCounter.getCounter(connectingEngine.engine, Engine.events.newFile, 2);
 
         async.series(
             [

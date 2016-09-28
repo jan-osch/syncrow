@@ -2,12 +2,12 @@ import * as async from "async";
 import {createPathSeries, removePath, getRandomString, compareDirectories, pathExists} from "../../utils/fs_test_utils";
 import {Engine} from "../../core/engine";
 import {EventCounter} from "../../utils/event_counter";
-import startListeningEngine from "../../core/listen";
-import startConnectingEngine from "../../core/connect";
-import {setDeleteLocalFiles} from "../../sync/sync_actions";
-import {expect} from "chai";
+import * as assert from "assert";
 import {pullAction} from "../../sync/pull_action";
 import * as sinon from "sinon";
+import SConnect from "../../facade/connect";
+import SListen from "../../facade/listen";
+import {setDeleteLocalFiles} from "../../sync/sync_actions";
 
 const token = '12897371023o1289nnjos';
 const port = 4321;
@@ -69,35 +69,32 @@ describe('PullAction', function () {
                     )
                 },
 
-                (cb)=> startListeningEngine({
-                    path: `${TEST_DIR}/dir_list`, localPort: port,
-                    authenticate: true,
-                    externalHost: '127.0.0.1',
-                    initialToken: token,
-                    watch: true,
-                    sync: pullAction
-                }, cb),
+                (cb)=> {
+                    listeningEngine = new SListen({
+                        path: `${TEST_DIR}/dir_list`, localPort: port,
+                        authenticate: true,
+                        externalHost: '127.0.0.1',
+                        initialToken: token,
+                        watch: true,
+                        sync: pullAction
+                    });
+                    sandbox.spy(listeningEngine.engine, 'requestRemoteFile');
+                    counter = EventCounter.getCounter(listeningEngine.engine, Engine.events.synced, 1);
 
-                (engine, cb)=> {
-                    listeningEngine = engine;
-                    sandbox.spy(listeningEngine, 'requestRemoteFile');
-                    counter = EventCounter.getCounter(listeningEngine, Engine.events.synced, 1);
-
-                    return setImmediate(cb);
+                    return listeningEngine.start(cb);
                 },
 
-                (cb)=>startConnectingEngine({
-                    path: `${TEST_DIR}/dir_conn`,
-                    remotePort: port,
-                    remoteHost: '127.0.0.1',
-                    authenticate: true,
-                    initialToken: token,
-                    watch: true
-                }, cb),
+                (cb)=> {
+                    connectingEngine = new SConnect({
+                        path: `${TEST_DIR}/dir_conn`,
+                        remotePort: port,
+                        remoteHost: '127.0.0.1',
+                        authenticate: true,
+                        initialToken: token,
+                        watch: true
+                    });
 
-                (engine, cb)=> {
-                    connectingEngine = engine;
-                    return setImmediate(cb);
+                    return connectingEngine.start(cb)
                 },
 
                 (cb)=> {
@@ -109,7 +106,7 @@ describe('PullAction', function () {
                 (cb)=>compareDirectories(`${TEST_DIR}/dir_conn`, `${TEST_DIR}/dir_list`, cb),
 
                 (cb)=> {
-                    expect(listeningEngine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt')).to.be.ok;
+                    assert(listeningEngine.engine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt'));
                     setImmediate(cb);
                 }
             ],
@@ -137,36 +134,33 @@ describe('PullAction', function () {
                     )
                 },
 
-                (cb)=> startListeningEngine({
-                    path: `${TEST_DIR}/dir_list`, localPort: port,
-                    authenticate: true,
-                    externalHost: '127.0.0.1',
-                    initialToken: token,
-                    watch: true,
-                    sync: setDeleteLocalFiles(pullAction)
-                }, cb),
+                (cb)=> {
+                    listeningEngine = new SListen({
+                        path: `${TEST_DIR}/dir_list`, localPort: port,
+                        authenticate: true,
+                        externalHost: '127.0.0.1',
+                        initialToken: token,
+                        watch: true,
+                        sync: setDeleteLocalFiles(pullAction)
+                    });
 
-                (engine, cb)=> {
-                    listeningEngine = engine;
-                    sandbox.spy(listeningEngine, 'requestRemoteFile');
-                    counter = EventCounter.getCounter(listeningEngine, Engine.events.synced, 1);
+                    sandbox.spy(listeningEngine.engine, 'requestRemoteFile');
+                    counter = EventCounter.getCounter(listeningEngine.engine, Engine.events.synced, 1);
 
-                    setImmediate(cb);
+                    return listeningEngine.start(cb)
                 },
 
-                (cb)=>startConnectingEngine({
-                    path: `${TEST_DIR}/dir_conn`,
-                    remotePort: port,
-                    remoteHost: '127.0.0.1',
-                    authenticate: true,
-                    initialToken: token,
-                    watch: true
-                }, cb),
+                (cb)=> {
+                    connectingEngine = new SConnect({
+                        path: `${TEST_DIR}/dir_conn`,
+                        remotePort: port,
+                        remoteHost: '127.0.0.1',
+                        authenticate: true,
+                        initialToken: token,
+                        watch: true
+                    });
 
-
-                (engine, cb)=> {
-                    connectingEngine = engine;
-                    setImmediate(cb);
+                    return connectingEngine.start(cb)
                 },
 
                 (cb)=> {
@@ -179,8 +173,8 @@ describe('PullAction', function () {
 
                 (cb)=> {
 
-                    expect(pathExists(`${TEST_DIR}/dir_conn/file_to_delete.txt`)).to.equal(false);
-                    expect(listeningEngine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt')).to.be.ok;
+                    assert.equal(pathExists(`${TEST_DIR}/dir_conn/file_to_delete.txt`), false);
+                    assert(listeningEngine.engine.requestRemoteFile.neverCalledWithMatch(()=>true, 'same.txt'));
 
                     setImmediate(cb);
                 }

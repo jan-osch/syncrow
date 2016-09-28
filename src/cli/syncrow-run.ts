@@ -6,9 +6,9 @@ import {pullAction} from "../sync/pull_action";
 import {ProgramOptions, configurationFileName} from "./program";
 import {noAction} from "../sync/no_action";
 import {pushAction} from "../sync/push_action";
-import startListeningEngine from "../core/listen";
-import startConnectingEngine from "../core/connect";
 import {PathHelper} from "../fs_helpers/path_helper";
+import SListen from "../facade/listen";
+import SConnect from "../facade/connect";
 
 const logger = loggerFor("syncrow-run");
 const debug = debugFor("syncrow:cli:run");
@@ -61,7 +61,7 @@ function startEngine(chosenConfig:ProgramOptions) {
     chosenConfig.path = process.cwd();
     if (chosenConfig.listen) {
 
-        return startListeningEngine(
+        const listener = new SListen(
             {
                 path: process.cwd(),
                 localPort: chosenConfig.localPort,
@@ -71,14 +71,16 @@ function startEngine(chosenConfig:ProgramOptions) {
                 filter: chosenConfig.filter,
                 initialToken: chosenConfig.initialToken,
                 authenticate: chosenConfig.authenticate
-            }, (err, engine)=> {
-                debug(`listening engine started`);
-                ifErrorThrow(err);
-                engine.on(Engine.events.error, ifErrorThrow);
-            })
+            });
+
+        return listener.start((err)=> {
+            debug(`listening engine started`);
+            ifErrorThrow(err);
+            listener.engine.on(Engine.events.error, ifErrorThrow);
+        })
     }
 
-    return startConnectingEngine({
+    const connector = new SConnect({
         path: process.cwd(),
         remotePort: chosenConfig.remotePort,
         remoteHost: chosenConfig.remoteHost,
@@ -87,10 +89,12 @@ function startEngine(chosenConfig:ProgramOptions) {
         filter: chosenConfig.filter,
         initialToken: chosenConfig.initialToken,
         authenticate: chosenConfig.authenticate
-    }, (err, engine)=> {
+    });
+
+    connector.start((err)=> {
         ifErrorThrow(err);
         debug(`engine connected`);
-        engine.on(Engine.events.error, ifErrorThrow);
+        connector.engine.on(Engine.events.error, ifErrorThrow);
     })
 }
 

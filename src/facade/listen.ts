@@ -39,11 +39,12 @@ export default class SListen implements Closable {
         watch?:boolean}) {
 
         this.authTimeout = params.authTimeout ? params.authTimeout : AUTH_TIMEOUT;
+
+        this.initializeHelpers();
     }
 
     public start(callback:ErrorCallback) {
         debug(`starting the initialization flow`);
-        this.initializeHelpers();
 
         return async.waterfall(
             [

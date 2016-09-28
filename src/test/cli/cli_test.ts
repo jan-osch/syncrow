@@ -3,7 +3,7 @@ import * as path from "path";
 import * as child_process from "child_process";
 import {createPathSeries, removePath, compareDirectories, getRandomString} from "../../utils/fs_test_utils";
 
-const START_TIMEOUT = 3000; //3 second
+const START_TIMEOUT = 1000; //Should not take longer than 1 second
 const TEST_DIR = path.join(__dirname, 'cli_test');
 
 const configurationClient = {
@@ -64,11 +64,17 @@ describe('CLI', function () {
                 ),
 
                 (cb)=> {
-                    client = child_process.spawn('../../../../../bin/syncrow', ['run'], {cwd: path.join(TEST_DIR, 'client_dir')});
                     server = child_process.spawn('../../../../../bin/syncrow', ['run'], {cwd: path.join(TEST_DIR, 'server_dir')});
+
+                    return setTimeout(cb, 100); //Give server some time to start
+                },
+
+                (cb)=> {
+                    client = child_process.spawn('../../../../../bin/syncrow', ['run'], {cwd: path.join(TEST_DIR, 'client_dir')});
 
                     return setTimeout(cb, START_TIMEOUT);
                 },
+
                 (cb)=>removePath(path.join(TEST_DIR, 'client_dir', '.syncrow.json'), cb),
 
                 (cb)=>removePath(path.join(TEST_DIR, 'server_dir', '.syncrow.json'), cb)
@@ -87,6 +93,5 @@ describe('CLI', function () {
     it('will start and synchronize two directories', (done)=> {
         return compareDirectories(path.join(TEST_DIR, 'client_dir'), path.join(TEST_DIR, 'server_dir'), done)
     });
-
 });
 

@@ -2,13 +2,14 @@ import {FilterFunction} from "../fs_helpers/file_container";
 import {SyncAction} from "../sync/sync_actions";
 import SListen from "../facade/listen";
 import {EngineCallback} from "../utils/interfaces";
+import * as util from "util";
 
 
 /**
  * @param params
  * @param {EngineCallback} callback
  */
-export default function startListeningEngine(params:{
+export default util.deprecate(function (params:{
     path:string,
     localPort:number,
     externalHost:string,
@@ -21,7 +22,7 @@ export default function startListeningEngine(params:{
     watch?:boolean
 }, callback:EngineCallback) {
 
-    console.warn('This API is deprecated please use one from facade');
+    console.warn();
 
     const sListen = new SListen(params);
 
@@ -30,4 +31,4 @@ export default function startListeningEngine(params:{
 
         return callback(null, sListen.engine);
     })
-}
+}, 'This API is deprecated please use one from facade');
