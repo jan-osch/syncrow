@@ -198,15 +198,6 @@ function compareFileContents(pathA:string, contentA:string|Buffer, pathB:string,
     if (Buffer.isBuffer(contentA) && Buffer.isBuffer(contentB)) {
         const buffersAreEqual = (contentA.compare(contentB) === 0);
         if (!buffersAreEqual) {
-            console.log('FIR')
-            console.log('FIR')
-            console.log('FIR')
-            console.log('FIR')
-            console.log(contentA.toString());
-            console.log('SEC')
-            console.log('SEC')
-            console.log('SEC')
-            console.log(contentB.toString());
             return setImmediate(callback, new Error(`File contents ${pathA} and ${pathB} (Buffers) do not match `));
         }
 
