@@ -86,6 +86,7 @@ params:
 * `[initalToken]` **String** optional token that will be used for authentication
 * `[watch]` **Boolean** optional, defaults to `true`, if set to `false` server will not watch local files
 
+
 #### server.engine
 An instance of `syncrow.Engine`
 #### server.start(callback)
@@ -107,6 +108,8 @@ params:
 * `remoteHost` **String** host for connection
 * `[initalToken]` **String** optional token that will be used for authentication
 * `[watch]` **Boolean** optional, defaults to `true`, if set to `false` server will not watch local files
+
+
 #### client.engine
 An instance of `syncrow.Engine`
 #### client.start(callback)
