@@ -2,11 +2,11 @@ import * as async from "async";
 import {createPathSeries, removePath, getRandomString, compareDirectories, pathExists} from "../../utils/fs_test_utils";
 import {Engine} from "../../core/engine";
 import {EventCounter} from "../../utils/event_counter";
-import startListeningEngine from "../../core/listen";
-import startConnectingEngine from "../../core/connect";
 import {pushAction} from "../../sync/push_action";
 import {setDeleteRemoteFiles} from "../../sync/sync_actions";
 import {expect} from "chai";
+import SListen from "../../facade/listen";
+import SConnect from "../../facade/connect";
 
 const TEST_DIR = 'push_test';
 const TOKEN = '121cb2897o1289nnjos';
@@ -63,35 +63,32 @@ describe('PushAction', function () {
                     )
                 },
 
-                (cb)=> startListeningEngine({
-                    path: `${TEST_DIR}/dir_list`, localPort: PORT,
-                    authenticate: true,
-                    externalHost: '127.0.0.1',
-                    initialToken: TOKEN,
-                    watch: true,
-                    sync: pushAction
-                }, cb),
+                (cb)=> {
+                    listeningEngine = new SListen({
+                        path: `${TEST_DIR}/dir_list`, localPort: PORT,
+                        authenticate: true,
+                        externalHost: '127.0.0.1',
+                        initialToken: TOKEN,
+                        watch: true,
+                        sync: pushAction
+                    });
 
-                (engine, cb)=> {
-                    listeningEngine = engine;
+                    counter = EventCounter.getCounter(listeningEngine.engine, Engine.events.synced, 1);
 
-                    counter = EventCounter.getCounter(listeningEngine, Engine.events.synced, 1);
-
-                    setImmediate(cb);
+                    return listeningEngine.start(cb)
                 },
 
-                (cb)=>startConnectingEngine({
-                    path: `${TEST_DIR}/dir_conn`,
-                    remotePort: PORT,
-                    remoteHost: '127.0.0.1',
-                    authenticate: true,
-                    initialToken: TOKEN,
-                    watch: true
-                }, cb),
+                (cb)=> {
+                    connectingEngine = new SConnect({
+                        path: `${TEST_DIR}/dir_conn`,
+                        remotePort: PORT,
+                        remoteHost: '127.0.0.1',
+                        authenticate: true,
+                        initialToken: TOKEN,
+                        watch: true
+                    });
 
-                (engine, cb)=> {
-                    connectingEngine = engine;
-                    setImmediate(cb);
+                    return connectingEngine.start(cb)
                 },
 
                 (cb)=> {
@@ -125,37 +122,32 @@ describe('PushAction', function () {
                     )
                 },
 
-                (cb)=> startListeningEngine({
-                    path: `${TEST_DIR}/dir_list`,
-                    localPort: PORT,
-                    authenticate: true,
-                    externalHost: '127.0.0.1',
-                    initialToken: TOKEN,
-                    watch: true,
-                    sync: setDeleteRemoteFiles(pushAction)
-                }, cb),
+                (cb)=> {
+                    listeningEngine = new SListen({
+                        path: `${TEST_DIR}/dir_list`, localPort: PORT,
+                        authenticate: true,
+                        externalHost: '127.0.0.1',
+                        initialToken: TOKEN,
+                        watch: true,
+                        sync: setDeleteRemoteFiles(pushAction)
+                    });
 
+                    counter = EventCounter.getCounter(listeningEngine.engine, Engine.events.synced, 1);
 
-                (engine, cb)=> {
-                    listeningEngine = engine;
-
-                    counter = EventCounter.getCounter(listeningEngine, Engine.events.synced, 1);
-
-                    setImmediate(cb);
+                    return listeningEngine.start(cb)
                 },
 
-                (cb)=>startConnectingEngine({
-                    path: `${TEST_DIR}/dir_conn`,
-                    remotePort: PORT,
-                    remoteHost: '127.0.0.1',
-                    authenticate: true,
-                    initialToken: TOKEN,
-                    watch: true
-                }, cb),
+                (cb)=> {
+                    connectingEngine = new SConnect({
+                        path: `${TEST_DIR}/dir_conn`,
+                        remotePort: PORT,
+                        remoteHost: '127.0.0.1',
+                        authenticate: true,
+                        initialToken: TOKEN,
+                        watch: true
+                    });
 
-                (engine, cb)=> {
-                    connectingEngine = engine;
-                    setImmediate(cb);
+                    return connectingEngine.start(cb)
                 },
 
                 (cb)=> {
