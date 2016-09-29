@@ -4,7 +4,7 @@ import * as path from "path";
 import {readTree} from "../../fs_helpers/read_tree";
 import * as assert from "assert";
 
-const TEST_DIR = 'read_tree_test';
+const TEST_DIR = path.join(__dirname, 'read_tree_test');
 const CONTENT = 'random text';
 
 const allFiles = [

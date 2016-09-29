@@ -10,11 +10,12 @@ import * as crypto from "crypto";
 import {EventCounter} from "../../utils/event_counter";
 import {PathHelper} from "../../fs_helpers/path_helper";
 import * as assert from "assert";
+import * as path from "path";
 
 chai.use(sinonChai);
 
 const FS_TIMEOUT = 400;
-const TEST_DIR = 'testDir';
+const TEST_DIR = path.join(__dirname, 'testDir');
 
 describe('FileContainer', ()=> {
     let sandbox;
@@ -41,6 +42,9 @@ describe('FileContainer', ()=> {
         container = null;
     });
 
+    after((done)=> {
+        return removePath(TEST_DIR, done)
+    });
 
     describe('getFileTree', ()=> {
         it('list of files from the directory', function (done) {
