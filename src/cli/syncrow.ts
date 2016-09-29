@@ -7,7 +7,7 @@ main();
 
 function main() {
     program
-        .version('0.0.2')
+        .version('0.0.3')
         .description('a real-time file synchronization tool')
         .command('init', 'initializes syncrow in current directory')
         .alias('i')
