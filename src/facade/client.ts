@@ -10,7 +10,7 @@ import ConstantConnector from "../connection/constant_connector";
 import DynamicConnector from "../connection/dynamic_connector";
 import {Closable} from "../utils/interfaces";
 
-const debug = debugFor('syncrow:core:connect');
+const debug = debugFor('syncrow:facade:client');
 
 const AUTH_TIMEOUT = 10;
 

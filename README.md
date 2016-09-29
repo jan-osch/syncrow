@@ -1,6 +1,6 @@
 # Syncrow
 
-Real time file synchronization using sockets.
+Real time directory synchronization using sockets. It can be used as a command line tool, and as a library in other programs. 
 
 ## Installation
 
@@ -62,7 +62,7 @@ and
 
 `user@laptop $ syncrow run`
 
-After a connection is obtained - *syncrow* will sync existing files.
+After a connection is obtained *syncrow* will sync existing files.
 This will run both *syncrow* instances as a foreground processes.
 It is possible to connect multiple connecting *syncrow* instances to single *syncrow* listener
 
@@ -93,6 +93,8 @@ An instance of `syncrow.Engine`
 starts the server watching the FS and listening for connections.
 #### server.shutdown()
 Completely stops the server. 
+### event: connected
+Emitted when remote party connects to the server 
 
 ### Class: Client
 Connects to remote server.
@@ -158,7 +160,7 @@ emitted on error. Params:
 #### event: synced
 emitted when synchronization with remote has finished
  
-## Roadmap
+## Major TODOS:
 
 * Add interval synchronization
 * Separate into several repositories

@@ -3,6 +3,7 @@ import {ConnectionHelper} from "../connection/connection_helper";
 import {TransferHelper} from "../transport/transfer_helper";
 import {SyncAction} from "../sync/sync_actions";
 import {EventMessenger} from "../connection/event_messenger";
+import {EventEmitter} from "events";
 import * as async from "async";
 import ConstantServer from "../connection/constant_server";
 import DynamicServer from "../connection/dynamic_server";
@@ -10,16 +11,22 @@ import {debugFor} from "../utils/logger";
 import {Closable, ErrorCallback} from "../utils/interfaces";
 import {Engine} from "../core/engine";
 
-const debug = debugFor('syncrow:facade:listen');
+const debug = debugFor('syncrow:facade:server');
 const AUTH_TIMEOUT = 100;
 
-
-//TODO fix the lib section in README
 /**
  * @param params
  * @param {EngineCallback} callback
  */
-export default class Server implements Closable {
+export default class Server extends EventEmitter implements Closable {
+
+    public static events = {
+        /**
+         * @event emitted when remote party connects
+         */
+        connection: 'connection'
+    };
+
     public engine:Engine;
 
     private authTimeout:number;
@@ -39,7 +46,7 @@ export default class Server implements Closable {
         authenticate?:boolean,
         sync?:SyncAction,
         watch?:boolean}) {
-
+        super();
         this.authTimeout = params.authTimeout ? params.authTimeout : AUTH_TIMEOUT;
 
         this.initializeHelpers();
@@ -52,20 +59,18 @@ export default class Server implements Closable {
             [
                 (cb)=> {
                     if (this.params.watch)return this.container.beginWatching(cb);
-                    return cb();
+                    return setImmediate(cb);
                 },
 
-                (cb)=>this.connectionHelperEntry.listen(cb)
+                (cb)=>this.connectionHelperEntry.listen(cb),
+
+                (cb)=> {
+                    this.listenForMultipleConnections(this.engine, this.connectionHelperEntry);
+                    return setImmediate(cb);
+                }
             ],
-
-            (err:Error)=> {
-                if (err) return callback(err);
-
-                this.listenForMultipleConnections(this.engine, this.connectionHelperEntry);
-
-                return callback();
-            }
-        )
+            callback
+        );
     }
 
     public shutdown() {
@@ -113,7 +118,9 @@ export default class Server implements Closable {
                         return cb();
                     }
 
-                    engine.addOtherPartyMessenger(new EventMessenger(socket));
+                    const eventMessenger = new EventMessenger(socket);
+                    this.emit(Server.events.connection, eventMessenger);
+                    engine.addOtherPartyMessenger(eventMessenger);
                     return cb();
                 })
             },

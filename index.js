@@ -1,5 +1,5 @@
 module.exports = {
-    Server: require('./build/facade/listen'),
-    Client: require('./build/facade/connect'),
+    Server: require('./build/facade/server'),
+    Client: require('./build/facade/client'),
     Engine: require('./build/client/engine')
 };
