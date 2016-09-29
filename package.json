@@ -1,7 +1,7 @@
 {
   "name": "syncrow",
-  "version": "0.0.2",
-  "description": "Easy directory synchronization over the network",
+  "version": "0.0.3",
+  "description": "Real time directory synchronization using sockets",
   "main": "index.js",
   "scripts": {
     "test": "mocha --require source-map-support/register --recursive build/test",
