@@ -1,6 +1,8 @@
 # Syncrow
 
-Real time directory synchronization using sockets. It can be used as a command line tool, and as a library in other programs. 
+Real time directory synchronization using sockets. It can be used as a command line tool, and as a library in other programs.
+ 
+**Currently in Beta**
 
 ## Installation
 
@@ -93,7 +95,7 @@ An instance of `syncrow.Engine`
 starts the server watching the FS and listening for connections.
 #### server.shutdown()
 Completely stops the server. 
-### event: connected
+### event: connection
 Emitted when remote party connects to the server 
 
 ### Class: Client
