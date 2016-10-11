@@ -2,6 +2,7 @@ import {ConnectionHelper, SocketCallback} from "./connection_helper";
 import * as net from "net";
 import {loggerFor, debugFor} from "../utils/logger";
 import {AuthorisationHelper} from "./authorisation_helper";
+import * as _ from "lodash";
 
 const logger = loggerFor('ConstantConnector');
 const debug = debugFor('syncrow:con:constant_connector');
@@ -19,7 +20,10 @@ export default class ConstantConnector implements ConnectionHelper {
      * @param callback
      */
     public getNewSocket(params:{}, callback:SocketCallback):any {
+        callback = _.once(callback);
+
         debug(`#getNewSocket - connecting to : ${this.remoteHost}:${this.remotePort}`);
+
         const socket = net.connect(
             {
                 port: this.remotePort,
@@ -46,7 +50,7 @@ export default class ConstantConnector implements ConnectionHelper {
                     }
                 )
             }
-        ).on('error',callback);
+        ).on('error', callback);
     }
 
 }

@@ -2,6 +2,7 @@ import {ConnectionHelper, SocketCallback, ListenCallback} from "./connection_hel
 import * as net from "net";
 import {debugFor} from "../utils/logger";
 import {AuthorisationHelper} from "./authorisation_helper";
+import * as _ from "lodash";
 
 const debug = debugFor('syncrow:con:dynamic_server');
 
@@ -26,6 +27,8 @@ export default class DynamicServer implements ConnectionHelper {
      * @returns {number}
      */
     public getNewSocket(params:{listenCallback:ListenCallback}, callback:SocketCallback):any {
+        callback = _.once(callback);
+
         debug('#getNewSocket called');
 
         const server = net.createServer();
